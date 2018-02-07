@@ -123,8 +123,10 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
       val g2 = removeVertex(g1, target)
       val init = initRandomWalk(g2)
       for (i <- 0 until config.numRuns) {
-        val paths = firstOrderWalk(init)
-        save(paths, s"v${target.toString}-$i")
+        val seed = System.currentTimeMillis()
+        val r = new Random(seed)
+        val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+        save(paths, s"v${target.toString}-$i-s$seed")
       }
     }
   }
