@@ -47,20 +47,6 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     }.sortBy(_._2.last, ascending = false)
   }
 
-  //  private def computeAffecteds(afs: Array[Int], v: Int, al: Int,
-  //                               length: Int)
-  //  : Unit = {
-  //    if (length >= al)
-  //      return
-  //    val neighbors = GraphMap.getNeighbors(v)
-  //    if (neighbors != null) {
-  //      afs(length) += neighbors.length
-  //      for (n <- neighbors) {
-  //        computeAffecteds(afs, n._1, al, length + 1)
-  //      }
-  //    }
-  //  }
-
   def save(degrees: Array[Int]) = {
     val file = new File(s"${config.output}.${Property.degreeSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -109,7 +95,6 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
 
 
   lazy val partitioner: HashPartitioner = new HashPartitioner(config.rddPartitions)
-  var routingTable: RDD[Int] = _
   lazy val logger = LogManager.getLogger("rwLogger")
   var nVertices: Int = 0
   var nEdges: Int = 0
@@ -124,12 +109,66 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     * @return
     */
   def loadGraph(): RDD[(Int, Array[Int])] = {
+
+    val g: RDD[(Int, Array[(Int, Float)])] = readFromFile(config)
+    initRandomWalk(g)
+  }
+
+  def removeAndRun(): Unit = {
+    val g1 = readFromFile(config)
+    val vertices: Array[Int] = g1.map(_._1).collect()
+    for (target <- vertices) {
+      logger.info(s"Removed vertex $target")
+      println(s"Removed vertex $target")
+      val g2 = removeVertex(g1, target)
+      val init = initRandomWalk(g2)
+      for (i <- 0 until config.numRuns) {
+        val paths = firstOrderWalk(init)
+        save(paths, s"v${target.toString}-$i")
+      }
+    }
+  }
+
+  def removeVertex(g: RDD[(Int, Array[(Int, Float)])], target: Int): RDD[(Int, Array[(Int, Float)])] = {
+    val bcTarget = context.broadcast(target)
+    g.filter(_._1 != target).map { case (vId, neighbors) =>
+      val filtered = neighbors.filter(_._1 != bcTarget.value)
+      (vId, filtered)
+    }
+  }
+
+
+  def initRandomWalk(g: RDD[(Int, Array[(Int, Float)])]): RDD[(Int, Array[Int])] = {
+    buildGraphMap(g)
+
+    val vAccum = context.longAccumulator("vertices")
+    val eAccum = context.longAccumulator("edges")
+
+    g.foreachPartition { iter =>
+      iter.foreach {
+        case (_, (neighbors: Array[(Int, Float)])) =>
+          vAccum.add(1)
+          eAccum.add(neighbors.length)
+      }
+    }
+    nVertices = vAccum.sum.toInt
+    nEdges = eAccum.sum.toInt
+
+    logger.info(s"edges: $nEdges")
+    logger.info(s"vertices: $nVertices")
+    println(s"edges: $nEdges")
+    println(s"vertices: $nVertices")
+
+    createWalkers(g)
+  }
+
+
+  def readFromFile(config: Params): RDD[(Int, Array[(Int, Float)])] = {
     // the directed and weighted parameters are only used for building the graph object.
     // is directed? they will be shared among stages and executors
     val bcDirected = context.broadcast(config.directed)
     val bcWeighted = context.broadcast(config.weighted) // is weighted?
-
-    val g: RDD[(Int, Array[(Int, Float)])] = context.textFile(config.input, minPartitions
+    context.textFile(config.input, minPartitions
       = config
       .rddPartitions).flatMap { triplet =>
       val parts = triplet.split("\\s+")
@@ -150,43 +189,9 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
       reduceByKey(_ ++ _).
       partitionBy(partitioner).
       persist(StorageLevel.MEMORY_AND_DISK)
+  }
 
-    routingTable = buildRoutingTable(g).persist(StorageLevel.MEMORY_ONLY)
-    routingTable.count()
-
-    val vAccum = context.longAccumulator("vertices")
-    val eAccum = context.longAccumulator("edges")
-
-    val rAcc = context.collectionAccumulator[Int]("replicas")
-    val lAcc = context.collectionAccumulator[Int]("links")
-
-    g.foreachPartition { iter =>
-      val (r, e) = GraphMap.getGraphStatsOnlyOnce
-      if (r != 0) {
-        rAcc.add(r)
-        lAcc.add(e)
-      }
-      iter.foreach {
-        case (_, (neighbors: Array[(Int, Float)])) =>
-          vAccum.add(1)
-          eAccum.add(neighbors.length)
-      }
-    }
-    nVertices = vAccum.sum.toInt
-    nEdges = eAccum.sum.toInt
-
-    logger.info(s"edges: $nEdges")
-    logger.info(s"vertices: $nVertices")
-    println(s"edges: $nEdges")
-    println(s"vertices: $nVertices")
-
-    val ePartitions = lAcc.value.toArray.mkString(" ")
-    val vPartitions = rAcc.value.toArray.mkString(" ")
-    logger.info(s"E Partitions: $ePartitions")
-    logger.info(s"V Partitions: $vPartitions")
-    println(s"E Partitions: $ePartitions")
-    println(s"V Partitions: $vPartitions")
-
+  def createWalkers(g: RDD[(Int, Array[(Int, Float)])]): RDD[(Int, Array[Int])] = {
     g.mapPartitions({ iter =>
       iter.map {
         case (vId: Int, _) =>
@@ -238,16 +243,13 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     totalPaths
   }
 
-  def buildRoutingTable(graph: RDD[(Int, Array[(Int, Float)])]): RDD[Int] = {
-
-    graph.mapPartitionsWithIndex({ (id: Int, iter: Iterator[(Int, Array[(Int, Float)])]) =>
+  def buildGraphMap(graph: RDD[(Int, Array[(Int, Float)])]): Unit = {
+    GraphMap.reset // This is only to run on a single executor.
+    graph.foreachPartition { iter: Iterator[(Int, Array[(Int, Float)])] =>
       iter.foreach { case (vId, neighbors) =>
         GraphMap.addVertex(vId, neighbors)
-        id
       }
-      Iterator.empty
-    }, preservesPartitioning = true
-    )
+    }
 
   }
 
@@ -258,6 +260,16 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         val pathString = path.mkString("\t")
         s"$pathString"
     }.repartition(config.rddPartitions).saveAsTextFile(s"${config.output}.${Property.pathSuffix}")
+    paths
+  }
+
+  def save(paths: RDD[Array[Int]], suffix: String): RDD[Array[Int]] = {
+
+    paths.map {
+      case (path) =>
+        val pathString = path.mkString("\t")
+        s"$pathString"
+    }.repartition(1).saveAsTextFile(s"${config.output}/${Property.removeAndRunSuffix}/$suffix")
     paths
   }
 

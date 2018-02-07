@@ -6,7 +6,7 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, queryPaths, probs, degrees, affecteds, passProbs = Value
+    val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr = Value
   }
 
   val WALK_LENGTH = "walkLength"
@@ -14,6 +14,7 @@ object CommandParser {
   val RDD_PARTITIONS = "rddPartitions"
   val WEIGHTED = "weighted"
   val DIRECTED = "directed"
+  val NUM_RUNS = "nRuns"
   val AL = "al"
   val INPUT = "input"
   val OUTPUT = "output"
@@ -29,6 +30,9 @@ object CommandParser {
     opt[Int](NUM_WALKS)
       .text(s"numWalks: ${defaultParams.numWalks}")
       .action((x, c) => c.copy(numWalks = x))
+    opt[Int](NUM_RUNS)
+      .text(s"numWalks: ${defaultParams.numRuns}")
+      .action((x, c) => c.copy(numRuns = x))
     opt[Int](AL)
       .text(s"numWalks: ${defaultParams.affectedLength}")
       .action((x, c) => c.copy(affectedLength = x))

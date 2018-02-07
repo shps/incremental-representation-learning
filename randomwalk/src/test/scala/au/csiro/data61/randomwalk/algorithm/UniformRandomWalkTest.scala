@@ -2,8 +2,10 @@ package au.csiro.data61.randomwalk.algorithm
 
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common.Params
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.BeforeAndAfter
+
+import scala.collection.mutable
 
 
 class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
@@ -67,26 +69,30 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(vAcc.sum == 34)
   }
 
-  test("buildRoutingTable") {
-    val v1 = (1, (Array.empty[(Int, Float)]))
-    val v2 = (2, (Array.empty[(Int, Float)]))
-    val v3 = (3, (Array.empty[(Int, Float)]))
-    val numPartitions = 3
-    val partitioner = new HashPartitioner(numPartitions)
-
-    val graph = sc.parallelize(Array(v1, v2, v3)).partitionBy(partitioner)
-
-    val config = Params(rddPartitions = numPartitions)
+  test("remove vertex") {
+    val config = Params(input = karate, directed = false)
     val rw = UniformRandomWalk(sc, config)
-    val rTable = rw.buildRoutingTable(graph)
-    assert(rTable.getNumPartitions == numPartitions)
-    assert(rTable.partitioner match {
-      case Some(p) => p equals partitioner
-      case None => false
-    })
-    val ps = rTable.partitions
-    assert(ps.length == numPartitions)
-    assert(rTable.collect().isEmpty)
+    val target = 1
+    val before = rw.readFromFile(config)
+    rw.buildGraphMap(before)
+    val neighbors = GraphMap.getNeighbors(target)
+    val nDegrees = new mutable.HashMap[Int, Int]()
+    for (n <- neighbors) {
+      nDegrees.put(n._1, GraphMap.getNeighbors(n._1).length)
+    }
+
+    val after = rw.removeVertex(before, target)
+    assert(after.count() == 33)
+    assert(after.filter(_._1 == target).count() == 0)
+    rw.buildGraphMap(after)
+    for (n <- neighbors) {
+      val newDegree = GraphMap.getNeighbors(n._1).length
+      nDegrees.get(n._1) match {
+        case Some(d) => assert(d - 1 == newDegree)
+        case None => assert(false)
+      }
+
+    }
   }
 
   test("first order walk") {

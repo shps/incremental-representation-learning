@@ -40,6 +40,9 @@ object Main {
         val affecteds = rw.computeAffecteds(vertices, params.affectedLength)
         rw.saveAffecteds(affecteds)
         null
+      case TaskName.rr =>
+        rw.removeAndRun()
+        null
     }
 
     params.cmd match {

@@ -78,6 +78,7 @@ object GraphMap {
     * structures that are initially set by calling setUp function.
     */
   def reset {
+    resetGetters
     indexCounter = 0
     offsetCounter = 0
     srcVertexMap.clear()
