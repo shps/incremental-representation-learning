@@ -9,12 +9,18 @@ object CommandParser {
     val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr = Value
   }
 
+  object RrType extends Enumeration {
+    type RrType = Value
+    val m1, m2, m3, m4 = Value
+  }
+
   val WALK_LENGTH = "walkLength"
   val NUM_WALKS = "numWalks"
   val RDD_PARTITIONS = "rddPartitions"
   val WEIGHTED = "weighted"
   val DIRECTED = "directed"
   val NUM_RUNS = "nRuns"
+  val RR_TYPE = "rrType"
   val AL = "al"
   val INPUT = "input"
   val OUTPUT = "output"
@@ -63,6 +69,10 @@ object CommandParser {
       .required()
       .text(s"command: ${defaultParams.cmd.toString}")
       .action((x, c) => c.copy(cmd = TaskName.withName(x)))
+    opt[String](RR_TYPE)
+      .required()
+      .text(s"RR Type: ${defaultParams.rrType.toString}")
+      .action((x, c) => c.copy(rrType = RrType.withName(x)))
   }
 
   def parse(args: Array[String]) = {

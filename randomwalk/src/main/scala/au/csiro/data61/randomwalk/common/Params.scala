@@ -1,6 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
-import au.csiro.data61.randomwalk.common.CommandParser.TaskName
+import au.csiro.data61.randomwalk.common.CommandParser.RrType.RrType
+import au.csiro.data61.randomwalk.common.CommandParser.{RrType, TaskName}
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName.TaskName
 
 
@@ -15,4 +16,5 @@ case class Params(walkLength: Int = 80,
                   affectedLength: Int = 3,
                   numRuns: Int = 1,
                   nodes: String = "",
+                  rrType: RrType = RrType.m1,
                   cmd: TaskName = TaskName.firstorder) extends AbstractParams[Params]
