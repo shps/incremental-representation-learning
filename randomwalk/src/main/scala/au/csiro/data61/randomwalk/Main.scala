@@ -1,7 +1,5 @@
 package au.csiro.data61.randomwalk
 
-import java.util.concurrent.ConcurrentHashMap
-
 import au.csiro.data61.randomwalk.algorithm.UniformRandomWalk
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common.{CommandParser, Params}
@@ -14,8 +12,7 @@ object Main {
   def main(args: Array[String]) {
     CommandParser.parse(args) match {
       case Some(params) =>
-        logger.info(params.nodes)
-        val conf = new SparkConf().setAppName("Node2Vec")
+        val conf = new SparkConf().setAppName("stellar-random-walk")
         val context: SparkContext = new SparkContext(conf)
         execute(context, params)
       case None => sys.exit(1)
