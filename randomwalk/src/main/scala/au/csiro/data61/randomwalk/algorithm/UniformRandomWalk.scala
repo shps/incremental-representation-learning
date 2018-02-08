@@ -154,25 +154,63 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
           for (target <- vertices) {
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
-            val afs1 = GraphMap.getNeighbors(target).map{case (v, w)=>v}
-            val walkers = filterPaths(paths, afs1)
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
+            val fWalkers = filterWalkers(paths, afs1)
+            val walkers = context.union(Array.fill(config.numWalks)(fWalkers))
             val partialPaths = firstOrderWalk(walkers)
-            val aws = walkers.map(tuple => tuple._1).collect()
-            val unaffectedPaths = paths.filter{case p =>
-                !aws.contains(p.head)
+            val aws = fWalkers.map(tuple => tuple._1).collect()
+            val unaffectedPaths = paths.filter { case p =>
+              !aws.contains(p.head)
             }
             val newPaths = unaffectedPaths.union(partialPaths)
             save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i-s$seed")
           }
         }
       }
+      case RrType.m3 => {
+        val vertices: Array[Int] = g1.map(_._1).collect()
+        val init = initRandomWalk(g1)
+        for (i <- 0 until config.numRuns) {
+          val seed = System.currentTimeMillis()
+          val r = new Random(seed)
+          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+          for (target <- vertices) {
+            logger.info(s"Added vertex $target")
+            println(s"Added vertex $target")
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
+            val walkers = filterSplitPaths(paths, afs1)
+            val partialPaths = firstOrderWalk(walkers)
+            val unaffectedPaths = filterPaths(paths, afs1)
+            val newPaths = unaffectedPaths.union(partialPaths)
+            save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i-s$seed")
+          }
+        }
+      }
+      case RrType.m4 => {
+
+      }
+    }
+  }
+
+  def filterWalkers(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+    paths.filter { case p =>
+      !p.forall(s => !afs1.contains(s))
+    }.map(a => (a.head, Array(a.head))).reduceByKey((a, b) => a)
+  }
+
+  def filterSplitPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+    paths.filter { case p =>
+      !p.forall(s => !afs1.contains(s))
+    }.map { a =>
+      val first = a.indexWhere(e => afs1.contains(e))
+      (a.head, a.splitAt(first + 1)._1)
     }
   }
 
   def filterPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    paths.filter{case p =>
-      !p.forall(s => !afs1.contains(s))
-    }.map(a => (a.head,Array(a.head)))
+    paths.filter { case p =>
+      p.forall(s => !afs1.contains(s))
+    }
   }
 
 
@@ -239,55 +277,55 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
   }
 
   def createWalkers(g: RDD[(Int, Array[(Int, Float)])]): RDD[(Int, Array[Int])] = {
-    g.mapPartitions({ iter =>
+    val walkers = g.mapPartitions({ iter =>
       iter.map {
         case (vId: Int, _) =>
           (vId, Array(vId))
       }
     }, preservesPartitioning = true
     )
+    context.union(Array.fill(config.numWalks)(walkers))
   }
 
   def firstOrderWalk(initPaths: RDD[(Int, Array[Int])], nextFloat: () => Float = Random
     .nextFloat): RDD[Array[Int]] = {
     val walkLength = context.broadcast(config.walkLength)
-    var totalPaths: RDD[Array[Int]] = context.emptyRDD[Array[Int]]
+    //    var totalPaths: RDD[Array[Int]] = context.emptyRDD[Array[Int]]
 
-    for (_ <- 0 until config.numWalks) {
-      val paths = initPaths.mapPartitions({ iter =>
-        iter.map { case (_, steps) =>
-          var path = steps
-          val rSample = RandomSample(nextFloat)
-          breakable {
-            while (path.length < walkLength.value + 1) {
-              val neighbors = GraphMap.getNeighbors(path.last)
-              if (neighbors != null && neighbors.length > 0) {
-                val (nextStep, _) = rSample.sample(neighbors)
-                path = path ++ Array(nextStep)
-              } else {
-                break
-              }
+    //    for (_ <- 0 until config.numWalks) {
+    val paths = initPaths.mapPartitions({ iter =>
+      iter.map { case (_, steps) =>
+        var path = steps
+        val rSample = RandomSample(nextFloat)
+        breakable {
+          while (path.length < walkLength.value + 1) {
+            val neighbors = GraphMap.getNeighbors(path.last)
+            if (neighbors != null && neighbors.length > 0) {
+              val (nextStep, _) = rSample.sample(neighbors)
+              path = path ++ Array(nextStep)
+            } else {
+              break
             }
           }
-          path
         }
-      }, preservesPartitioning = true
-      ).persist(StorageLevel.MEMORY_AND_DISK)
-
-      paths.count()
-
-      val pCount = paths.count()
-      if (pCount != nVertices) {
-        println(s"Inconsistent number of paths: nPaths=[${pCount}] != vertices[$nVertices]")
+        path
       }
-      totalPaths = totalPaths.union(paths).persist(StorageLevel
-        .MEMORY_AND_DISK)
+    }, preservesPartitioning = true
+    ).persist(StorageLevel.MEMORY_AND_DISK)
 
-      totalPaths.count()
-
+    val pCount = paths.count()
+    if (pCount != config.numWalks * nVertices) {
+      println(s"Inconsistent number of paths: nPaths=[${pCount}] != vertices[$nVertices]")
     }
+    //    totalPaths = totalPaths.union(paths).persist(StorageLevel
+    //      .MEMORY_AND_DISK)
+    //
+    //    totalPaths.count()
 
-    totalPaths
+    //    }
+
+    //    totalPaths
+    paths
   }
 
   def buildGraphMap(graph: RDD[(Int, Array[(Int, Float)])]): Unit = {

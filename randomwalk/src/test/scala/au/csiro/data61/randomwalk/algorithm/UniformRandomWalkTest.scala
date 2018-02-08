@@ -100,13 +100,13 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val wLength = 50
 
     val config = Params(input = karate, directed = false, walkLength =
-      wLength, rddPartitions = 8, numWalks = 1)
+      wLength, rddPartitions = 8, numWalks = 2)
     val rw = UniformRandomWalk(sc, config)
     val rValue = 0.1f
     val nextFloatGen = () => rValue
     val graph = rw.loadGraph()
     val paths = rw.firstOrderWalk(graph, nextFloatGen)
-    assert(paths.count() == rw.nVertices) // a path per vertex
+    assert(paths.count() == 2*rw.nVertices) // a path per vertex
     val rSampler = RandomSample(nextFloatGen)
     paths.collect().foreach { case (p: Array[Int]) =>
       val p2 = doFirstOrderRandomWalk(GraphMap, p(0), wLength, rSampler)
@@ -119,7 +119,17 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val wLength = 5
 
     val config = Params(input = karate, directed = false, walkLength =
-      wLength, rddPartitions = 8, numWalks = 1, rrType = RrType.m2)
+      wLength, rddPartitions = 8, numWalks = 2, rrType = RrType.m2)
+    val rw = UniformRandomWalk(sc, config)
+    rw.addAndRun()
+  }
+
+  test("addAndRun m3") {
+    // Undirected graph
+    val wLength = 5
+
+    val config = Params(input = karate, directed = false, walkLength =
+      wLength, rddPartitions = 8, numWalks = 1, rrType = RrType.m3)
     val rw = UniformRandomWalk(sc, config)
     rw.addAndRun()
   }
