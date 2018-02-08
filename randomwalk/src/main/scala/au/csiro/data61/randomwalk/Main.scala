@@ -43,6 +43,9 @@ object Main {
       case TaskName.rr =>
         rw.removeAndRun()
         null
+      case TaskName.ar =>
+        rw.addAndRun()
+        null
     }
 
     params.cmd match {

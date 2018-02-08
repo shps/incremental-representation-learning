@@ -132,12 +132,21 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     }
   }
 
+  def computeNumSteps(walkers: RDD[(Int, Array[Int])]) = {
+    val bcWalkLength = context.broadcast(config.walkLength+1)
+    walkers.map{case (_, path) => bcWalkLength.value - path.length}.reduce(_ + _)
+  }
+
   def addAndRun(): Unit = {
     val g1 = readFromFile(config)
+    val vertices: Array[Int] = g1.map(_._1).collect()
+    val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     config.rrType match {
       case RrType.m1 => {
         val init = initRandomWalk(g1)
+        val ns = computeNumSteps(init)
         for (i <- 0 until config.numRuns) {
+          numSteps(i) = Array.fill(vertices.length)(ns)
           val seed = System.currentTimeMillis()
           val r = new Random(seed)
           val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
@@ -145,18 +154,20 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m2 => {
-        val vertices: Array[Int] = g1.map(_._1).collect()
         val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
           val seed = System.currentTimeMillis()
           val r = new Random(seed)
           val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
-          for (target <- vertices) {
+          for (j <- 0 until vertices.length) {
+            val target = vertices(j)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
             val fWalkers = filterUniqueWalkers(paths, afs1)
             val walkers = context.union(Array.fill(config.numWalks)(fWalkers))
+            val ns = computeNumSteps(walkers)
+            numSteps(i)(j)= ns
             val partialPaths = firstOrderWalk(walkers)
             val aws = fWalkers.map(tuple => tuple._1).collect()
             val unaffectedPaths = paths.filter { case p =>
@@ -168,17 +179,19 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m3 => {
-        val vertices: Array[Int] = g1.map(_._1).collect()
         val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
           val seed = System.currentTimeMillis()
           val r = new Random(seed)
           val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
-          for (target <- vertices) {
+          for (j <- 0 until vertices.length) {
+            val target = vertices(j)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
             val walkers = filterSplitPaths(paths, afs1)
+            val ns = computeNumSteps(walkers)
+            numSteps(i)(j)= ns
             val partialPaths = firstOrderWalk(walkers)
             val unaffectedPaths = filterNotAffectedPaths(paths, afs1)
             val newPaths = unaffectedPaths.union(partialPaths)
@@ -187,17 +200,19 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m4 => {
-        val vertices: Array[Int] = g1.map(_._1).collect()
         val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
           val seed = System.currentTimeMillis()
           val r = new Random(seed)
           val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
-          for (target <- vertices) {
+          for (j <- 0 until vertices.length) {
+            val target = vertices(j)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
             val walkers = filterWalkers(paths, afs1)
+            val ns = computeNumSteps(walkers)
+            numSteps(i)(j)= ns
             val partialPaths = firstOrderWalk(walkers)
             val unaffectedPaths = filterNotAffectedPaths(paths, afs1)
             val newPaths = unaffectedPaths.union(partialPaths)
