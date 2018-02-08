@@ -155,7 +155,7 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
-            val fWalkers = filterWalkers(paths, afs1)
+            val fWalkers = filterUniqueWalkers(paths, afs1)
             val walkers = context.union(Array.fill(config.numWalks)(fWalkers))
             val partialPaths = firstOrderWalk(walkers)
             val aws = fWalkers.map(tuple => tuple._1).collect()
@@ -180,34 +180,57 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
             val walkers = filterSplitPaths(paths, afs1)
             val partialPaths = firstOrderWalk(walkers)
-            val unaffectedPaths = filterPaths(paths, afs1)
+            val unaffectedPaths = filterNotAffectedPaths(paths, afs1)
             val newPaths = unaffectedPaths.union(partialPaths)
             save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i-s$seed")
           }
         }
       }
       case RrType.m4 => {
+        val vertices: Array[Int] = g1.map(_._1).collect()
+        val init = initRandomWalk(g1)
+        for (i <- 0 until config.numRuns) {
+          val seed = System.currentTimeMillis()
+          val r = new Random(seed)
+          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+          for (target <- vertices) {
+            logger.info(s"Added vertex $target")
+            println(s"Added vertex $target")
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
+            val walkers = filterWalkers(paths, afs1)
+            val partialPaths = firstOrderWalk(walkers)
+            val unaffectedPaths = filterNotAffectedPaths(paths, afs1)
+            val newPaths = unaffectedPaths.union(partialPaths)
+            save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i-s$seed")
+          }
+        }
 
       }
     }
   }
 
+  def filterUniqueWalkers(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+    filterWalkers(paths, afs1).reduceByKey((a, b) => a)
+  }
+
   def filterWalkers(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    paths.filter { case p =>
-      !p.forall(s => !afs1.contains(s))
-    }.map(a => (a.head, Array(a.head))).reduceByKey((a, b) => a)
+    filterAffectedPaths(paths, afs1).map(a => (a.head, Array(a.head)))
   }
 
   def filterSplitPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    paths.filter { case p =>
-      !p.forall(s => !afs1.contains(s))
-    }.map { a =>
+    filterAffectedPaths(paths, afs1).map { a =>
       val first = a.indexWhere(e => afs1.contains(e))
       (a.head, a.splitAt(first + 1)._1)
     }
   }
 
-  def filterPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+  def filterAffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+    paths.filter { case p =>
+      !p.forall(s => !afs1.contains(s))
+    }
+  }
+
+  def filterNotAffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
     paths.filter { case p =>
       p.forall(s => !afs1.contains(s))
     }

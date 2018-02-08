@@ -134,6 +134,16 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     rw.addAndRun()
   }
 
+  test("addAndRun m4") {
+    // Undirected graph
+    val wLength = 5
+
+    val config = Params(input = karate, directed = false, walkLength =
+      wLength, rddPartitions = 8, numWalks = 2, rrType = RrType.m4)
+    val rw = UniformRandomWalk(sc, config)
+    rw.addAndRun()
+  }
+
   test("Query Nodes") {
     var config = Params(nodes = "1 2 3 4")
 
