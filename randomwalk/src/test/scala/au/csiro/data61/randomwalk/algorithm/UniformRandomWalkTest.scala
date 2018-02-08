@@ -1,6 +1,6 @@
 package au.csiro.data61.randomwalk.algorithm
 
-import au.csiro.data61.randomwalk.common.CommandParser.TaskName
+import au.csiro.data61.randomwalk.common.CommandParser.{RrType, TaskName}
 import au.csiro.data61.randomwalk.common.Params
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.BeforeAndAfter
@@ -99,7 +99,6 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     // Undirected graph
     val wLength = 50
 
-    // Directed Graph
     val config = Params(input = karate, directed = false, walkLength =
       wLength, rddPartitions = 8, numWalks = 1)
     val rw = UniformRandomWalk(sc, config)
@@ -113,6 +112,16 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val p2 = doFirstOrderRandomWalk(GraphMap, p(0), wLength, rSampler)
       assert(p sameElements p2)
     }
+  }
+
+  test("addAndRun m2") {
+    // Undirected graph
+    val wLength = 5
+
+    val config = Params(input = karate, directed = false, walkLength =
+      wLength, rddPartitions = 8, numWalks = 1, rrType = RrType.m2)
+    val rw = UniformRandomWalk(sc, config)
+    rw.addAndRun()
   }
 
   test("Query Nodes") {

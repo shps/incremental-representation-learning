@@ -6,7 +6,7 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr = Value
+    val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr, ar = Value
   }
 
   object RrType extends Enumeration {

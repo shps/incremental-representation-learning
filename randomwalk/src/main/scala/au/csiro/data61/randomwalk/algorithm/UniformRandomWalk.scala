@@ -3,6 +3,7 @@ package au.csiro.data61.randomwalk.algorithm
 import java.io.{BufferedWriter, File, FileWriter}
 import java.util
 
+import au.csiro.data61.randomwalk.common.CommandParser.RrType
 import au.csiro.data61.randomwalk.common.{Params, Property}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
@@ -130,6 +131,50 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
       }
     }
   }
+
+  def addAndRun(): Unit = {
+    val g1 = readFromFile(config)
+    config.rrType match {
+      case RrType.m1 => {
+        val init = initRandomWalk(g1)
+        for (i <- 0 until config.numRuns) {
+          val seed = System.currentTimeMillis()
+          val r = new Random(seed)
+          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+          save(paths, s"${config.rrType.toString}-$i-s$seed")
+        }
+      }
+      case RrType.m2 => {
+        val vertices: Array[Int] = g1.map(_._1).collect()
+        val init = initRandomWalk(g1)
+        for (i <- 0 until config.numRuns) {
+          val seed = System.currentTimeMillis()
+          val r = new Random(seed)
+          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+          for (target <- vertices) {
+            logger.info(s"Added vertex $target")
+            println(s"Added vertex $target")
+            val afs1 = GraphMap.getNeighbors(target).map{case (v, w)=>v}
+            val walkers = filterPaths(paths, afs1)
+            val partialPaths = firstOrderWalk(walkers)
+            val aws = walkers.map(tuple => tuple._1).collect()
+            val unaffectedPaths = paths.filter{case p =>
+                !aws.contains(p.head)
+            }
+            val newPaths = unaffectedPaths.union(partialPaths)
+            save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i-s$seed")
+          }
+        }
+      }
+    }
+  }
+
+  def filterPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+    paths.filter{case p =>
+      !p.forall(s => !afs1.contains(s))
+    }.map(a => (a.head,Array(a.head)))
+  }
+
 
   def removeVertex(g: RDD[(Int, Array[(Int, Float)])], target: Int): RDD[(Int, Array[(Int, Float)])] = {
     val bcTarget = context.broadcast(target)
