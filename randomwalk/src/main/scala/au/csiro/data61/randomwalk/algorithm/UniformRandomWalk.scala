@@ -227,8 +227,8 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
             val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
-            initRandomWalk(g1)
-            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
+            buildGraphMap(g1)
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
             val targetWalker = Array.fill(config.numWalks)(Array((target, Array(target)))).flatMap(a => a)
             val walkers = filterWalkers(paths, afs1).union(context.parallelize(targetWalker))
             val ns = computeNumSteps(walkers)
