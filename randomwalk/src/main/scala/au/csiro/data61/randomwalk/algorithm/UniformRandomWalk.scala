@@ -166,22 +166,24 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m2 => {
-        val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
-          val seed = System.currentTimeMillis()
-          val r = new Random(seed)
-          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
           for (j <- 0 until vertices.length) {
+            val seed = System.currentTimeMillis()
+            val r = new Random(seed)
             val target = vertices(j)
+            val g2 = removeVertex(g1, target)
+            val init = initRandomWalk(g2)
+            val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+            buildGraphMap(g1)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
-            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
-            val fWalkers = filterUniqueWalkers(paths, afs1)
-            val walkers = context.union(Array.fill(config.numWalks)(fWalkers))
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
+            val fWalkers: Array[(Int, Array[Int])] = filterUniqueWalkers(paths, afs1).collect() ++ Array((target, Array(target)))
+            val walkers: RDD[(Int, Array[Int])] = context.parallelize(Array.fill(config.numWalks)(fWalkers).flatMap(a => a), numSlices = config.rddPartitions)
             val ns = computeNumSteps(walkers)
             numSteps(i)(j) = ns
             val partialPaths = firstOrderWalk(walkers)
-            val aws = fWalkers.map(tuple => tuple._1).collect()
+            val aws = fWalkers.map(tuple => tuple._1)
             val unaffectedPaths = paths.filter { case p =>
               !aws.contains(p.head)
             }
@@ -191,17 +193,20 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m3 => {
-        val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
-          val seed = System.currentTimeMillis()
-          val r = new Random(seed)
-          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
           for (j <- 0 until vertices.length) {
+            val seed = System.currentTimeMillis()
+            val r = new Random(seed)
             val target = vertices(j)
+            val g2 = removeVertex(g1, target)
+            val init = initRandomWalk(g2)
+            val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
+            buildGraphMap(g1)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
-            val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
-            val walkers = filterSplitPaths(paths, afs1)
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
+            val targetWalker = Array.fill(config.numWalks)(Array((target, Array(target)))).flatMap(a => a)
+            val walkers = filterSplitPaths(paths, afs1).union(context.parallelize(targetWalker))
             val ns = computeNumSteps(walkers)
             numSteps(i)(j) = ns
             val partialPaths = firstOrderWalk(walkers)
@@ -212,17 +217,20 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
         }
       }
       case RrType.m4 => {
-        val init = initRandomWalk(g1)
         for (i <- 0 until config.numRuns) {
-          val seed = System.currentTimeMillis()
-          val r = new Random(seed)
-          val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
           for (j <- 0 until vertices.length) {
-            val target = vertices(j)
+            val seed = System.currentTimeMillis()
+            val r = new Random(seed)
+            val target: Int = vertices(j)
+            val g2 = removeVertex(g1, target)
+            val init = initRandomWalk(g2)
+            val paths = firstOrderWalk(init, nextFloat = r.nextFloat)
             logger.info(s"Added vertex $target")
             println(s"Added vertex $target")
+            initRandomWalk(g1)
             val afs1 = GraphMap.getNeighbors(target).map { case (v, w) => v }
-            val walkers = filterWalkers(paths, afs1)
+            val targetWalker = Array.fill(config.numWalks)(Array((target, Array(target)))).flatMap(a => a)
+            val walkers = filterWalkers(paths, afs1).union(context.parallelize(targetWalker))
             val ns = computeNumSteps(walkers)
             numSteps(i)(j) = ns
             val partialPaths = firstOrderWalk(walkers)
@@ -242,7 +250,7 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     filterWalkers(paths, afs1).reduceByKey((a, b) => a)
   }
 
-  def filterWalkers(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+  def filterWalkers(paths: RDD[Array[Int]], afs1: Array[Int]): RDD[(Int, Array[Int])] = {
     filterAffectedPaths(paths, afs1).map(a => (a.head, Array(a.head)))
   }
 
@@ -366,9 +374,9 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
     ).persist(StorageLevel.MEMORY_AND_DISK)
 
     val pCount = paths.count()
-//    if (pCount != config.numWalks * nVertices) {
-//      println(s"Inconsistent number of paths: nPaths=[${pCount}] != vertices[$nVertices]")
-//    }
+    //    if (pCount != config.numWalks * nVertices) {
+    //      println(s"Inconsistent number of paths: nPaths=[${pCount}] != vertices[$nVertices]")
+    //    }
     //    totalPaths = totalPaths.union(paths).persist(StorageLevel
     //      .MEMORY_AND_DISK)
     //
@@ -406,7 +414,7 @@ case class UniformRandomWalk(context: SparkContext, config: Params) extends Seri
       case (path) =>
         val pathString = path.mkString("\t")
         s"$pathString"
-    }.repartition(1).saveAsTextFile(s"${config.output}/${Property.removeAndRunSuffix}/$suffix")
+    }.repartition(1).saveAsTextFile(s"${config.output}/${config.cmd}/$suffix")
     paths
   }
 
