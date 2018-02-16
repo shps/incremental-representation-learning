@@ -1,7 +1,7 @@
 package au.csiro.data61.randomwalk.algorithm
 
-import au.csiro.data61.randomwalk.common.CommandParser.{RrType, TaskName}
-import au.csiro.data61.randomwalk.common.Params
+import au.csiro.data61.randomwalk.common.CommandParser.TaskName
+import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.BeforeAndAfter
 
@@ -72,7 +72,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
   test("remove vertex") {
     val config = Params(input = karate, directed = false)
     val rw = UniformRandomWalk(sc, config)
-    val before = rw.readFromFile(config)
+    val before = FileManager(sc, config).readFromFile()
     for (target <- 1 until 34) {
       rw.buildGraphMap(before)
       val neighbors = GraphMap.getNeighbors(target)
@@ -81,7 +81,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
         nDegrees.put(n._1, GraphMap.getNeighbors(n._1).length)
       }
 
-      val after = rw.removeVertex(before, target)
+      val after = Experiments(sc, config).removeVertex(before, target)
       assert(after.count() == 33)
       assert(after.filter(_._1 == target).count() == 0)
       rw.buildGraphMap(after)
@@ -101,7 +101,8 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
   test("graph map load after removal") {
     val config = Params(input = karate, directed = false)
     val rw = UniformRandomWalk(sc, config)
-    val before = rw.readFromFile(config)
+    val exp = Experiments(sc, config)
+    val before = FileManager(sc, config).readFromFile()
     for (target <- 1 until 34) {
       rw.buildGraphMap(before)
       val neighbors = GraphMap.getNeighbors(target)
@@ -110,7 +111,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
         nDegrees.put(n._1, GraphMap.getNeighbors(n._1).length)
       }
 
-      val after = rw.removeVertex(before, target)
+      val after = exp.removeVertex(before, target)
       rw.buildGraphMap(after)
       rw.buildGraphMap(before)
       val neighbors2 = GraphMap.getNeighbors(target)
@@ -130,7 +131,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val afs = Array(1, 5, 6)
     val pRdd = sc.parallelize(Array(p1, p2, p3))
     val config = Params()
-    val rw = UniformRandomWalk(sc, config)
+    val rw = Experiments(sc, config)
     val result = rw.filterAffectedPaths(pRdd, afs).collect()
     assert(result.size == 2)
     assert(result(0) sameElements p1)
@@ -145,7 +146,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val afs = Array(1, 5, 6)
     val pRdd = sc.parallelize(Array(p1, p2, p3, p4))
     val config = Params()
-    val rw = UniformRandomWalk(sc, config)
+    val rw = Experiments(sc, config)
     val result = rw.filterSplitPaths(pRdd, afs).collect()
     assert(result.size == 3)
     val vertices = result.map(_._1)
@@ -178,7 +179,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val paths = rw.firstOrderWalk(graph, nextFloatGen)
     assert(paths.count() == 2 * rw.nVertices) // a path per vertex
     val rw2 = UniformRandomWalk(sc, config)
-    val gMap = rw2.readFromFile(config).collectAsMap()
+    val gMap = FileManager(sc, config).readFromFile().collectAsMap()
     val rSampler = RandomSample(nextFloatGen)
     paths.collect().foreach { case (p: Array[Int]) =>
       val p2 = doFirstOrderRandomWalk(gMap, p(0), wLength, rSampler)
@@ -279,4 +280,12 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     path
   }
 
+  test("analyze")
+  {
+    val config = Params(input=karate, directed = false, rddPartitions = 10)
+    val ea = ExperimentAnalyzer(sc, config)
+    val rw = UniformRandomWalk(sc, config)
+    rw.loadGraph()
+    ea.analyze(rw.degrees())
+  }
 }
