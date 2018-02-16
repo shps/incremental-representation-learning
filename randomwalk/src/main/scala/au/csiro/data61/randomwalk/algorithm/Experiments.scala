@@ -21,86 +21,62 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
     val vertices: Array[Int] = g1.map(_._1).collect()
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     for (i <- 0 until config.numRuns) {
-      breakable {
-        for (j <- 0 until vertices.length) {
-          val target = vertices(j)
-          val g2 = removeVertex(g1, target)
-          val init = rwalk.initRandomWalk(g2)
-          val paths = rwalk.firstOrderWalk(init)
-          //            println(s"Before adding $target")
-          //            checkGraphMap()
-          rwalk.buildGraphMap(g1)
-          println(s"Added vertex $target")
-          val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
-          config.rrType match {
-            case RrType.m1 => {
-              val init = rwalk.initRandomWalk(g1)
-              //        checkGraphMap()
-              val ns = computeNumSteps(init)
-              numSteps(i) = Array.fill(vertices.length)(ns)
-              val p = rwalk.firstOrderWalk(init)
-              //          val summary = p.map(a => (a.head, (1, a.length))).reduceByKey((a,b)=>(a
-              // ._1+b._1,a._2+b._2))
-              //          println(s"Partial Paths: ${summary.count()}\n${summary.collect()
-              // .mkString("
-              // ")}")
-              fm.save(p, s"${config.rrType.toString}-$i")
-              break
-            }
-            case RrType.m2 => {
-              //            println(s"+$target -> ${afs1.mkString(" ")}")
-              //            checkGraphMap()
-              val fWalkers: Array[(Int, Array[Int])] = filterUniqueWalkers(
-                paths, afs1).collect() ++ Array((target, Array(target)))
-              //            println(s"Unique Walkers: ${fWalkers.length}\tdistinct: ${fWalkers
-              // .map(_._1).distinct.length}")
-              val walkers: RDD[(Int, Array[Int])] = context.parallelize(Array.fill(config
-                .numWalks)(fWalkers).flatMap(a => a), numSlices = config.rddPartitions)
-              //            println(s"Walkers: ${walkers.count()}\tdistinct: ${walkers.map(_._1)
-              // .distinct().count()}\nEach Key: ${walkers.map { case (a, _) => (a, 1) }
-              // .reduceByKey(_ + _).collect().mkString(" ")}")
-              val ns = computeNumSteps(walkers)
-              numSteps(i)(j) = ns
-              val pp = rwalk.firstOrderWalk(walkers)
-              //            val summary = pp.map(a => (a.head, (1, a.length))).reduceByKey((a,b)
-              // =>(a._1+b._1,a._2+b._2))
-              //            println(s"Partial Paths: ${summary.count()}\n${summary.collect()
-              // .mkString(" ")}")
-              val aws = fWalkers.map(tuple => tuple._1)
-              val up = paths.filter { case p =>
-                !aws.contains(p.head)
+      config.rrType match {
+        case RrType.m1 => {
+          val init = rwalk.initRandomWalk(g1)
+          val ns = computeNumSteps(init)
+          numSteps(i) = Array.fill(vertices.length)(ns)
+          val p = rwalk.firstOrderWalk(init)
+          fm.save(p, s"${config.rrType.toString}-$i")
+        }
+        case _ =>
+          for (j <- 0 until vertices.length) {
+            val target = vertices(j)
+            val g2 = removeVertex(g1, target)
+            val init = rwalk.initRandomWalk(g2)
+            val paths = rwalk.firstOrderWalk(init)
+            rwalk.buildGraphMap(g1)
+            println(s"Added vertex $target")
+            val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
+            config.rrType match {
+              case RrType.m2 => {
+                val fWalkers: Array[(Int, Array[Int])] = filterUniqueWalkers(
+                  paths, afs1).collect() ++ Array((target, Array(target)))
+                val walkers: RDD[(Int, Array[Int])] = context.parallelize(Array.fill(config
+                  .numWalks)(fWalkers).flatMap(a => a), numSlices = config.rddPartitions)
+                val ns = computeNumSteps(walkers)
+                numSteps(i)(j) = ns
+                val pp = rwalk.firstOrderWalk(walkers)
+                val aws = fWalkers.map(tuple => tuple._1)
+                val up = paths.filter { case p =>
+                  !aws.contains(p.head)
+                }
+
+                val np = up.union(pp)
+                fm.save(np, s"${config.rrType.toString}-v${target.toString}-$i")
+              }
+              case RrType.m3 => {
+                val walkers = filterSplitPaths(paths, afs1).union(rwalk.initWalker(target))
+                val ns = computeNumSteps(walkers)
+                numSteps(i)(j) = ns
+                val partialPaths = rwalk.firstOrderWalk(walkers)
+                val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
+                val newPaths = unaffectedPaths.union(partialPaths)
+                fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
+              }
+              case RrType.m4 => {
+                val walkers = filterWalkers(paths, afs1).union(rwalk.initWalker(target))
+                val ns = computeNumSteps(walkers)
+                numSteps(i)(j) = ns
+                val partialPaths = rwalk.firstOrderWalk(walkers)
+                val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
+                val newPaths = unaffectedPaths.union(partialPaths)
+                fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
               }
 
-              //            println(s"Unaffected paths: ${up.count()}\t${up.map(a => (a.head, 1))
-              // .reduceByKey(_ + _).collect().mkString(" ")}")
-              val np = up.union(pp)
-              //            val summary2 = np.map(a => (a.head, (1, a.length))).reduceByKey((a,b)
-              // =>(a._1+b._1,a._2+b._2))
-              //            println(s"Partial Paths: ${summary2.count()}\n${summary2.collect()
-              // .mkString(" ")}")
-              fm.save(np, s"${config.rrType.toString}-v${target.toString}-$i")
-            }
-            case RrType.m3 => {
-              val walkers = filterSplitPaths(paths, afs1).union(rwalk.initWalker(target))
-              val ns = computeNumSteps(walkers)
-              numSteps(i)(j) = ns
-              val partialPaths = rwalk.firstOrderWalk(walkers)
-              val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
-              val newPaths = unaffectedPaths.union(partialPaths)
-              fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
-            }
-            case RrType.m4 => {
-              val walkers = filterWalkers(paths, afs1).union(rwalk.initWalker(target))
-              val ns = computeNumSteps(walkers)
-              numSteps(i)(j) = ns
-              val partialPaths = rwalk.firstOrderWalk(walkers)
-              val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
-              val newPaths = unaffectedPaths.union(partialPaths)
-              fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
             }
           }
 
-        }
       }
     }
 
@@ -145,30 +121,21 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
   }
 
   def filterSplitPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    //    filterAffectedPaths(paths, afs1).map { a =>
-    //      val first = a.indexWhere(e => afs1.contains(e))
-    //      (a.head, a.splitAt(first + 1)._1)
-    //    }
-    filterAffectedPaths(paths, afs1).map {
-      a =>
-        (a.head, Array(a.head))
+    filterAffectedPaths(paths, afs1).map { a =>
+      val first = a.indexWhere(e => afs1.contains(e))
+      (a.head, a.splitAt(first + 1)._1)
     }
   }
 
   def filterAffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    //    paths.filter { case p =>
-    //      !p.forall(s => !afs1.contains(s))
-    //    }
-    paths
+    paths.filter { case p =>
+      !p.forall(s => !afs1.contains(s))
+    }
   }
 
   def filterUnaffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    //    paths.filter { case p =>
-    //      p.forall(s => !afs1.contains(s))
-    //    }
-    paths.filter {
-      case p =>
-        false
+    paths.filter { case p =>
+      p.forall(s => !afs1.contains(s))
     }
   }
 
