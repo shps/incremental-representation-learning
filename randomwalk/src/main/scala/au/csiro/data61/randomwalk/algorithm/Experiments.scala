@@ -6,7 +6,6 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
 import scala.util.Random
-import scala.util.control.Breaks._
 
 /**
   * Created by Hooman on 2018-02-16.
