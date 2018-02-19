@@ -1,7 +1,7 @@
 package au.csiro.data61.randomwalk.algorithm
 
 import au.csiro.data61.randomwalk.common.CommandParser.RrType
-import au.csiro.data61.randomwalk.common.{FileManager, Params}
+import au.csiro.data61.randomwalk.common.{FileManager, Params, Property}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -17,19 +17,22 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
 
   def addAndRun(): Unit = {
     val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1).collect()
+    val vertices: Array[Int] = g1.map(_._1).collect().sortWith((a, b) => a < b)
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
+    val numWalkers = Array.ofDim[Int](config.numRuns, vertices.length)
     for (i <- 0 until config.numRuns) {
       config.rrType match {
         case RrType.m1 => {
           val init = rwalk.initRandomWalk(g1)
           val ns = computeNumSteps(init)
+          val nw = computeNumWalkers(init)
           numSteps(i) = Array.fill(vertices.length)(ns)
+          numWalkers(i) = Array.fill(vertices.length)(nw)
           val p = rwalk.firstOrderWalk(init)
-          fm.save(p, s"${config.rrType.toString}-$i")
+          fm.save(p, s"${config.rrType.toString}-wl${config.walkLength}-nw${config.numWalks}-$i")
         }
         case _ =>
-          for (j <- 0 until vertices.length) {
+          for (j <- 0 until math.min(config.numVertices, vertices.length)) {
             val target = vertices(j)
             val g2 = removeVertex(g1, target)
             val init = rwalk.initRandomWalk(g2)
@@ -44,7 +47,9 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
                 val walkers: RDD[(Int, Array[Int])] = context.parallelize(Array.fill(config
                   .numWalks)(fWalkers).flatMap(a => a), numSlices = config.rddPartitions)
                 val ns = computeNumSteps(walkers)
+                val nw = computeNumWalkers(walkers)
                 numSteps(i)(j) = ns
+                numWalkers(i)(j) = nw
                 val pp = rwalk.firstOrderWalk(walkers)
                 val aws = fWalkers.map(tuple => tuple._1)
                 val up = paths.filter { case p =>
@@ -52,25 +57,32 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
                 }
 
                 val np = up.union(pp)
-                fm.save(np, s"${config.rrType.toString}-v${target.toString}-$i")
+                fm.save(np, s"${config.rrType.toString}-wl${config.walkLength}-nw${config
+                  .numWalks}-v${target.toString}-$i")
               }
               case RrType.m3 => {
                 val walkers = filterSplitPaths(paths, afs1).union(rwalk.initWalker(target))
                 val ns = computeNumSteps(walkers)
+                val nw = computeNumWalkers(walkers)
                 numSteps(i)(j) = ns
+                numWalkers(i)(j) = nw
                 val partialPaths = rwalk.firstOrderWalk(walkers)
                 val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
                 val newPaths = unaffectedPaths.union(partialPaths)
-                fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
+                fm.save(newPaths, s"${config.rrType.toString}-wl${config.walkLength}-nw${config
+                  .numWalks}-v${target.toString}-$i")
               }
               case RrType.m4 => {
                 val walkers = filterWalkers(paths, afs1).union(rwalk.initWalker(target))
                 val ns = computeNumSteps(walkers)
+                val nw = computeNumWalkers(walkers)
                 numSteps(i)(j) = ns
+                numWalkers(i)(j) = nw
                 val partialPaths = rwalk.firstOrderWalk(walkers)
                 val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
                 val newPaths = unaffectedPaths.union(partialPaths)
-                fm.save(newPaths, s"${config.rrType.toString}-v${target.toString}-$i")
+                fm.save(newPaths, s"${config.rrType.toString}-wl${config.walkLength}-nw${config
+                  .numWalks}-v${target.toString}-$i")
               }
 
             }
@@ -79,7 +91,8 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
       }
     }
 
-    fm.save(vertices, numSteps)
+    fm.save(vertices, numSteps, Property.stepsToCompute.toString)
+    fm.save(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
 
@@ -145,4 +158,7 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
     }.reduce(_ + _)
   }
 
+  def computeNumWalkers(walkers: RDD[(Int, Array[Int])]) = {
+    walkers.count().toInt
+  }
 }

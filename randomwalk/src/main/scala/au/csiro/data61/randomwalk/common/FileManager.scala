@@ -51,8 +51,8 @@ case class FileManager(context: SparkContext, config: Params) {
     bw.close()
   }
 
-  def save(vertices: Array[Int], numSteps: Array[Array[Int]]): Unit = {
-    val file = new File(s"${config.output}/${config.rrType}-${Property.stepsToCompute}.txt")
+  def save(vertices: Array[Int], numSteps: Array[Array[Int]], suffix:String): Unit = {
+    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${config.walkLength}-nw${config.numWalks}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(s"${vertices.mkString("\t")}\n")
     for (steps <- numSteps) {

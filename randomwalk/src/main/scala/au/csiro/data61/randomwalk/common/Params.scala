@@ -17,4 +17,5 @@ case class Params(walkLength: Int = 80,
                   numRuns: Int = 1,
                   nodes: String = "",
                   rrType: RrType = RrType.m1,
+                  numVertices: Int = 34,
                   cmd: TaskName = TaskName.firstorder) extends AbstractParams[Params]

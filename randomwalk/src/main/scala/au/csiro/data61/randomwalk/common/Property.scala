@@ -9,4 +9,5 @@ object Property extends Enumeration {
   val degreeSuffix = Value(s"degrees")
   val affecteds = Value(s"affecteds")
   val stepsToCompute = Value(s"steps-to-compute")
+  val walkersToCompute = Value(s"walkers-to-compute")
 }

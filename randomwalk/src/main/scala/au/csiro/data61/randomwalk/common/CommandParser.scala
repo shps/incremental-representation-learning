@@ -26,6 +26,7 @@ object CommandParser {
   val OUTPUT = "output"
   val CMD = "cmd"
   val NODE_IDS = "nodes"
+  val NUM_VERTICES = "nVertices"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -39,6 +40,9 @@ object CommandParser {
     opt[Int](NUM_RUNS)
       .text(s"numWalks: ${defaultParams.numRuns}")
       .action((x, c) => c.copy(numRuns = x))
+    opt[Int](NUM_VERTICES)
+      .text(s"numWalks: ${defaultParams.numVertices}")
+      .action((x, c) => c.copy(numVertices = x))
     opt[Int](AL)
       .text(s"numWalks: ${defaultParams.affectedLength}")
       .action((x, c) => c.copy(affectedLength = x))
