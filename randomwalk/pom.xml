@@ -15,11 +15,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <shadedClassifier>bin</shadedClassifier>
-        <maven-shade-plugin.version>3.1.0</maven-shade-plugin.version>
-        <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <java.version>1.8</java.version>
-        <scala.binary.version>2.11</scala.binary.version>
     </properties>
 
     <repositories>
@@ -93,14 +89,27 @@
                     <skip>false</skip>
                 </configuration>
             </plugin>
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-resources-plugin</artifactId>-->
-                <!--<version>3.0.2</version>-->
-                <!--<configuration>-->
-                    <!--<encoding>UTF-8</encoding>-->
-                <!--</configuration>-->
-            <!--</plugin>-->
+            <plugin>
+                <!-- Build an executable JAR -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>au.csiro.data61.randomwalk.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
         </plugins>
         <testResources>
             <testResource>
@@ -110,39 +119,38 @@
     </build>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/log4j/log4j -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>${scala.binary.version}.8</version>
-            <scope>provided</scope>
+            <version>2.12.4</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.11</artifactId>
-            <version>2.2.0</version>
-            <scope>provided</scope>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-reflect</artifactId>
+            <version>2.12.4</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.pathikrit/better-files -->
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-mllib_2.11</artifactId>
-            <version>2.2.0</version>
-            <scope>provided</scope>
+            <groupId>com.github.pathikrit</groupId>
+            <artifactId>better-files_2.12</artifactId>
+            <version>3.4.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.scopt</groupId>
-            <artifactId>scopt_${scala.binary.version}</artifactId>
+            <artifactId>scopt_2.12</artifactId>
             <version>3.7.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-library</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_2.11</artifactId>
-            <version>3.0.4</version>
+            <artifactId>scalatest_2.12</artifactId>
+            <version>3.2.0-SNAP10</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -2,22 +2,22 @@ package au.csiro.data61.randomwalk.algorithm
 
 import au.csiro.data61.randomwalk.common.CommandParser.RrType
 import au.csiro.data61.randomwalk.common.{FileManager, Params, Property}
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 
 import scala.util.Random
 
 /**
   * Created by Hooman on 2018-02-16.
   */
-case class Experiments(context: SparkContext, config: Params) extends Serializable {
+case class Experiments(config: Params) extends Serializable {
 
-  val fm = FileManager(context, config)
-  val rwalk = UniformRandomWalk(context, config)
+  val fm = FileManager(config)
+  val rwalk = UniformRandomWalk(config)
+  val ADD = 1
+  val REM = 0
 
   def addAndRun(): Unit = {
     val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1).collect().sortWith((a, b) => a < b)
+    val vertices: Array[Int] = g1.map(_._1).sortWith((a, b) => a < b)
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, vertices.length)
     for (i <- 0 until config.numRuns) {
@@ -41,9 +41,9 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
           }
           case RrType.m2 => {
             val fWalkers: Array[(Int, Array[Int])] = filterUniqueWalkers(
-              paths, afs1).collect() ++ Array((target, Array(target)))
-            val walkers: RDD[(Int, Array[Int])] = context.parallelize(Array.fill(config
-              .numWalks)(fWalkers).flatMap(a => a), numSlices = config.rddPartitions)
+              paths, afs1) ++ Array((target, Array(target)))
+            val walkers: Array[(Int, Array[Int])] = Array.fill(config
+              .numWalks)(fWalkers).flatMap(a => a)
             val ns = computeNumSteps(walkers)
             val nw = computeNumWalkers(walkers)
             numSteps(i)(j) = ns
@@ -94,10 +94,32 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
     fm.save(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
+  def extractEdges(g1: Array[(Int, Array[(Int, Float)])]): Array[(Int, Int)] = {
+    g1.flatMap { case (src, neighbors) =>
+      neighbors.map { case (dst, _) => (src, dst) }
+    }
+  }
+
+  def streamingUpdates(): Unit = {
+    val g1 = fm.readFromFile()
+    val vertices: Array[Int] = g1.map(_._1).sortWith((a, b) => a < b)
+    val edges: Array[(Int, Int)] = extractEdges(g1)
+    print(s"Number of edges: ${edges.length}")
+    var g2 = null
+    for (i <- 0 until config.numRuns) {
+      val rand = new Random(config.seed + i)
+//      val sEdges = rand.shuffle(edges)
+//      for (e <- sEdges) {
+//
+//      }
+
+    }
+  }
+
 
   def removeAndRun(): Unit = {
     val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1).collect()
+    val vertices: Array[Int] = g1.map(_._1)
     for (target <- vertices) {
       println(s"Removed vertex $target")
       val g2 = removeVertex(g1, target)
@@ -113,25 +135,26 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
     }
   }
 
-  def removeVertex(g: RDD[(Int, Array[(Int, Float)])], target: Int): RDD[(Int, Array[(Int, Float)
-    ])] = {
-    val bcTarget = context.broadcast(target)
+  def removeVertex(g: Array[(Int, Array[(Int, Float)])], target: Int): Array[(Int, Array[(Int,
+    Float)])] = {
     g.filter(_._1 != target).map {
       case (vId, neighbors) =>
-        val filtered = neighbors.filter(_._1 != bcTarget.value)
+        val filtered = neighbors.filter(_._1 != target)
         (vId, filtered)
     }
   }
 
-  def filterUniqueWalkers(paths: RDD[Array[Int]], afs1: Array[Int]) = {
-    filterWalkers(paths, afs1).reduceByKey((a, b) => a)
+  def filterUniqueWalkers(paths: Array[Array[Int]], afs1: Array[Int]) = {
+    filterWalkers(paths, afs1).groupBy(_._1).map { case (_, p) =>
+      p.head
+    }.toArray
   }
 
-  def filterWalkers(paths: RDD[Array[Int]], afs1: Array[Int]): RDD[(Int, Array[Int])] = {
+  def filterWalkers(paths: Array[Array[Int]], afs1: Array[Int]): Array[(Int, Array[Int])] = {
     filterAffectedPaths(paths, afs1).map(a => (a.head, Array(a.head)))
   }
 
-  def filterSplitPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+  def filterSplitPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
     filterAffectedPaths(paths, afs1).map {
       a =>
         val first = a.indexWhere(e => afs1.contains(e))
@@ -139,28 +162,28 @@ case class Experiments(context: SparkContext, config: Params) extends Serializab
     }
   }
 
-  def filterAffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+  def filterAffectedPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
     paths.filter {
       case p =>
         !p.forall(s => !afs1.contains(s))
     }
   }
 
-  def filterUnaffectedPaths(paths: RDD[Array[Int]], afs1: Array[Int]) = {
+  def filterUnaffectedPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
     paths.filter {
       case p =>
         p.forall(s => !afs1.contains(s))
     }
   }
 
-  def computeNumSteps(walkers: RDD[(Int, Array[Int])]) = {
-    val bcWalkLength = context.broadcast(config.walkLength + 1)
+  def computeNumSteps(walkers: Array[(Int, Array[Int])]) = {
+    val bcWalkLength = config.walkLength + 1
     walkers.map {
-      case (_, path) => bcWalkLength.value - path.length
+      case (_, path) => bcWalkLength - path.length
     }.reduce(_ + _)
   }
 
-  def computeNumWalkers(walkers: RDD[(Int, Array[Int])]) = {
-    walkers.count().toInt
+  def computeNumWalkers(walkers: Array[(Int, Array[Int])]) = {
+    walkers.length
   }
 }

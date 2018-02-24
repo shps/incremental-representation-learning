@@ -2,57 +2,53 @@ package au.csiro.data61.randomwalk.common
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import org.apache.spark.{HashPartitioner, SparkContext}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
-
+import better.files._
+import scala.io.Source
 import scala.util.Try
 
 /**
   * Created by Hooman on 2018-02-16.
   */
-case class FileManager(context: SparkContext, config: Params) {
+case class FileManager(config: Params) {
 
-  lazy val partitioner: HashPartitioner = new HashPartitioner(config.rddPartitions)
+  def readFromFile(): Array[(Int, Array[(Int, Float)])] = {
+    val lines = Source.fromFile(config.input).getLines.toArray
 
-  def readFromFile(): RDD[(Int, Array[(Int, Float)])] = {
-    // the directed and weighted parameters are only used for building the graph object.
-    // is directed? they will be shared among stages and executors
-    val bcDirected = context.broadcast(config.directed)
-    val bcWeighted = context.broadcast(config.weighted) // is weighted?
-    context.textFile(config.input, minPartitions
-      = config
-      .rddPartitions).flatMap { triplet =>
+    lines.flatMap { triplet =>
       val parts = triplet.split("\\s+")
       // if the weights are not specified it sets it to 1.0
 
-      val weight = bcWeighted.value && parts.length > 2 match {
+      val weight = config.weighted && parts.length > 2 match {
         case true => Try(parts.last.toFloat).getOrElse(1.0f)
         case false => 1.0f
       }
 
       val (src, dst) = (parts.head.toInt, parts(1).toInt)
-      if (bcDirected.value) {
+      if (config.directed) {
         Array((src, Array((dst, weight))), (dst, Array.empty[(Int, Float)]))
       } else {
         Array((src, Array((dst, weight))), (dst, Array((src, weight))))
       }
-    }.
-      reduceByKey(_ ++ _).
-      partitionBy(partitioner).
-      persist(StorageLevel.MEMORY_AND_DISK)
+    }.groupBy(_._1).map { case (src, edges) =>
+      var neighbors = Array.empty[(Int, Float)]
+      edges.foreach(neighbors ++= _._2)
+      (src, neighbors)
+    }.toArray
   }
 
   def save(probs: Array[Array[Double]]): Unit = {
-    val file = new File(s"${config.output}.${Property.probSuffix}.txt")
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${Property.probSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(probs.map(array => array.map(a => f"$a%1.4f").mkString("\t")).mkString("\n"))
     bw.flush()
     bw.close()
   }
 
-  def save(vertices: Array[Int], numSteps: Array[Array[Int]], suffix:String): Unit = {
-    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${config.walkLength}-nw${config.numWalks}.txt")
+  def save(vertices: Array[Int], numSteps: Array[Array[Int]], suffix: String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
+      config.walkLength}-nw${config.numWalks}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(s"${vertices.mkString("\t")}\n")
     for (steps <- numSteps) {
@@ -63,35 +59,47 @@ case class FileManager(context: SparkContext, config: Params) {
 
   }
 
-  def save(paths: RDD[Array[Int]], suffix: String): RDD[Array[Int]] = {
-
-    paths.map {
-      case (path) =>
+  def save(paths: Array[Array[Int]], suffix: String): Array[Array[Int]] = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(paths.map { case (path) =>
         val pathString = path.mkString("\t")
         s"$pathString"
-    }.repartition(1).saveAsTextFile(s"${config.output}/${config.cmd}/$suffix")
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
     paths
   }
 
-  def save(paths: RDD[Array[Int]]): RDD[Array[Int]] = {
-
-    paths.map {
+  def save(paths: Array[Array[Int]]): Array[Array[Int]] = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${Property.pathSuffix}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(paths.map {
       case (path) =>
         val pathString = path.mkString("\t")
         s"$pathString"
-    }.repartition(config.rddPartitions).saveAsTextFile(s"${config.output}.${Property.pathSuffix}")
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
     paths
   }
 
   def saveCounts(counts: Array[(Int, (Int, Int))]) = {
-
-    context.parallelize(counts, config.rddPartitions).sortBy(_._2._2, ascending = false).map {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${Property.countsSuffix}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(counts.sortWith(_._2._2 > _._2._2).map {
       case (vId, (count, occurs)) =>
         s"$vId\t$count\t$occurs"
-    }.repartition(1).saveAsTextFile(s"${config.output}.${Property.countsSuffix}")
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
   }
 
   def save(degrees: Array[(Int, Int)]) = {
+    config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.degreeSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(degrees.map { case (v, d) => s"$v\t$d" }.mkString("\n"))
@@ -99,10 +107,12 @@ case class FileManager(context: SparkContext, config: Params) {
     bw.close()
   }
 
-  def saveAffecteds(afs: RDD[(Int, Array[Int])]) = {
-    afs.map {
-      case (vId, af) =>
-        s"$vId\t${af.mkString("\t")}"
-    }.repartition(1).saveAsTextFile(s"${config.output}.${Property.affecteds}")
+  def saveAffecteds(afs: Array[(Int, Array[Int])]) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${Property.affecteds}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(afs.map { case (vId, af) => s"$vId\t${af.mkString("\t")}" }.mkString("\n"))
+    bw.flush()
+    bw.close()
   }
 }
