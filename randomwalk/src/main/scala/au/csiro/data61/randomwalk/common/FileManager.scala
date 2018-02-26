@@ -3,6 +3,7 @@ package au.csiro.data61.randomwalk.common
 import java.io.{BufferedWriter, File, FileWriter}
 
 import better.files._
+
 import scala.io.Source
 import scala.util.Try
 
@@ -11,7 +12,7 @@ import scala.util.Try
   */
 case class FileManager(config: Params) {
 
-  def readFromFile(): Array[(Int, Array[(Int, Float)])] = {
+  def readFromFile(directed: Boolean): Seq[(Int, Seq[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray
 
     lines.flatMap { triplet =>
@@ -24,19 +25,19 @@ case class FileManager(config: Params) {
       }
 
       val (src, dst) = (parts.head.toInt, parts(1).toInt)
-      if (config.directed) {
-        Array((src, Array((dst, weight))), (dst, Array.empty[(Int, Float)]))
+      if (directed) {
+        Seq((src, Seq((dst, weight))), (dst, Seq.empty[(Int, Float)]))
       } else {
-        Array((src, Array((dst, weight))), (dst, Array((src, weight))))
+        Seq((src, Seq((dst, weight))), (dst, Seq((src, weight))))
       }
     }.groupBy(_._1).map { case (src, edges) =>
-      var neighbors = Array.empty[(Int, Float)]
+      var neighbors = Seq.empty[(Int, Float)]
       edges.foreach(neighbors ++= _._2)
       (src, neighbors)
-    }.toArray
+    }.toSeq
   }
 
-  def save(probs: Array[Array[Double]]): Unit = {
+  def saveProbs(probs: Seq[Seq[Double]]): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.probSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -45,10 +46,11 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def save(vertices: Array[Int], numSteps: Array[Array[Int]], suffix: String): Unit = {
+  def saveNumSteps(vertices: Seq[Int], numSteps: Array[Array[Int]], suffix: String): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
-      config.walkLength}-nw${config.numWalks}.txt")
+      config.walkLength
+    }-nw${config.numWalks}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(s"${vertices.mkString("\t")}\n")
     for (steps <- numSteps) {
@@ -59,20 +61,31 @@ case class FileManager(config: Params) {
 
   }
 
-  def save(paths: Array[Array[Int]], suffix: String): Array[Array[Int]] = {
+  def savePaths(paths: Seq[Seq[Int]], suffix: String): Seq[Seq[Int]] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(paths.map { case (path) =>
-        val pathString = path.mkString("\t")
-        s"$pathString"
+      val pathString = path.mkString("\t")
+      s"$pathString"
     }.mkString("\n"))
     bw.flush()
     bw.close()
     paths
   }
 
-  def save(paths: Array[Array[Int]]): Array[Array[Int]] = {
+  def saveEdgeList(edges: Seq[(Int, (Int, Float))], suffix: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.rrType}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(edges.map { case (edge) =>
+      s"${edge._1}\t${edge._2._1}"
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def savePaths(paths: Seq[Seq[Int]]): Seq[Seq[Int]] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.pathSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -86,7 +99,7 @@ case class FileManager(config: Params) {
     paths
   }
 
-  def saveCounts(counts: Array[(Int, (Int, Int))]) = {
+  def saveCounts(counts: Seq[(Int, (Int, Int))]) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.countsSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -98,7 +111,7 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def save(degrees: Array[(Int, Int)]) = {
+  def saveDegrees(degrees: Seq[(Int, Int)]) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.degreeSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -107,7 +120,7 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def saveAffecteds(afs: Array[(Int, Array[Int])]) = {
+  def saveAffecteds(afs: Seq[(Int, Array[Int])]) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.affecteds}.txt")
     val bw = new BufferedWriter(new FileWriter(file))

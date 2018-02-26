@@ -6,7 +6,7 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr, ar = Value
+    val firstorder, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1 = Value
   }
 
   object RrType extends Enumeration {
@@ -27,6 +27,7 @@ object CommandParser {
   val CMD = "cmd"
   val NODE_IDS = "nodes"
   val NUM_VERTICES = "nVertices"
+  val SEED = "seed"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -46,6 +47,9 @@ object CommandParser {
     opt[Int](AL)
       .text(s"numWalks: ${defaultParams.affectedLength}")
       .action((x, c) => c.copy(affectedLength = x))
+    opt[Long](SEED)
+      .text(s"seed: ${defaultParams.seed}")
+      .action((x, c) => c.copy(seed = x))
     opt[Int](RDD_PARTITIONS)
       .text(s"Number of RDD partitions in running Random Walk and Word2vec: ${
         defaultParams

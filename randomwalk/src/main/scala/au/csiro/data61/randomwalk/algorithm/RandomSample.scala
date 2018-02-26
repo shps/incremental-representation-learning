@@ -9,7 +9,7 @@ case class RandomSample(nextFloat: () => Float = Random.nextFloat) extends Seria
     *
     * @return
     */
-  final def sample(edges: Array[(Int, Float)]): (Int, Float) = {
+  final def sample(edges: Seq[(Int, Float)]): (Int, Float) = {
 
     val sum = edges.foldLeft(0.0) { case (w1, (_, w2)) => w1 + w2 }
 

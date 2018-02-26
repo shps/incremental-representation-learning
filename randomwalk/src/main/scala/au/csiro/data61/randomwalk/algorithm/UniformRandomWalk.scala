@@ -10,8 +10,7 @@ import scala.util.control.Breaks.{break, breakable}
 
 case class UniformRandomWalk(config: Params) extends Serializable {
 
-  def computeAffecteds(vertices: Array[Int], affectedLength: Int): Array[(Int,
-    Array[Int])] = {
+  def computeAffecteds(vertices: Seq[Int], affectedLength: Int): Seq[(Int, Array[Int])] = {
 
     vertices.map { v =>
       def computeAffecteds(afs: Array[Int], visited: util.HashSet[Int], v: Int, al: Int,
@@ -20,7 +19,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           return
         visited.add(v)
         val neighbors = GraphMap.getNeighbors(v)
-        if (neighbors != null) {
+//        if (neighbors != null) {
           for (n <- neighbors) {
             if (!visited.contains(n._1)) {
               afs(length) += 1
@@ -28,7 +27,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
               computeAffecteds(afs, visited, n._1, al, length + 1)
             }
           }
-        }
+//        }
       }
 
       val affecteds = new Array[Int](affectedLength)
@@ -41,7 +40,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }.sortBy(_._2.last)
   }
 
-  def degrees(): Array[(Int, Int)] = {
+  def degrees(): Seq[(Int, Int)] = {
     val vertices = GraphMap.getVertices()
     val n = vertices.length
     val degs = new Array[(Int, Int)](n)
@@ -52,7 +51,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   }
 
 
-  def computeProbs(paths: Array[Array[Int]]): Array[Array[Double]] = {
+  def computeProbs(paths: Seq[Seq[Int]]): Array[Array[Double]] = {
     val n = GraphMap.getVertices().length
     val matrix = Array.ofDim[Double](n, n)
     paths.foreach { case p =>
@@ -74,7 +73,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   var nVertices: Int = 0
   var nEdges: Int = 0
 
-  def execute(): Array[Array[Int]] = {
+  def execute(): Seq[Seq[Int]] = {
     firstOrderWalk(loadGraph())
   }
 
@@ -83,9 +82,9 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     *
     * @return
     */
-  def loadGraph(): Array[(Int, Array[Int])] = {
+  def loadGraph(): Seq[(Int, Seq[Int])] = {
 
-    val g: Array[(Int, Array[(Int, Float)])] = FileManager(config).readFromFile()
+    val g: Seq[(Int, Seq[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
     initRandomWalk(g)
   }
 
@@ -98,12 +97,12 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }
   }
 
-  def initWalker(v: Int): Array[(Int, Array[Int])] = {
-    Array.fill(config.numWalks)(Array((v, Array(v)))).flatMap(a => a)
+  def initWalker(v: Int): Seq[(Int, Seq[Int])] = {
+    Seq.fill(config.numWalks)(Seq((v, Seq(v)))).flatMap(a => a)
   }
 
 
-  def initRandomWalk(g: Array[(Int, Array[(Int, Float)])]): Array[(Int, Array[Int])] = {
+  def initRandomWalk(g: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, Seq[Int])] = {
     buildGraphMap(g)
 
     nVertices = g.length
@@ -118,26 +117,30 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     createWalkers(g)
   }
 
-  def createWalkers(g: Array[(Int, Array[(Int, Float)])]): Array[(Int, Array[Int])] = {
+  def createWalkers(g: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, Seq[Int])] = {
     g.flatMap {
       case (vId: Int, _) =>
-        Array.fill(config.numWalks)((vId, Array(vId)))
+        Seq.fill(config.numWalks)((vId, Seq(vId)))
     }
   }
 
-  def firstOrderWalk(initPaths: Array[(Int, Array[Int])], nextFloat: () => Float = Random
-    .nextFloat): Array[Array[Int]] = {
+  def createWalkersByVertices(vertices: Seq[Int]): Seq[(Int, Seq[Int])] = {
+    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, Seq(vId)))}
+  }
+
+  def firstOrderWalk(initPaths: Seq[(Int, Seq[Int])], nextFloat: () => Float = Random
+    .nextFloat): Seq[Seq[Int]] = {
     val walkLength = config.walkLength
 
-    val paths: Array[Array[Int]] = initPaths.map { case (_, steps) =>
+    val paths: Seq[Seq[Int]] = initPaths.map { case (_, steps) =>
       var path = steps
       val rSample = RandomSample(nextFloat)
       breakable {
         while (path.length < walkLength + 1) {
           val neighbors = GraphMap.getNeighbors(path.last)
-          if (neighbors != null && neighbors.length > 0) {
+          if (neighbors.length > 0) {
             val (nextStep, _) = rSample.sample(neighbors)
-            path = path ++ Array(nextStep)
+            path = path ++ Seq(nextStep)
           } else {
             break
           }
@@ -149,7 +152,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     paths
   }
 
-  def buildGraphMap(graph: Array[(Int, Array[(Int, Float)])]): Unit = {
+  def buildGraphMap(graph: Seq[(Int, Seq[(Int, Float)])]): Unit = {
     GraphMap.reset // This is only to run on a single executor.
     graph.foreach { case (vId, neighbors) =>
       GraphMap.addVertex(vId, neighbors)
@@ -157,8 +160,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
   }
 
-  def queryPaths(paths: Array[Array[Int]]): Array[(Int, (Int, Int))] = {
-    var nodes: Array[Int] = Array.empty[Int]
+  def queryPaths(paths: Seq[Seq[Int]]): Seq[(Int, (Int, Int))] = {
+    var nodes: Seq[Int] = Seq.empty[Int]
     var numOccurrences: Array[(Int, (Int, Int))] = null
     if (config.nodes.isEmpty) {
       numOccurrences = paths.flatMap { case steps =>

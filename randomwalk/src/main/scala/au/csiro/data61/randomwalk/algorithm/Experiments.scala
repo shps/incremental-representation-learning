@@ -16,8 +16,8 @@ case class Experiments(config: Params) extends Serializable {
   val REM = 0
 
   def addAndRun(): Unit = {
-    val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1).sortWith((a, b) => a < b)
+    val g1 = fm.readFromFile(config.directed)
+    val vertices: Seq[Int] = g1.map(_._1).sortWith((a, b) => a < b)
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, vertices.length)
     for (i <- 0 until config.numRuns) {
@@ -40,9 +40,9 @@ case class Experiments(config: Params) extends Serializable {
             p
           }
           case RrType.m2 => {
-            val fWalkers: Array[(Int, Array[Int])] = filterUniqueWalkers(
-              paths, afs1) ++ Array((target, Array(target)))
-            val walkers: Array[(Int, Array[Int])] = Array.fill(config
+            val fWalkers: Seq[(Int, Seq[Int])] = filterUniqueWalkers(
+              paths, afs1) ++ Seq((target, Seq(target)))
+            val walkers: Seq[(Int, Seq[Int])] = Seq.fill(config
               .numWalks)(fWalkers).flatMap(a => a)
             val ns = computeNumSteps(walkers)
             val nw = computeNumWalkers(walkers)
@@ -81,7 +81,7 @@ case class Experiments(config: Params) extends Serializable {
           }
         }
 
-        fm.save(newPaths, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        fm.savePaths(newPaths, s"${config.rrType.toString}-wl${config.walkLength}-nw${
           config
             .numWalks
         }-v${target.toString}-$i")
@@ -90,36 +90,142 @@ case class Experiments(config: Params) extends Serializable {
     }
 
 
-    fm.save(vertices, numSteps, Property.stepsToCompute.toString)
-    fm.save(vertices, numWalkers, Property.walkersToCompute.toString)
+    fm.saveNumSteps(vertices, numSteps, Property.stepsToCompute.toString)
+    fm.saveNumSteps(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
-  def extractEdges(g1: Array[(Int, Array[(Int, Float)])]): Array[(Int, Int)] = {
+  def extractEdges(g1: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, (Int, Float))] = {
     g1.flatMap { case (src, neighbors) =>
-      neighbors.map { case (dst, _) => (src, dst) }
+      neighbors.map { case (dst, w) => (src, (dst, w)) }
     }
   }
 
   def streamingUpdates(): Unit = {
-    val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1).sortWith((a, b) => a < b)
-    val edges: Array[(Int, Int)] = extractEdges(g1)
+    val g1 = fm.readFromFile(directed = true) // read it as directed
+    val edges: Seq[(Int, (Int, Float))] = extractEdges(g1)
     print(s"Number of edges: ${edges.length}")
-    var g2 = null
-    for (i <- 0 until config.numRuns) {
-      val rand = new Random(config.seed + i)
-//      val sEdges = rand.shuffle(edges)
-//      for (e <- sEdges) {
-//
-//      }
-
+    val rand = new Random(config.seed)
+    val sEdges = rand.shuffle(edges)
+    for (ec <- 0 until sEdges.size) {
+      val e = sEdges(ec)
+      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}-s${e._1.toString}-d${e._2._1
+        .toString}")
     }
+    for (nr <- 0 until config.numRuns) {
+      GraphMap.reset
+      var prevWalks = Seq.empty[Seq[Int]]
+
+      for (ec <- 0 until sEdges.size) {
+        val e = sEdges(ec)
+        prevWalks = streamingAddAndRun(e, prevWalks)
+        val nEdges = GraphMap.getNumEdges
+        println(s"Number of edges: ${nEdges}")
+        println(s"Number of vertices: ${GraphMap.getNumVertices}")
+        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+          config.numWalks
+        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+
+      }
+    }
+  }
+
+  def streamingAddAndRun(targetEdge: (Int, (Int, Float)), paths: Seq[Seq[Int]]): Seq[Seq[Int]] = {
+    val src = targetEdge._1
+    val dst = targetEdge._2._1
+    val w = targetEdge._2._2
+    var sNeighbors = GraphMap.getNeighbors(src)
+    var dNeighbors = GraphMap.getNeighbors(dst)
+    sNeighbors ++= Seq((dst, w))
+    dNeighbors ++= Seq((src, w))
+    GraphMap.putVertex(src, sNeighbors)
+    GraphMap.putVertex(dst, dNeighbors)
+
+    println(s"Added Edge: $src <-> $dst")
+    var afs1 = GraphMap.getNeighbors(src).map { case (v, _) => v }
+    afs1 ++= GraphMap.getNeighbors(dst).map { case (v, _) => v }
+    afs1 = afs1.distinct
+
+    val newPaths = config.rrType match {
+      case RrType.m1 => {
+        val init = rwalk.createWalkersByVertices(GraphMap.getVertices())
+        val ns = computeNumSteps(init)
+        val nw = computeNumWalkers(init)
+        //        numSteps(i) = Array.fill(vertices.length)(ns)
+        //        numWalkers(i) = Array.fill(vertices.length)(nw)
+        val p = rwalk.firstOrderWalk(init)
+        p
+      }
+      case RrType.m2 => {
+        var fWalkers: Seq[(Int, Seq[Int])] = filterUniqueWalkers(paths, afs1)
+        if (paths.forall(_.head != src)) {
+          fWalkers ++= Seq((src, Seq(src)))
+        }
+        if (paths.forall(_.head != dst)) {
+          fWalkers ++= Seq((dst, Seq(dst)))
+        }
+        val walkers: Seq[(Int, Seq[Int])] = Seq.fill(config.numWalks)(fWalkers).flatMap(a => a)
+        val ns = computeNumSteps(walkers)
+        val nw = computeNumWalkers(walkers)
+        //        numSteps(i)(j) = ns
+        //        numWalkers(i)(j) = nw
+        val pp = rwalk.firstOrderWalk(walkers)
+        val aws = fWalkers.map(tuple => tuple._1)
+        val up = paths.filter { case p =>
+          !aws.contains(p.head)
+        }
+
+        val np = up.union(pp)
+        np
+      }
+      case RrType.m3 => {
+        var walkers = filterSplitPaths(paths, afs1)
+        if (paths.forall(_.head != src)) {
+          walkers ++= rwalk.initWalker(dst)
+        }
+        if (paths.forall(_.head != dst)) {
+          walkers ++= rwalk.initWalker(src)
+        }
+        //          .union(rwalk.initWalker(target))
+        val ns = computeNumSteps(walkers)
+        val nw = computeNumWalkers(walkers)
+        //        numSteps(i)(j) = ns
+        //        numWalkers(i)(j) = nw
+        val partialPaths = rwalk.firstOrderWalk(walkers)
+        val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
+        val newPaths = unaffectedPaths.union(partialPaths)
+        newPaths
+      }
+      case RrType.m4 => {
+        var walkers = filterWalkers(paths, afs1)
+        if (paths.forall(_.head != src)) {
+          walkers ++= rwalk.initWalker(dst)
+        }
+        if (paths.forall(_.head != dst)) {
+          walkers ++= rwalk.initWalker(src)
+        }
+
+        val ns = computeNumSteps(walkers)
+        val nw = computeNumWalkers(walkers)
+        //        numSteps(i)(j) = ns
+        //        numWalkers(i)(j) = nw
+        val partialPaths = rwalk.firstOrderWalk(walkers)
+        val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
+        val newPaths = unaffectedPaths.union(partialPaths)
+        newPaths
+      }
+    }
+
+    newPaths
+
+
+    //    fm.saveNumSteps(vertices, numSteps, Property.stepsToCompute.toString)
+    //    fm.saveNumSteps(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
 
   def removeAndRun(): Unit = {
-    val g1 = fm.readFromFile()
-    val vertices: Array[Int] = g1.map(_._1)
+    val g1 = fm.readFromFile(config.directed)
+    val vertices: Seq[Int] = g1.map(_._1)
     for (target <- vertices) {
       println(s"Removed vertex $target")
       val g2 = removeVertex(g1, target)
@@ -128,14 +234,14 @@ case class Experiments(config: Params) extends Serializable {
         val seed = System.currentTimeMillis()
         val r = new Random(seed)
         val paths = rwalk.firstOrderWalk(init, nextFloat = r.nextFloat)
-        fm.save(paths, s"v${
+        fm.savePaths(paths, s"v${
           target.toString
         }-$i-s$seed")
       }
     }
   }
 
-  def removeVertex(g: Array[(Int, Array[(Int, Float)])], target: Int): Array[(Int, Array[(Int,
+  def removeVertex(g: Seq[(Int, Seq[(Int, Float)])], target: Int): Seq[(Int, Seq[(Int,
     Float)])] = {
     g.filter(_._1 != target).map {
       case (vId, neighbors) =>
@@ -144,17 +250,18 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterUniqueWalkers(paths: Array[Array[Int]], afs1: Array[Int]) = {
-    filterWalkers(paths, afs1).groupBy(_._1).map { case (_, p) =>
-      p.head
-    }.toArray
+  def filterUniqueWalkers(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
+    filterWalkers(paths, afs1).groupBy(_._1).map {
+      case (_, p) =>
+        p.head
+    }.toSeq
   }
 
-  def filterWalkers(paths: Array[Array[Int]], afs1: Array[Int]): Array[(Int, Array[Int])] = {
-    filterAffectedPaths(paths, afs1).map(a => (a.head, Array(a.head)))
+  def filterWalkers(paths: Seq[Seq[Int]], afs1: Seq[Int]): Seq[(Int, Seq[Int])] = {
+    filterAffectedPaths(paths, afs1).map(a => (a.head, Seq(a.head)))
   }
 
-  def filterSplitPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
+  def filterSplitPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
     filterAffectedPaths(paths, afs1).map {
       a =>
         val first = a.indexWhere(e => afs1.contains(e))
@@ -162,28 +269,28 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterAffectedPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
+  def filterAffectedPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
     paths.filter {
       case p =>
         !p.forall(s => !afs1.contains(s))
     }
   }
 
-  def filterUnaffectedPaths(paths: Array[Array[Int]], afs1: Array[Int]) = {
+  def filterUnaffectedPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
     paths.filter {
       case p =>
         p.forall(s => !afs1.contains(s))
     }
   }
 
-  def computeNumSteps(walkers: Array[(Int, Array[Int])]) = {
+  def computeNumSteps(walkers: Seq[(Int, Seq[Int])]) = {
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path.length
     }.reduce(_ + _)
   }
 
-  def computeNumWalkers(walkers: Array[(Int, Array[Int])]) = {
+  def computeNumWalkers(walkers: Seq[(Int, Seq[Int])]) = {
     walkers.length
   }
 }

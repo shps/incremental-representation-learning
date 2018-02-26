@@ -1,6 +1,5 @@
 package au.csiro.data61.randomwalk.algorithm
 
-import org.apache.spark.graphx.Edge
 import org.scalatest.FunSuite
 
 class RandomSampleTest extends FunSuite {
@@ -21,12 +20,5 @@ class RandomSampleTest extends FunSuite {
     rValue = 0.7f
     random = RandomSample(nextFloat = () => rValue)
     assert(random.sample(edges) == e3)
-  }
-
-  def checkResult(result: Option[Edge[Float]], expected: Edge[Float]): Boolean = {
-    result match {
-      case Some(e) => e.equals(expected)
-      case None => false
-    }
   }
 }

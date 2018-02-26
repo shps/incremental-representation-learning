@@ -23,16 +23,16 @@ object Main {
     val paths = params.cmd match {
       case TaskName.firstorder =>
         val g = rw.loadGraph()
-        fm.save(rw.firstOrderWalk(g))
+        fm.savePaths(rw.firstOrderWalk(g))
       case TaskName.queryPaths =>
 //        context.textFile(params.input).repartition(params.rddPartitions).
 //          map(_.split("\\s+").map(s => s.toInt))
       case TaskName.probs =>
         val g = rw.loadGraph()
-        fm.save(rw.firstOrderWalk(g))
+        fm.savePaths(rw.firstOrderWalk(g))
       case TaskName.degrees =>
         rw.loadGraph()
-        fm.save(rw.degrees())
+        fm.saveDegrees(rw.degrees())
         null
       case TaskName.affecteds =>
         val vertices = rw.loadGraph().map { case (v, p) => v }
@@ -44,6 +44,9 @@ object Main {
         null
       case TaskName.ar =>
         exp.addAndRun()
+        null
+      case TaskName.s1 =>
+        exp.streamingUpdates()
         null
     }
 
