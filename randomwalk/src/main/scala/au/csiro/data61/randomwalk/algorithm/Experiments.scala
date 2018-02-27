@@ -106,9 +106,9 @@ case class Experiments(config: Params) extends Serializable {
     print(s"Number of edges: ${edges.length}")
     val rand = new Random(config.seed)
     val sEdges = rand.shuffle(edges)
-//    for (ec <- 0 until sEdges.size) {
-//      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
-//    }
+    for (ec <- 0 until sEdges.size) {
+      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
+    }
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
       var prevWalks = Seq.empty[Seq[Int]]
@@ -120,9 +120,9 @@ case class Experiments(config: Params) extends Serializable {
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         println(s"Number of walks: ${prevWalks.size}")
-//        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-//          config.numWalks
-//        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+          config.numWalks
+        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
 
       }
     }
