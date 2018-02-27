@@ -106,11 +106,9 @@ case class Experiments(config: Params) extends Serializable {
     print(s"Number of edges: ${edges.length}")
     val rand = new Random(config.seed)
     val sEdges = rand.shuffle(edges)
-    for (ec <- 0 until sEdges.size) {
-      val e = sEdges(ec)
-      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}-s${e._1.toString}-d${e._2._1
-        .toString}")
-    }
+//    for (ec <- 0 until sEdges.size) {
+//      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
+//    }
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
       var prevWalks = Seq.empty[Seq[Int]]
@@ -121,9 +119,10 @@ case class Experiments(config: Params) extends Serializable {
         val nEdges = GraphMap.getNumEdges
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
-        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-          config.numWalks
-        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+        println(s"Number of walks: ${prevWalks.size}")
+//        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+//          config.numWalks
+//        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
 
       }
     }
@@ -141,9 +140,7 @@ case class Experiments(config: Params) extends Serializable {
     GraphMap.putVertex(dst, dNeighbors)
 
     println(s"Added Edge: $src <-> $dst")
-    var afs1 = GraphMap.getNeighbors(src).map { case (v, _) => v }
-    afs1 ++= GraphMap.getNeighbors(dst).map { case (v, _) => v }
-    afs1 = afs1.distinct
+    val afs1 = Seq(src, dst)
 
     val newPaths = config.rrType match {
       case RrType.m1 => {
@@ -180,12 +177,11 @@ case class Experiments(config: Params) extends Serializable {
       case RrType.m3 => {
         var walkers = filterSplitPaths(paths, afs1)
         if (paths.forall(_.head != src)) {
-          walkers ++= rwalk.initWalker(dst)
-        }
-        if (paths.forall(_.head != dst)) {
           walkers ++= rwalk.initWalker(src)
         }
-        //          .union(rwalk.initWalker(target))
+        if (paths.forall(_.head != dst)) {
+          walkers ++= rwalk.initWalker(dst)
+        }
         val ns = computeNumSteps(walkers)
         val nw = computeNumWalkers(walkers)
         //        numSteps(i)(j) = ns
@@ -198,10 +194,10 @@ case class Experiments(config: Params) extends Serializable {
       case RrType.m4 => {
         var walkers = filterWalkers(paths, afs1)
         if (paths.forall(_.head != src)) {
-          walkers ++= rwalk.initWalker(dst)
+          walkers ++= rwalk.initWalker(src)
         }
         if (paths.forall(_.head != dst)) {
-          walkers ++= rwalk.initWalker(src)
+          walkers ++= rwalk.initWalker(dst)
         }
 
         val ns = computeNumSteps(walkers)
