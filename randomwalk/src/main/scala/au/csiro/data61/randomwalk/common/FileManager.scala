@@ -37,6 +37,17 @@ case class FileManager(config: Params) {
     }.toSeq
   }
 
+  def readEdgeList(): Seq[(Int, Int)] = {
+    val lines = Source.fromFile(config.input).getLines.toArray
+
+    lines.flatMap { triplet =>
+      val parts = triplet.split("\\s+")
+
+      Seq((parts.head.toInt, parts(1).toInt))
+    }
+
+  }
+
   def saveProbs(probs: Seq[Seq[Double]]): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.probSuffix}.txt")
