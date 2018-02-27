@@ -61,6 +61,20 @@ case class FileManager(config: Params) {
 
   }
 
+  def saveComputations(numSteps: Array[Array[Int]], suffix: String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
+      config.walkLength
+    }-nw${config.numWalks}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    for (steps <- numSteps) {
+      bw.write(s"${steps.mkString("\t")}\n")
+    }
+    bw.flush()
+    bw.close()
+
+  }
+
   def savePaths(paths: Seq[Seq[Int]], suffix: String): Seq[Seq[Int]] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
