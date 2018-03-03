@@ -5,6 +5,7 @@ import java.util
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.apache.log4j.LogManager
 
+import scala.collection.parallel.ParSeq
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
@@ -132,7 +133,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     .nextFloat): Seq[Seq[Int]] = {
     val walkLength = config.walkLength
 
-    val paths: Seq[Seq[Int]] = initPaths.map { case (_, steps) =>
+    val paths: ParSeq[Seq[Int]] = initPaths.par.map { case (_, steps) =>
       var path = steps
       val rSample = RandomSample(nextFloat)
       breakable {
@@ -149,7 +150,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       path
     }
 
-    paths
+    paths.toList
   }
 
   def buildGraphMap(graph: Seq[(Int, Seq[(Int, Float)])]): Unit = {

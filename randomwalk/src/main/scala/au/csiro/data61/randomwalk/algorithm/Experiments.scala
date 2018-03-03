@@ -109,9 +109,10 @@ case class Experiments(config: Params) extends Serializable {
     val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
 
-    for (ec <- 0 until sEdges.size) {
-      fm.saveEdgeList(edges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
-    }
+    fm.saveEdgeList(sEdges, "g")
+    //    for (ec <- 0 until sEdges.size) {
+    //      fm.saveEdgeList(sEdges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
+    //    }
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
       var prevWalks = Seq.empty[Seq[Int]]
@@ -128,11 +129,14 @@ case class Experiments(config: Params) extends Serializable {
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         println(s"Number of walks: ${prevWalks.size}")
-        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-          config.numWalks
-        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+//        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+//          config.numWalks
+//        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
 
       }
+      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        config.numWalks
+      }-$nr")
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
