@@ -25,6 +25,7 @@ object CommandParser {
   val RDD_PARTITIONS = "rddPartitions"
   val WEIGHTED = "weighted"
   val DIRECTED = "directed"
+  val WALK_TYPE = "wType"
   val NUM_RUNS = "nRuns"
   val RR_TYPE = "rrType"
   val P = "p"
@@ -95,6 +96,10 @@ object CommandParser {
       .required()
       .text(s"RR Type: ${defaultParams.rrType.toString}")
       .action((x, c) => c.copy(rrType = RrType.withName(x)))
+    opt[String](WALK_TYPE)
+      .required()
+      .text(s"Walk Type: ${defaultParams.wType.toString}")
+      .action((x, c) => c.copy(wType = WalkType.withName(x)))
   }
 
   def parse(args: Array[String]) = {

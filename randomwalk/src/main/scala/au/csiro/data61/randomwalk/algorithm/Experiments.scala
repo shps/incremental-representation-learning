@@ -17,7 +17,7 @@ case class Experiments(config: Params) extends Serializable {
 
   def addAndRun(): Unit = {
     val g1 = fm.readFromFile(config.directed)
-    val vertices: Seq[Int] = g1.map(_._1).seq.sortWith((a, b) => a < b)
+    val vertices: Seq[Int] = g1.map(_._1).sortWith((a, b) => a < b)
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, vertices.length)
 
@@ -25,24 +25,23 @@ case class Experiments(config: Params) extends Serializable {
       for (j <- 0 until math.min(config.numVertices, vertices.length)) {
         val target = vertices(j)
         val g2 = removeVertex(g1, target)
-        val init = rwalk.initRandomWalk(g2)
         val paths = config.wType match {
-          case WalkType.firstorder => rwalk.firstOrderWalk(init)
-          case WalkType.secondorder => rwalk.secondOrderWalk(init)
+          case WalkType.firstorder => rwalk.firstOrderWalk(rwalk.initRandomWalk(g2))
+          case WalkType.secondorder => rwalk.secondOrderWalk(rwalk.initRandomWalk(g2))
         }
         rwalk.buildGraphMap(g1)
         println(s"Added vertex $target")
         val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
         val newPaths = config.rrType match {
           case RrType.m1 => {
-            val init = rwalk.initRandomWalk(g1)
-            val ns = computeNumSteps(init)
-            val nw = computeNumWalkers(init)
+            val walkers = rwalk.initRandomWalk(g1)
+            val ns = computeNumSteps(walkers)
+            val nw = computeNumWalkers(walkers)
             numSteps(i) = Array.fill(vertices.length)(ns)
             numWalkers(i) = Array.fill(vertices.length)(nw)
             val p = config.wType match {
-              case WalkType.firstorder => rwalk.firstOrderWalk(init)
-              case WalkType.secondorder => rwalk.secondOrderWalk(init)
+              case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+              case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
             }
             p
           }
@@ -56,10 +55,10 @@ case class Experiments(config: Params) extends Serializable {
             numSteps(i)(j) = ns
             numWalkers(i)(j) = nw
             val pp = config.wType match {
-              case WalkType.firstorder => rwalk.firstOrderWalk(init)
-              case WalkType.secondorder => rwalk.secondOrderWalk(init)
+              case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+              case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
             }
-            val aws = fWalkers.map(tuple => tuple._1).seq
+            val aws = fWalkers.map(tuple => tuple._1)
             val up = paths.filter { case p =>
               !aws.contains(p.head)
             }
@@ -74,8 +73,8 @@ case class Experiments(config: Params) extends Serializable {
             numSteps(i)(j) = ns
             numWalkers(i)(j) = nw
             val partialPaths = config.wType match {
-              case WalkType.firstorder => rwalk.firstOrderWalk(init)
-              case WalkType.secondorder => rwalk.secondOrderWalk(init)
+              case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+              case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
             }
             val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
             val newPaths = unaffectedPaths.union(partialPaths)
@@ -88,8 +87,8 @@ case class Experiments(config: Params) extends Serializable {
             numSteps(i)(j) = ns
             numWalkers(i)(j) = nw
             val partialPaths = config.wType match {
-              case WalkType.firstorder => rwalk.firstOrderWalk(init)
-              case WalkType.secondorder => rwalk.secondOrderWalk(init)
+              case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+              case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
             }
             val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
             val newPaths = unaffectedPaths.union(partialPaths)
@@ -97,7 +96,7 @@ case class Experiments(config: Params) extends Serializable {
           }
         }
 
-        fm.savePaths(newPaths.seq, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        fm.savePaths(newPaths, s"${config.rrType.toString}-wl${config.walkLength}-nw${
           config
             .numWalks
         }-v${target.toString}-$i")
@@ -121,11 +120,11 @@ case class Experiments(config: Params) extends Serializable {
     val edges: Seq[(Int, (Int, Float))] = extractEdges(g1)
     print(s"Number of edges: ${edges.length}")
     val rand = new Random(config.seed)
-    val sEdges = rand.shuffle(edges.seq)
+    val sEdges = rand.shuffle(edges)
     val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
 
-    fm.saveEdgeList(sEdges.seq, "g")
+    fm.saveEdgeList(sEdges, "g")
     //    for (ec <- 0 until sEdges.size) {
     //      fm.saveEdgeList(sEdges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
     //    }
@@ -150,7 +149,7 @@ case class Experiments(config: Params) extends Serializable {
         //        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
 
       }
-      fm.savePaths(prevWalks.seq, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         config.numWalks
       }-$nr")
     }
@@ -180,7 +179,10 @@ case class Experiments(config: Params) extends Serializable {
         val nw = computeNumWalkers(init)
         //        numSteps(i) = Array.fill(vertices.length)(ns)
         //        numWalkers(i) = Array.fill(vertices.length)(nw)
-        val p = rwalk.firstOrderWalk(init)
+        val p = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(init)
+          case WalkType.secondorder => rwalk.secondOrderWalk(init)
+        }
         (p, ns, nw)
       }
       case RrType.m2 => {
@@ -195,8 +197,11 @@ case class Experiments(config: Params) extends Serializable {
         val ns = computeNumSteps(walkers)
         val nw = computeNumWalkers(walkers)
 
-        val pp = rwalk.firstOrderWalk(walkers)
-        val aws = fWalkers.map(tuple => tuple._1).seq
+        val pp = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+        }
+        val aws = fWalkers.map(tuple => tuple._1)
         val up = paths.filter { case p =>
           !aws.contains(p.head)
         }
@@ -216,7 +221,10 @@ case class Experiments(config: Params) extends Serializable {
         val nw = computeNumWalkers(walkers)
         //        numSteps(i)(j) = ns
         //        numWalkers(i)(j) = nw
-        val partialPaths = rwalk.firstOrderWalk(walkers)
+        val partialPaths = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+        }
         val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
         val newPaths = unaffectedPaths.union(partialPaths)
         (newPaths, ns, nw)
@@ -234,7 +242,10 @@ case class Experiments(config: Params) extends Serializable {
         val nw = computeNumWalkers(walkers)
         //        numSteps(i)(j) = ns
         //        numWalkers(i)(j) = nw
-        val partialPaths = rwalk.firstOrderWalk(walkers)
+        val partialPaths = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+        }
         val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
         val newPaths = unaffectedPaths.union(partialPaths)
         (newPaths, ns, nw)
@@ -256,7 +267,7 @@ case class Experiments(config: Params) extends Serializable {
         val seed = System.currentTimeMillis()
         val r = new Random(seed)
         val paths = rwalk.firstOrderWalk(init, nextFloat = r.nextFloat)
-        fm.savePaths(paths.seq, s"v${
+        fm.savePaths(paths, s"v${
           target.toString
         }-$i-s$seed")
       }

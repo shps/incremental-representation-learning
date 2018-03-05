@@ -37,7 +37,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       computeAffecteds(affecteds, visited, v, affectedLength, 0)
 
       (v, affecteds)
-    }.seq.sortBy(_._2.last)
+    }.sortBy(_._2.last)
   }
 
   def degrees(): Seq[(Int, Int)] = {
@@ -91,14 +91,14 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   def checkGraphMap() = {
     //    save(degrees())
     println(degrees().sortBy(_._1).map { case (v, d) => s"$v\t$d" }.mkString("\n"))
-    for (v <- GraphMap.getVertices().seq.sortBy(a => a)) {
+    for (v <- GraphMap.getVertices().sortBy(a => a)) {
       val n = GraphMap.getNeighbors(v).map(_._1)
       println(s"$v -> ${n.mkString(" ")}")
     }
   }
 
   def initWalker(v: Int): Seq[(Int, Seq[Int])] = {
-    Seq.fill(config.numWalks)(Seq((v, Seq(v)))).flatMap(a => a)
+    Seq.fill(config.numWalks)(Seq((v, Seq(v)))).flatten
   }
 
 
@@ -119,8 +119,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
   def createWalkers(g: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, Seq[Int])] = {
     g.flatMap {
-      case (vId: Int, _) =>
-        Seq.fill(config.numWalks)((vId, Seq(vId)))
+      case (vId: Int, _) => Seq.fill(config.numWalks)((vId, Seq(vId)))
     }
   }
 

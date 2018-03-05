@@ -184,7 +184,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     // Undirected graph
     val wLength = 50
     val config = Params(input = karate, directed = false, walkLength =
-      wLength, rddPartitions = 8, numWalks = 1, p=0.5f,q=2.0f)
+      wLength, rddPartitions = 8, numWalks = 1, p = 0.5f, q = 2.0f)
     val rValue = 0.1f
     val nextFloatGen = () => rValue
     val rw = UniformRandomWalk(config)
@@ -196,7 +196,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       case (k, v) => (k, v.flatMap(_._2))
     }
     paths.foreach { case (p: Seq[Int]) =>
-      val p2 = doSecondOrderRandomWalk(gMap, p(0), wLength, rSampler, p=config.p, q=config.q)
+      val p2 = doSecondOrderRandomWalk(gMap, p(0), wLength, rSampler, p = config.p, q = config.q)
       assert(p sameElements p2)
     }
   }
