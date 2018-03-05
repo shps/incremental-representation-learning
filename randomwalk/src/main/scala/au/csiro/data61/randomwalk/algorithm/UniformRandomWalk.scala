@@ -5,7 +5,6 @@ import java.util
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.apache.log4j.LogManager
 
-import scala.collection.parallel.ParSeq
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
@@ -20,15 +19,15 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           return
         visited.add(v)
         val neighbors = GraphMap.getNeighbors(v)
-//        if (neighbors != null) {
-          for (n <- neighbors) {
-            if (!visited.contains(n._1)) {
-              afs(length) += 1
-              visited.add(n._1)
-              computeAffecteds(afs, visited, n._1, al, length + 1)
-            }
+        //        if (neighbors != null) {
+        for (n <- neighbors) {
+          if (!visited.contains(n._1)) {
+            afs(length) += 1
+            visited.add(n._1)
+            computeAffecteds(afs, visited, n._1, al, length + 1)
           }
-//        }
+        }
+        //        }
       }
 
       val affecteds = new Array[Int](affectedLength)
@@ -38,7 +37,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       computeAffecteds(affecteds, visited, v, affectedLength, 0)
 
       (v, affecteds)
-    }.sortBy(_._2.last)
+    }.seq.sortBy(_._2.last)
   }
 
   def degrees(): Seq[(Int, Int)] = {
@@ -92,7 +91,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   def checkGraphMap() = {
     //    save(degrees())
     println(degrees().sortBy(_._1).map { case (v, d) => s"$v\t$d" }.mkString("\n"))
-    for (v <- GraphMap.getVertices().sortBy(a => a)) {
+    for (v <- GraphMap.getVertices().seq.sortBy(a => a)) {
       val n = GraphMap.getNeighbors(v).map(_._1)
       println(s"$v -> ${n.mkString(" ")}")
     }
@@ -108,10 +107,10 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
     nVertices = g.length
     nEdges = 0
-    g.foreach(nEdges += _._2.length)
+    nEdges = g.foldLeft(0)(_ + _._2.size)
 
-//    logger.info(s"edges: $nEdges")
-//    logger.info(s"vertices: $nVertices")
+    //    logger.info(s"edges: $nEdges")
+    //    logger.info(s"vertices: $nVertices")
     println(s"edges: $nEdges")
     println(s"vertices: $nVertices")
 
@@ -126,14 +125,14 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   }
 
   def createWalkersByVertices(vertices: Seq[Int]): Seq[(Int, Seq[Int])] = {
-    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, Seq(vId)))}
+    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, Seq(vId))) }
   }
 
   def firstOrderWalk(initPaths: Seq[(Int, Seq[Int])], nextFloat: () => Float = Random
     .nextFloat): Seq[Seq[Int]] = {
     val walkLength = config.walkLength
 
-    val paths: ParSeq[Seq[Int]] = initPaths.par.map { case (_, steps) =>
+    val paths: Seq[Seq[Int]] = initPaths.map { case (_, steps) =>
       var path = steps
       val rSample = RandomSample(nextFloat)
       breakable {
@@ -150,7 +149,47 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       path
     }
 
-    paths.toList
+    paths
+  }
+
+  def secondOrderWalk(initPaths: Seq[(Int, Seq[Int])], nextFloat: () => Float = Random
+    .nextFloat): Seq[Seq[Int]] = {
+    val walkLength = config.walkLength
+    val paths: Seq[Seq[Int]] = initPaths.map { case (_, s1) =>
+      var init = s1
+      if (init.length == 1) {
+        val rSample = RandomSample(nextFloat)
+        val neighbors = GraphMap.getNeighbors(s1.head)
+        if (neighbors.length > 0) {
+          val (nextStep, _) = rSample.sample(neighbors)
+          init = s1 ++ Seq(nextStep)
+        }
+      }
+      init
+    }
+
+    paths.map { case steps =>
+      var path = steps
+      if (path.length > 1) {
+        val rSample = RandomSample(nextFloat)
+        breakable {
+          while (path.length < walkLength + 2) {
+            val curr = path.last
+            val prev = path(path.length - 2)
+            val currNeighbors = GraphMap.getNeighbors(curr)
+            val prevNeighbors = GraphMap.getNeighbors(prev)
+            if (currNeighbors.length > 0) {
+              val (nextStep, _) = rSample.secondOrderSample(p = config.p, q = config.q, prevId =
+                prev, prevNeighbors = prevNeighbors, currNeighbors = currNeighbors)
+              path = path ++ Seq(nextStep)
+            } else {
+              break
+            }
+          }
+        }
+      }
+      path
+    }
   }
 
   def buildGraphMap(graph: Seq[(Int, Seq[(Int, Float)])]): Unit = {

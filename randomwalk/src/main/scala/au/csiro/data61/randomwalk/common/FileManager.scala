@@ -2,10 +2,12 @@ package au.csiro.data61.randomwalk.common
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import better.files._
-
 import scala.io.Source
 import scala.util.Try
+
+import better.files._
+
+
 
 /**
   * Created by Hooman on 2018-02-16.

@@ -68,9 +68,7 @@ object GraphMap {
   }
 
   def getNumEdges: Int = {
-    var nEdges = 0
-    srcVertexMap.values.foreach(nEdges += _.size)
-    nEdges
+    srcVertexMap.values.foldLeft(0)(_ + _.size)
   }
 
   /**

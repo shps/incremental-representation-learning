@@ -1,6 +1,6 @@
 package au.csiro.data61.randomwalk.algorithm
 
-import au.csiro.data61.randomwalk.common.CommandParser.{RrType, TaskName}
+import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.scalatest.BeforeAndAfter
 
@@ -159,17 +159,59 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     }
   }
 
-//  test("streaming updates") {
-//    // Undirected graph
-//    val wLength = 4
-//
-//    val config = Params(input = karate, directed = false, walkLength =
-//      wLength, rddPartitions = 8, numWalks = 10, rrType = RrType.m3)
-//
-//    val exp = Experiments(config)
-//    exp.streamingUpdates()
-//
-//  }
+  test("test 2nd order random walk undirected3") {
+    // Undirected graph
+    val wLength = 50
+    val config = Params(input = karate, directed = false, walkLength =
+      wLength, rddPartitions = 8, numWalks = 1)
+    val rValue = 0.9f
+    val nextFloatGen = () => rValue
+    val rw = UniformRandomWalk(config)
+    val graph = rw.loadGraph()
+    val paths = rw.secondOrderWalk(graph, nextFloatGen)
+    assert(paths.length == rw.nVertices) // a path per vertex
+    val rSampler = RandomSample(nextFloatGen)
+    val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
+      case (k, v) => (k, v.flatMap(_._2))
+    }
+    paths.foreach { case (p: Seq[Int]) =>
+      val p2 = doSecondOrderRandomWalk(gMap, p(0), wLength, rSampler, 1.0f, 1.0f)
+      assert(p sameElements p2)
+    }
+  }
+
+  test("test 2nd order random walk undirected2") {
+    // Undirected graph
+    val wLength = 50
+    val config = Params(input = karate, directed = false, walkLength =
+      wLength, rddPartitions = 8, numWalks = 1, p=0.5f,q=2.0f)
+    val rValue = 0.1f
+    val nextFloatGen = () => rValue
+    val rw = UniformRandomWalk(config)
+    val graph = rw.loadGraph()
+    val paths = rw.secondOrderWalk(graph, nextFloatGen)
+    assert(paths.length == rw.nVertices) // a path per vertex
+    val rSampler = RandomSample(nextFloatGen)
+    val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
+      case (k, v) => (k, v.flatMap(_._2))
+    }
+    paths.foreach { case (p: Seq[Int]) =>
+      val p2 = doSecondOrderRandomWalk(gMap, p(0), wLength, rSampler, p=config.p, q=config.q)
+      assert(p sameElements p2)
+    }
+  }
+
+  //  test("streaming updates") {
+  //    // Undirected graph
+  //    val wLength = 4
+  //
+  //    val config = Params(input = karate, directed = false, walkLength =
+  //      wLength, rddPartitions = 8, numWalks = 10, rrType = RrType.m3)
+  //
+  //    val exp = Experiments(config)
+  //    exp.streamingUpdates()
+  //
+  //  }
 
   //  test("addAndRun m2") {
   //    // Undirected graph
@@ -242,7 +284,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(counts1.sortBy(_._1) sameElements counts2.sortBy(_._1))
   }
 
-  private def doFirstOrderRandomWalk(gMap: scala.collection.Map[Int, Seq[(Int, Float)]], src: Int,
+  private def doFirstOrderRandomWalk(gMap: Map[Int, Seq[(Int, Float)]], src: Int,
                                      walkLength: Int, rSampler: RandomSample): Array[Int]
   = {
     var path = Array(src)
@@ -256,6 +298,45 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       }
       if (currNeighbors.size > 0) {
         path = path ++ Array(rSampler.sample(currNeighbors)._1)
+      } else {
+        return path
+      }
+    }
+
+    path
+  }
+
+  private def doSecondOrderRandomWalk(gMap: Map[Int, Seq[(Int, Float)]], src: Int,
+                                      walkLength: Int, rSampler: RandomSample, p: Float,
+                                      q: Float): Seq[Int]
+  = {
+    var path = Array(src)
+    val neighbors = gMap.get(src) match {
+      case Some(neighbors) => neighbors
+      case None => Seq.empty[(Int, Float)]
+    }
+    if (neighbors.length > 0) {
+      path = path ++ Array(rSampler.sample(neighbors)._1)
+    }
+    else {
+      return path
+    }
+
+    for (_ <- 0 until walkLength) {
+
+      val curr = path.last
+      val prev = path(path.length - 2)
+      val currNeighbors = gMap.get(curr) match {
+        case Some(neighbors) => neighbors
+        case None => Seq.empty[(Int, Float)]
+      }
+      if (currNeighbors.length > 0) {
+        val prevNeighbors = gMap.get(prev) match {
+          case Some(neighbors) => neighbors
+          case None => Seq.empty[(Int, Float)]
+        }
+        path = path ++ Array(rSampler.secondOrderSample(p, q, prev, prevNeighbors, currNeighbors)
+          ._1)
       } else {
         return path
       }
