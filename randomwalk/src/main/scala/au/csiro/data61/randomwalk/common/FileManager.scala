@@ -4,8 +4,9 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import scala.io.Source
 import scala.util.Try
-
 import better.files._
+
+import scala.collection.mutable
 
 
 
@@ -145,6 +146,21 @@ case class FileManager(config: Params) {
     bw.write(degrees.map { case (v, d) => s"$v\t$d" }.mkString("\n"))
     bw.flush()
     bw.close()
+  }
+
+  def saveSecondOrderProbs(edgeIds: mutable.HashMap[(Int, Int), Int], probs: Seq[(Int, Int, Double)]) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${Property.edgeIds}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(edgeIds.map { case ((src, dst), id) => s"$src\t$dst\t$id" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+
+    val file2 = new File(s"${config.output}/${Property.soProbs}.txt")
+    val bw2 = new BufferedWriter(new FileWriter(file2))
+    bw2.write(probs.map { case (sId, dId, p) => s"$sId\t$dId\t$p" }.mkString("\n"))
+    bw2.flush()
+    bw2.close()
   }
 
   def saveAffecteds(afs: Seq[(Int, Array[Int])]) = {

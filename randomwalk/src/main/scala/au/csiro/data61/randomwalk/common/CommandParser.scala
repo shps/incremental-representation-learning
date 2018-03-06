@@ -6,7 +6,7 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, secondorder, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1 =
+    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1 =
       Value
   }
 
@@ -93,11 +93,9 @@ object CommandParser {
       .text(s"command: ${defaultParams.cmd.toString}")
       .action((x, c) => c.copy(cmd = TaskName.withName(x)))
     opt[String](RR_TYPE)
-      .required()
       .text(s"RR Type: ${defaultParams.rrType.toString}")
       .action((x, c) => c.copy(rrType = RrType.withName(x)))
     opt[String](WALK_TYPE)
-      .required()
       .text(s"Walk Type: ${defaultParams.wType.toString}")
       .action((x, c) => c.copy(wType = WalkType.withName(x)))
   }

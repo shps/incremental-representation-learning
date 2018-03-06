@@ -2,7 +2,7 @@ package au.csiro.data61.randomwalk
 
 import au.csiro.data61.randomwalk.algorithm.{Experiments, UniformRandomWalk}
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
-import au.csiro.data61.randomwalk.common.{CommandParser, FileManager, Params}
+import au.csiro.data61.randomwalk.common.{CommandParser, FileManager, GraphUtils, Params}
 import org.apache.log4j.LogManager
 
 object Main {
@@ -48,6 +48,10 @@ object Main {
       case TaskName.s1 =>
         exp.streamingUpdates()
         null
+      case TaskName.soProbs =>
+        rw.loadGraph()
+        val (edgeIds, probs) = GraphUtils.computeSecondOrderProbs(params)
+        FileManager(params).saveSecondOrderProbs(edgeIds, probs)
     }
 
     params.cmd match {

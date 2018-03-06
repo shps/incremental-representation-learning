@@ -10,4 +10,6 @@ object Property extends Enumeration {
   val affecteds = Value(s"affecteds")
   val stepsToCompute = Value(s"steps-to-compute")
   val walkersToCompute = Value(s"walkers-to-compute")
+  val edgeIds = Value(s"edge-id-map")
+  val soProbs = Value(s"so-probs")
 }
