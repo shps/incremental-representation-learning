@@ -36,7 +36,7 @@ object Main {
         null
       case TaskName.affecteds =>
         val vertices = rw.loadGraph().map { case (v, p) => v }
-        val affecteds = rw.computeAffecteds(vertices, params.affectedLength)
+        val affecteds = rw.computeAffecteds(vertices.seq, params.affectedLength)
         fm.saveAffecteds(affecteds)
         null
       case TaskName.rr =>

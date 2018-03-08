@@ -7,6 +7,7 @@ import scala.util.Try
 import better.files._
 
 import scala.collection.mutable
+import scala.collection.parallel.ParSeq
 
 
 
@@ -15,8 +16,8 @@ import scala.collection.mutable
   */
 case class FileManager(config: Params) {
 
-  def readFromFile(directed: Boolean): Seq[(Int, Seq[(Int, Float)])] = {
-    val lines = Source.fromFile(config.input).getLines.toArray
+  def readFromFile(directed: Boolean): ParSeq[(Int, Seq[(Int, Float)])] = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
 
     lines.flatMap { triplet =>
       val parts = triplet.split("\\s+")
@@ -34,8 +35,7 @@ case class FileManager(config: Params) {
         Seq((src, Seq((dst, weight))), (dst, Seq((src, weight))))
       }
     }.groupBy(_._1).map { case (src, edges) =>
-      var neighbors = Seq.empty[(Int, Float)]
-      edges.foreach(neighbors ++= _._2)
+      val neighbors = edges.foldLeft(Seq.empty[(Int, Float)])(_ ++ _._2)
       (src, neighbors)
     }.toSeq
   }
@@ -89,7 +89,7 @@ case class FileManager(config: Params) {
 
   }
 
-  def savePaths(paths: Seq[Seq[Int]], suffix: String): Seq[Seq[Int]] = {
+  def savePaths(paths: ParSeq[Seq[Int]], suffix: String): ParSeq[Seq[Int]] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -113,7 +113,7 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def savePaths(paths: Seq[Seq[Int]]): Seq[Seq[Int]] = {
+  def savePaths(paths: ParSeq[Seq[Int]]): ParSeq[Seq[Int]] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.pathSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))

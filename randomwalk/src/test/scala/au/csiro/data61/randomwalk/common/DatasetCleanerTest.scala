@@ -10,8 +10,8 @@ class DatasetCleanerTest extends FunSuite {
   private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/datasets/"
 
   test("testCheckDataSet") {
-    val fName = dataset + "facebook_combined.txt"
-    val initId = 0
+    val fName = dataset + "soc-wiki-vote.txt"
+    val initId = 1
     val config = Params(input = fName)
     DatasetCleaner.checkDataSet(config, initId)
 

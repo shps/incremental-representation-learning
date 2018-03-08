@@ -5,6 +5,8 @@ import java.util
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.apache.log4j.LogManager
 
+import scala.collection.parallel.ParSeq
+import scala.collection.parallel.mutable.ParArray
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
@@ -73,7 +75,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   var nVertices: Int = 0
   var nEdges: Int = 0
 
-  def execute(): Seq[Seq[Int]] = {
+  def execute(): ParSeq[Seq[Int]] = {
     firstOrderWalk(loadGraph())
   }
 
@@ -82,9 +84,9 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     *
     * @return
     */
-  def loadGraph(): Seq[(Int, Seq[Int])] = {
+  def loadGraph(): ParSeq[(Int, Seq[Int])] = {
 
-    val g: Seq[(Int, Seq[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
+    val g: ParSeq[(Int, Seq[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
     initRandomWalk(g)
   }
 
@@ -102,8 +104,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   }
 
 
-  def initRandomWalk(g: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, Seq[Int])] = {
-    buildGraphMap(g)
+  def initRandomWalk(g: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
+    buildGraphMap(g.seq)
 
     nVertices = g.length
     nEdges = 0
@@ -117,21 +119,21 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     createWalkers(g)
   }
 
-  def createWalkers(g: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, Seq[Int])] = {
+  def createWalkers(g: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
     g.flatMap {
       case (vId: Int, _) => Seq.fill(config.numWalks)((vId, Seq(vId)))
     }
   }
 
-  def createWalkersByVertices(vertices: Seq[Int]): Seq[(Int, Seq[Int])] = {
+  def createWalkersByVertices(vertices: ParSeq[Int]): ParSeq[(Int, Seq[Int])] = {
     vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, Seq(vId))) }
   }
 
-  def firstOrderWalk(initPaths: Seq[(Int, Seq[Int])], nextFloat: () => Float = Random
-    .nextFloat): Seq[Seq[Int]] = {
+  def firstOrderWalk(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
+    .nextFloat): ParSeq[Seq[Int]] = {
     val walkLength = config.walkLength
 
-    val paths: Seq[Seq[Int]] = initPaths.map { case (_, steps) =>
+    val paths: ParSeq[Seq[Int]] = initPaths.map { case (_, steps) =>
       var path = steps
       val rSample = RandomSample(nextFloat)
       breakable {
@@ -151,10 +153,10 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     paths
   }
 
-  def secondOrderWalk(initPaths: Seq[(Int, Seq[Int])], nextFloat: () => Float = Random
-    .nextFloat): Seq[Seq[Int]] = {
+  def secondOrderWalk(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
+    .nextFloat): ParSeq[Seq[Int]] = {
     val walkLength = config.walkLength
-    val paths: Seq[Seq[Int]] = initPaths.map { case (_, s1) =>
+    val paths: ParSeq[Seq[Int]] = initPaths.map { case (_, s1) =>
       var init = s1
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)

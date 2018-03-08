@@ -3,6 +3,7 @@ package au.csiro.data61.randomwalk.algorithm
 import au.csiro.data61.randomwalk.common.CommandParser.{RrType, WalkType}
 import au.csiro.data61.randomwalk.common.{FileManager, Params, Property}
 
+import scala.collection.parallel.ParSeq
 import scala.util.Random
 
 /**
@@ -17,19 +18,19 @@ case class Experiments(config: Params) extends Serializable {
 
   def addAndRun(): Unit = {
     val g1 = fm.readFromFile(config.directed)
-    val vertices: Seq[Int] = g1.map(_._1).sortWith((a, b) => a < b)
+    val vertices: Seq[Int] = g1.map(_._1).seq.sortWith((a, b) => a < b)
     val numSteps = Array.ofDim[Int](config.numRuns, vertices.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, vertices.length)
 
     for (i <- 0 until config.numRuns) {
       for (j <- 0 until math.min(config.numVertices, vertices.length)) {
         val target = vertices(j)
-        val g2 = removeVertex(g1, target)
+        val g2 = removeVertex(g1.par, target)
         val paths = config.wType match {
           case WalkType.firstorder => rwalk.firstOrderWalk(rwalk.initRandomWalk(g2))
           case WalkType.secondorder => rwalk.secondOrderWalk(rwalk.initRandomWalk(g2))
         }
-        rwalk.buildGraphMap(g1)
+        rwalk.buildGraphMap(g1.seq)
         println(s"Added vertex $target")
         val afs1 = GraphMap.getNeighbors(target).map { case (v, _) => v }
         val newPaths = config.rrType match {
@@ -46,9 +47,9 @@ case class Experiments(config: Params) extends Serializable {
             p
           }
           case RrType.m2 => {
-            val fWalkers: Seq[(Int, Seq[Int])] = filterUniqueWalkers(
-              paths, afs1) ++ Seq((target, Seq(target)))
-            val walkers: Seq[(Int, Seq[Int])] = Seq.fill(config
+            val fWalkers: ParSeq[(Int, Seq[Int])] = filterUniqueWalkers(
+              paths, afs1) ++ ParSeq((target, Seq(target)))
+            val walkers: ParSeq[(Int, Seq[Int])] = ParSeq.fill(config
               .numWalks)(fWalkers).flatMap(a => a)
             val ns = computeNumSteps(walkers)
             val nw = computeNumWalkers(walkers)
@@ -58,7 +59,7 @@ case class Experiments(config: Params) extends Serializable {
               case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
               case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
             }
-            val aws = fWalkers.map(tuple => tuple._1)
+            val aws = fWalkers.map(tuple => tuple._1).seq
             val up = paths.filter { case p =>
               !aws.contains(p.head)
             }
@@ -109,7 +110,7 @@ case class Experiments(config: Params) extends Serializable {
     fm.saveNumSteps(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
-  def extractEdges(g1: Seq[(Int, Seq[(Int, Float)])]): Seq[(Int, (Int, Float))] = {
+  def extractEdges(g1: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, (Int, Float))] = {
     g1.flatMap { case (src, neighbors) =>
       neighbors.map { case (dst, w) => (src, (dst, w)) }
     }
@@ -117,10 +118,10 @@ case class Experiments(config: Params) extends Serializable {
 
   def streamingUpdates(): Unit = {
     val g1 = fm.readFromFile(directed = true) // read it as directed
-    val edges: Seq[(Int, (Int, Float))] = extractEdges(g1)
+    val edges: ParSeq[(Int, (Int, Float))] = extractEdges(g1)
     print(s"Number of edges: ${edges.length}")
     val rand = new Random(config.seed)
-    val sEdges = rand.shuffle(edges)
+    val sEdges = rand.shuffle(edges.seq)
     val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
 
@@ -130,7 +131,7 @@ case class Experiments(config: Params) extends Serializable {
     //    }
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
-      var prevWalks = Seq.empty[Seq[Int]]
+      var prevWalks = ParSeq.empty[Seq[Int]]
 
       for (ec <- 0 until sEdges.size) {
         val e = sEdges(ec)
@@ -157,7 +158,7 @@ case class Experiments(config: Params) extends Serializable {
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
   }
 
-  def streamingAddAndRun(targetEdge: (Int, (Int, Float)), paths: Seq[Seq[Int]]): (Seq[Seq[Int]],
+  def streamingAddAndRun(targetEdge: (Int, (Int, Float)), paths: ParSeq[Seq[Int]]): (ParSeq[Seq[Int]],
     Int, Int) = {
     val src = targetEdge._1
     val dst = targetEdge._2._1
@@ -174,7 +175,7 @@ case class Experiments(config: Params) extends Serializable {
 
     val result = config.rrType match {
       case RrType.m1 => {
-        val init = rwalk.createWalkersByVertices(GraphMap.getVertices())
+        val init = rwalk.createWalkersByVertices(GraphMap.getVertices().par)
         val ns = computeNumSteps(init)
         val nw = computeNumWalkers(init)
         //        numSteps(i) = Array.fill(vertices.length)(ns)
@@ -186,14 +187,14 @@ case class Experiments(config: Params) extends Serializable {
         (p, ns, nw)
       }
       case RrType.m2 => {
-        var fWalkers: Seq[(Int, Seq[Int])] = filterUniqueWalkers(paths, afs1)
-        if (paths.forall(_.head != src)) {
-          fWalkers ++= Seq((src, Seq(src)))
+        var fWalkers: ParSeq[(Int, Seq[Int])] = filterUniqueWalkers(paths, afs1)
+        if (paths.filter(_.head == src).size == 0) {
+          fWalkers ++= ParSeq((src, Seq(src)))
         }
-        if (paths.forall(_.head != dst)) {
-          fWalkers ++= Seq((dst, Seq(dst)))
+        if (paths.filter(_.head == dst).size == 0) {
+          fWalkers ++= ParSeq((dst, Seq(dst)))
         }
-        val walkers: Seq[(Int, Seq[Int])] = Seq.fill(config.numWalks)(fWalkers).flatMap(a => a)
+        val walkers: ParSeq[(Int, Seq[Int])] = ParSeq.fill(config.numWalks)(fWalkers).flatMap(a => a)
         val ns = computeNumSteps(walkers)
         val nw = computeNumWalkers(walkers)
 
@@ -201,7 +202,7 @@ case class Experiments(config: Params) extends Serializable {
           case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
           case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
         }
-        val aws = fWalkers.map(tuple => tuple._1)
+        val aws = fWalkers.map(tuple => tuple._1).seq
         val up = paths.filter { case p =>
           !aws.contains(p.head)
         }
@@ -258,7 +259,7 @@ case class Experiments(config: Params) extends Serializable {
 
   def removeAndRun(): Unit = {
     val g1 = fm.readFromFile(config.directed)
-    val vertices: Seq[Int] = g1.map(_._1)
+    val vertices: Seq[Int] = g1.map(_._1).seq
     for (target <- vertices) {
       println(s"Removed vertex $target")
       val g2 = removeVertex(g1, target)
@@ -274,7 +275,7 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def removeVertex(g: Seq[(Int, Seq[(Int, Float)])], target: Int): Seq[(Int, Seq[(Int,
+  def removeVertex(g: ParSeq[(Int, Seq[(Int, Float)])], target: Int): ParSeq[(Int, Seq[(Int,
     Float)])] = {
     g.filter(_._1 != target).map {
       case (vId, neighbors) =>
@@ -283,18 +284,18 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterUniqueWalkers(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterUniqueWalkers(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
     filterWalkers(paths, afs1).groupBy(_._1).map {
       case (_, p) =>
         p.head
     }.toSeq
   }
 
-  def filterWalkers(paths: Seq[Seq[Int]], afs1: Seq[Int]): Seq[(Int, Seq[Int])] = {
+  def filterWalkers(paths: ParSeq[Seq[Int]], afs1: Seq[Int]): ParSeq[(Int, Seq[Int])] = {
     filterAffectedPaths(paths, afs1).map(a => (a.head, Seq(a.head)))
   }
 
-  def filterSplitPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterSplitPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
     filterAffectedPaths(paths, afs1).map {
       a =>
         val first = a.indexWhere(e => afs1.contains(e))
@@ -302,28 +303,28 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterAffectedPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterAffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
     paths.filter {
       case p =>
         !p.forall(s => !afs1.contains(s))
     }
   }
 
-  def filterUnaffectedPaths(paths: Seq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterUnaffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
     paths.filter {
       case p =>
         p.forall(s => !afs1.contains(s))
     }
   }
 
-  def computeNumSteps(walkers: Seq[(Int, Seq[Int])]) = {
+  def computeNumSteps(walkers: ParSeq[(Int, Seq[Int])]) = {
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path.length
     }.reduce(_ + _)
   }
 
-  def computeNumWalkers(walkers: Seq[(Int, Seq[Int])]) = {
+  def computeNumWalkers(walkers: ParSeq[(Int, Seq[Int])]) = {
     walkers.length
   }
 }
