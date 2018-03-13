@@ -41,9 +41,17 @@ object DatasetCleaner {
     val fm = FileManager(config)
     val coAuthors = fm.readJsonFile()
     fm.saveCoAuthors(coAuthors.toList)
-    val filtered = coAuthors.flatMap { case (src, dst, y) => Seq(src, dst) }
+    val authors = coAuthors.flatMap { case (src, dst, y) => Seq(src, dst) }
       .distinct.zipWithIndex
-    fm.saveIds(filtered)
+    fm.saveIds(authors)
+    val idMaps = authors.toMap
+    val filtered = coAuthors.filter(_._3 != 0).map { case (a1, a2, y) =>
+      val src = idMaps.getOrElse(a1, throw new Exception)
+      val dst = idMaps.getOrElse(a2, throw new Exception)
+      (src, dst, y)
+    }.seq.sortWith(_._3 < _._3).par
+    fm.saveCoAuthors(filtered)
+
 
     //    val altNames = coAuthors.filter(_._3 == 0).map { case (n1, n2, y) => (n1, n2) }.groupBy
     // (_._1)

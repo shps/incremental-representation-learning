@@ -2,19 +2,19 @@ package au.csiro.data61.randomwalk.common
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import scala.io.Source
-import scala.util.Try
 import better.files._
-import spray.json.JsonParser
 
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
+import scala.io.Source
+import scala.util.Try
 
 
 /**
   * Created by Hooman on 2018-02-16.
   */
 case class FileManager(config: Params) {
+
 
   def readFromFile(directed: Boolean): ParSeq[(Int, Seq[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
@@ -204,7 +204,16 @@ case class FileManager(config: Params) {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/authors-ids.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(authors.map { case (a, id) => s"$a\t$id" }.mkString("\n"))
+    bw.write(authors.map { case (a, id) => s"$a,$id" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveCoAuthors(coauthors: ParSeq[(Int, Int, Int)]): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/coauthors-edge-list.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(coauthors.par.map { case (a1, a2, year) => s"$a1,$a2,$year" }.mkString("\n"))
     bw.flush()
     bw.close()
   }
