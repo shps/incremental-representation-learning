@@ -5,10 +5,10 @@ import java.io.{BufferedWriter, File, FileWriter}
 import scala.io.Source
 import scala.util.Try
 import better.files._
+import spray.json.JsonParser
 
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
-
 
 
 /**
@@ -38,6 +38,24 @@ case class FileManager(config: Params) {
       val neighbors = edges.foldLeft(Seq.empty[(Int, Float)])(_ ++ _._2)
       (src, neighbors)
     }.toSeq
+  }
+
+  def readJsonFile(): ParSeq[(String, String, Int)] = {
+    val lines = Source.fromFile(config.input).getLines.toList.par
+    val toRemove = "[\"]".toSet
+    val toRemove2 = ",".toSet
+    lines.flatMap { case l =>
+      val fl = l.filterNot(toRemove).split(", ")
+      if (fl.length > 1) {
+        val date = fl(2).filterNot(toRemove2) match {
+          case "null" => 0
+          case other => other.toInt
+        }
+        Seq((fl(0), fl(1), date))
+      } else {
+        Seq.empty[(String, String, Int)]
+      }
+    }
   }
 
   def readEdgeList(): Seq[(Int, Int)] = {
@@ -148,7 +166,8 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def saveSecondOrderProbs(edgeIds: mutable.HashMap[(Int, Int), Int], probs: Seq[(Int, Int, Double)]) = {
+  def saveSecondOrderProbs(edgeIds: mutable.HashMap[(Int, Int), Int], probs: Seq[(Int, Int,
+    Double)]) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.edgeIds}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
@@ -168,6 +187,24 @@ case class FileManager(config: Params) {
     val file = new File(s"${config.output}/${Property.affecteds}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(afs.map { case (vId, af) => s"$vId\t${af.mkString("\t")}" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveCoAuthors(tuples: List[(String, String, Int)]) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/coauthors.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(tuples.par.map { case (a1, a2, year) => s"$a1,$a2,$year" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveIds(authors: ParSeq[(String, Int)]): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/authors-ids.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(authors.map { case (a, id) => s"$a\t$id" }.mkString("\n"))
     bw.flush()
     bw.close()
   }
