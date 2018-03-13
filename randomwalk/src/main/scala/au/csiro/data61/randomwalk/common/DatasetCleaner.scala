@@ -1,24 +1,18 @@
 package au.csiro.data61.randomwalk.common
 
-import java.io.FileInputStream
-
-import spray.json._
-
-import scala.collection.mutable
 import scala.collection.parallel.ParSeq
-import scala.io.Source
 
-//import play.api.libs.json.Json
 
 /**
   * Created by Hooman on 2018-02-27.
   */
 object DatasetCleaner {
 
-  def checkRedundantEdges(edges: Seq[(Int, Int)]) = {
-    val rEdges = edges.flatMap { case (a, b) => Seq((a, b), (b, a)) }
-    if (edges.size * 2 != rEdges.distinct.size) {
-      throw new Exception("There are reversed edges.")
+  def checkRedundantEdges(edges: ParSeq[(Int, Int)]) = {
+    val rEdges = edges.flatMap { case (a, b) => Seq((a, b), (b, a)) }.distinct
+    if (edges.size * 2 != rEdges.size) {
+      throw new Exception(s"There are reversed edges. Expected: ${edges.size * 2}, Actual: " +
+        s"${rEdges.size}")
     }
   }
 
@@ -26,8 +20,10 @@ object DatasetCleaner {
     val fm = FileManager(config)
     val edges = fm.readEdgeList()
     println(s"Number of edges: ${edges.size}")
+    val deduplicated = edges.distinct
+    println(s"Number of edges after deduplication: ${deduplicated.size}")
     checkRedundantEdges(edges)
-    val vertices = edges.flatMap { case e => Seq(e._1, e._2) }.distinct.sortWith(_ < _)
+    val vertices = edges.flatMap { case e => Seq(e._1, e._2) }.distinct.seq.sortWith(_ < _)
     println(s"Number of vertices: ${vertices.size}")
     for (i <- 0 until vertices.size) {
       val expected = initId + i
@@ -45,11 +41,15 @@ object DatasetCleaner {
       .distinct.zipWithIndex
     fm.saveIds(authors)
     val idMaps = authors.toMap
+    // saves as indirected, removes duplicates.
     val filtered = coAuthors.filter(_._3 != 0).map { case (a1, a2, y) =>
       val src = idMaps.getOrElse(a1, throw new Exception)
       val dst = idMaps.getOrElse(a2, throw new Exception)
-      (src, dst, y)
-    }.seq.sortWith(_._3 < _._3).par
+      if (src < dst)
+        (src, dst, y)
+      else
+        (dst, src, y)
+    }.seq.sortWith(_._3 < _._3).par.distinct
     fm.saveCoAuthors(filtered)
     val groups = filtered.groupBy(_._3)
     val sums = groups.map { case (y, edges) =>
@@ -57,24 +57,17 @@ object DatasetCleaner {
     }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
     fm.saveNumAuthors(sums, "coauthors-per-year")
 
-    val ua= groups.map { case (y, edges) =>
-      val count = edges.flatMap{case (src, dst, _) => Seq(src, dst)}.distinct.length
+    val ua = groups.map { case (y, edges) =>
+      val count = edges.flatMap { case (src, dst, _) => Seq(src, dst) }.distinct.length
       (y, count)
     }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
     fm.saveNumAuthors(ua, "unique-authors-per-year")
 
-
-    //    val altNames = coAuthors.filter(_._3 == 0).map { case (n1, n2, y) => (n1, n2) }.groupBy
-    // (_._1)
-    //    val altKeys = altNames.keySet.seq
-    //    val nameMap = new mutable.HashMap[String, String]()
-    //    for (k <- altKeys) {
-    //      val otherNames = altNames.getOrElse(k, ParSeq.empty)
-    //      for (name <- otherNames) {
-    //          nameMap.put(name, k)
-    //      }
-    //    }
-    //    fm.saveCoAuthors(coAuthors.toList)
+//    val ra = groups.map { case (y, edges) =>
+//      val count = edges.flatMap { case (src, dst, _) => Seq((src, dst),(dst, src)) }.distinct.length
+//      (y, edges.length*2 - count)
+//    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
+//    println(ra)
   }
 
 }

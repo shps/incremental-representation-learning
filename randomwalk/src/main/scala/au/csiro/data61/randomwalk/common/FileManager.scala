@@ -57,8 +57,8 @@ case class FileManager(config: Params) {
     }
   }
 
-  def readEdgeList(): Seq[(Int, Int)] = {
-    val lines = Source.fromFile(config.input).getLines.toArray
+  def readEdgeList(): ParSeq[(Int, Int)] = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
 
     lines.flatMap { triplet =>
       val parts = triplet.split("\\s+")
@@ -66,6 +66,16 @@ case class FileManager(config: Params) {
       Seq((parts.head.toInt, parts(1).toInt))
     }
 
+  }
+
+  def readEdgeListByYear():Seq[(Int, ParSeq[(Int, Int, Int)])] = {
+    val lines = Source.fromFile(config.input).getLines.toSeq.par
+
+    lines.flatMap { triplet =>
+      val parts = triplet.split("\\s+")
+
+      Seq((parts.head.toInt, parts(1).toInt, parts(3).toInt))
+    }.groupBy(_._3).toSeq.seq.sortWith(_._1<_._1)
   }
 
   def saveProbs(probs: Seq[Seq[Double]]): Unit = {
@@ -212,7 +222,7 @@ case class FileManager(config: Params) {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/coauthors-edge-list.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(coauthors.par.map { case (a1, a2, year) => s"$a1,$a2,$year" }.mkString("\n"))
+    bw.write(coauthors.par.map { case (a1, a2, year) => s"$a1\t$a2\t$year" }.mkString("\n"))
     bw.flush()
     bw.close()
   }

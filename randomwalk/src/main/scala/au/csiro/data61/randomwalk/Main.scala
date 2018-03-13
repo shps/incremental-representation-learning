@@ -25,8 +25,8 @@ object Main {
         val g = rw.loadGraph()
         fm.savePaths(rw.firstOrderWalk(g))
       case TaskName.queryPaths =>
-//        context.textFile(params.input).repartition(params.rddPartitions).
-//          map(_.split("\\s+").map(s => s.toInt))
+      //        context.textFile(params.input).repartition(params.rddPartitions).
+      //          map(_.split("\\s+").map(s => s.toInt))
       case TaskName.probs =>
         val g = rw.loadGraph()
         fm.savePaths(rw.firstOrderWalk(g))
@@ -54,17 +54,20 @@ object Main {
         FileManager(params).saveSecondOrderProbs(edgeIds, probs)
       case TaskName.coAuthors =>
         DatasetCleaner.convertJsonFile(params)
+      case TaskName.sca =>
+        exp.streamingCoAuthors()
+        null
     }
 
     params.cmd match {
       case TaskName.queryPaths =>
-//        val counts = rw.queryPaths(paths)
-//        println(s"Total counts: ${counts.length}")
-//        fm.saveCounts(counts)
-//      case TaskName.probs =>
-//        val probs = rw.computeProbs(paths)
-//        println(s"Total prob entries: ${probs.length}")
-//        fm.save(probs)
+      //        val counts = rw.queryPaths(paths)
+      //        println(s"Total counts: ${counts.length}")
+      //        fm.saveCounts(counts)
+      //      case TaskName.probs =>
+      //        val probs = rw.computeProbs(paths)
+      //        println(s"Total prob entries: ${probs.length}")
+      //        fm.save(probs)
       case _ =>
     }
   }
