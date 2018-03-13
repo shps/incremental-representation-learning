@@ -51,6 +51,17 @@ object DatasetCleaner {
       (src, dst, y)
     }.seq.sortWith(_._3 < _._3).par
     fm.saveCoAuthors(filtered)
+    val groups = filtered.groupBy(_._3)
+    val sums = groups.map { case (y, edges) =>
+      (y, edges.length)
+    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
+    fm.saveNumAuthors(sums, "coauthors-per-year")
+
+    val ua= groups.map { case (y, edges) =>
+      val count = edges.flatMap{case (src, dst, _) => Seq(src, dst)}.distinct.length
+      (y, count)
+    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
+    fm.saveNumAuthors(ua, "unique-authors-per-year")
 
 
     //    val altNames = coAuthors.filter(_._3 == 0).map { case (n1, n2, y) => (n1, n2) }.groupBy

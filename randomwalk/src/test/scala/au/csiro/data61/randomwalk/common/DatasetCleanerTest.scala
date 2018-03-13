@@ -24,7 +24,8 @@ class DatasetCleanerTest extends FunSuite {
     val fName = dataset + "test.json"
     val output = dataset
     val config = Params(input = fName, output = output)
-    DatasetCleaner.convertJsonFile(config)
+    val filtered = DatasetCleaner.convertJsonFile(config)
+
   }
 
 }

@@ -15,7 +15,6 @@ import scala.util.Try
   */
 case class FileManager(config: Params) {
 
-
   def readFromFile(directed: Boolean): ParSeq[(Int, Seq[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
@@ -214,6 +213,15 @@ case class FileManager(config: Params) {
     val file = new File(s"${config.output}/coauthors-edge-list.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(coauthors.par.map { case (a1, a2, year) => s"$a1,$a2,$year" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveNumAuthors(ua: String, fname:String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$fname.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(ua)
     bw.flush()
     bw.close()
   }
