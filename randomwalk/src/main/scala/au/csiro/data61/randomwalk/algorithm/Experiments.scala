@@ -286,6 +286,7 @@ case class Experiments(config: Params) extends Serializable {
         prevWalks = result._1
         val ns = result._2
         val nw = result._3
+
         val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
         numSteps(nr)(ec) = ns
         numWalkers(nr)(ec) = nw
@@ -298,6 +299,8 @@ case class Experiments(config: Params) extends Serializable {
         println(s"Number of walks: ${prevWalks.size}")
         println(s"Mean Error: ${meanE}")
         println(s"Max Error: ${maxE}")
+        println(s"Number of actual steps: $ns")
+        println(s"Number of actual walks: $nw")
         //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         //          config.numWalks
         //        }-$year")
@@ -331,6 +334,8 @@ case class Experiments(config: Params) extends Serializable {
       afs.add(src)
       afs.add(dst)
     }
+
+    println("******* Updated the graph ********")
 
 
     val result = config.rrType match {
@@ -436,6 +441,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterUniqueWalkers(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+    println("&&&&&&&&& filterUniqueWalkers &&&&&&&&&")
     filterWalkers(paths, afs1).groupBy(_._1).map {
       case (_, p) =>
         p.head
@@ -443,6 +449,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterUniqueWalkers(paths: ParSeq[Seq[Int]], afs: mutable.HashSet[Int]) = {
+    println("&&&&&&&&& filterUniqueWalkers &&&&&&&&&")
     filterWalkers(paths, afs).groupBy(_._1).map {
       case (_, p) =>
         p.head
@@ -458,6 +465,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterSplitPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+    println("&&&&&&&&& filterSplitPaths &&&&&&&&&")
     filterAffectedPaths(paths, afs1).map {
       a =>
         val first = a.indexWhere(e => afs1.contains(e))
@@ -466,6 +474,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterSplitPaths(paths: ParSeq[Seq[Int]], afs: mutable.HashSet[Int]) = {
+    println("&&&&&&&&& filterSplitPaths &&&&&&&&&")
     filterAffectedPaths(paths, afs).map {
       a =>
         val first = a.indexWhere(e => afs.contains(e))
@@ -474,6 +483,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterAffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+    println("&&&&&&&&& filterAffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>
         !p.forall(s => !afs1.contains(s))
@@ -481,6 +491,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterAffectedPaths(paths: ParSeq[Seq[Int]], afs: mutable.HashSet[Int]) = {
+    println("&&&&&&&&& filterAffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>
         !p.forall(s => !afs.contains(s))
@@ -488,6 +499,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterUnaffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+    println("&&&&&&&&& filterUnaffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>
         p.forall(s => !afs1.contains(s))
@@ -495,6 +507,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def filterUnaffectedPaths(paths: ParSeq[Seq[Int]], afs: mutable.HashSet[Int]) = {
+    println("&&&&&&&&& filterUnaffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>
         p.forall(s => !afs.contains(s))
@@ -502,6 +515,7 @@ case class Experiments(config: Params) extends Serializable {
   }
 
   def computeNumSteps(walkers: ParSeq[(Int, Seq[Int])]) = {
+    println("%%%%% Compuing number of steps %%%%%")
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path.length

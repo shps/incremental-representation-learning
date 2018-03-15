@@ -1,5 +1,8 @@
 package au.csiro.data61.randomwalk.common
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.{AtomicInteger, LongAdder}
+
 import au.csiro.data61.randomwalk.algorithm.{GraphMap, RandomSample}
 import com.sun.org.apache.bcel.internal.generic.Type
 
@@ -52,6 +55,7 @@ object GraphUtils {
 
   def computeSecondOrderProbsWithNoId(config: Params): ParMap[(Int, Int, Int), Double] = {
 
+    println("******* Theoretical Errors ********")
     val vertices = GraphMap.getVertices().par
     val rSample = RandomSample()
     vertices.flatMap { case prev =>
@@ -75,33 +79,56 @@ object GraphUtils {
 
   def computeEmpiricalTransitionProbabilities(walks: ParSeq[Seq[Int]], possibleSteps: ParSet[
     (Int, Int, Int)]): ParSeq[((Int, Int, Int), Double)] = {
-    val transitions: ParMap[(Int, Int, Int), Int] = walks.flatMap { case w =>
-      var counts = Seq.empty[((Int, Int, Int), Int)]
+    println("******* Starting Empirical Errors ********")
+    val countMap = new ConcurrentHashMap[(Int, Int, Int), LongAdder]()
+    val sumMap = new ConcurrentHashMap[(Int, Int), LongAdder]()
+    //    val preTransition = walks.map { case w =>
+    //      var countTriples = Seq.empty[((Int, Int, Int), Int)]
+    //      var countEdges = Seq.empty[((Int, Int), Int)]
+    //      for (i <- 0 until w.length - 2) {
+    //        countTriples ++= Seq(((w(i), w(i + 1), w(i + 2)), 1))
+    //        countEdges ++= Seq(((w(i), w(i + 1)), 1))
+    //      }
+    //      (countTriples, countEdges)
+    //    }
+    walks.foreach { case w =>
       for (i <- 0 until w.length - 2) {
-        counts ++= Seq(((w(i), w(i + 1), w(i + 2)), 1))
+        countMap.computeIfAbsent((w(i), w(i + 1), w(i + 2)), _ => new LongAdder()).increment()
+        sumMap.computeIfAbsent((w(i), w(i + 1)), _ => new LongAdder()).increment()
       }
-      counts
-    }.groupBy(_._1).map { case (k, counts) => (k, counts.foldLeft(0)(_ + _._2)) }
+    }
+
+//    val transitions: ParMap[(Int, Int, Int), Int] = preTransition.map(_._1).flatten.groupBy(_._1)
+//      .map { case (k, counts) => (k, counts.foldLeft(0)(_ + _._2))
+//      }
+//
+//    val sums: ParMap[(Int, Int), Int] = preTransition.map(_._2).flatten.groupBy(_._1)
+//      .map { case (k, counts) => (k, counts.foldLeft(0)(_ + _._2)) }
 
     val mProbs = possibleSteps.toSeq.map { case (prev, curr, dst) =>
-      val currNeighbors = GraphMap.getNeighbors(curr)
-      var sum: Double = 0
-      for (n <- currNeighbors) {
-        sum += transitions.getOrElse((prev, curr, n._1), 0)
-      }
-      val count = transitions.getOrElse((prev, curr, dst), 0).toDouble
+//      val currNeighbors = GraphMap.getNeighbors(curr)
+      //      var sum: Double = 0
+      //      for (n <- currNeighbors) {
+      //        sum += transitions.getOrElse((prev, curr, n._1), 0)
+      //      }
+      val sum = sumMap.getOrDefault((prev, curr), new LongAdder()).intValue()
+      val count = countMap.getOrDefault((prev, curr, dst), new LongAdder()).doubleValue()
       val tp = count / math.max(sum, 1.0)
       ((prev, curr, dst), tp)
     }
+    println("******* Finished Empirical Errors ********")
     return mProbs
   }
 
   def computeErrorsMeanAndMax(walks: ParSeq[Seq[Int]], config: Params): (Double, Double) = {
 
+    println("******* Starting Computing Errors ********")
     val errors = computeErrors(walks, config)
+    println("******* Means and Max ********")
     val mean = errors.reduce(_ + _) / errors.size
     val max = errors.max
 
+    println("******* Finished Computing Errors ********")
     (mean, max)
   }
 
@@ -110,6 +137,7 @@ object GraphUtils {
 
     val mProbs = computeEmpiricalTransitionProbabilities(walks, tProbs.keySet)
 
+    println("******** Calculating errors ********")
     mProbs.map { case (k, mp) =>
       val tp = tProbs.getOrElse(k, throw new Exception(s"Theoretical prob for (${k._1}, ${k._2}, " +
         s"${k._3}) does not exist."))
