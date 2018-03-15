@@ -74,7 +74,7 @@ case class FileManager(config: Params) {
     lines.flatMap { triplet =>
       val parts = triplet.split("\\s+")
 
-      Seq((parts.head.toInt, parts(1).toInt, parts(3).toInt))
+      Seq((parts.head.toInt, parts(1).toInt, parts(2).toInt))
     }.groupBy(_._3).toSeq.seq.sortWith(_._1<_._1)
   }
 
@@ -103,6 +103,20 @@ case class FileManager(config: Params) {
   }
 
   def saveComputations(numSteps: Array[Array[Int]], suffix: String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
+      config.walkLength
+    }-nw${config.numWalks}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    for (steps <- numSteps) {
+      bw.write(s"${steps.mkString("\t")}\n")
+    }
+    bw.flush()
+    bw.close()
+
+  }
+
+  def saveErrors(numSteps: Array[Array[Double]], suffix: String): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
       config.walkLength

@@ -1,7 +1,7 @@
 package au.csiro.data61.randomwalk.algorithm
 
 import au.csiro.data61.randomwalk.common.CommandParser.{RrType, WalkType}
-import au.csiro.data61.randomwalk.common.{FileManager, Params, Property}
+import au.csiro.data61.randomwalk.common.{FileManager, GraphUtils, Params, Property}
 
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
@@ -125,6 +125,8 @@ case class Experiments(config: Params) extends Serializable {
     val sEdges = rand.shuffle(edges.seq)
     val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
+    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
 
     fm.saveEdgeList(sEdges, "g")
     //    for (ec <- 0 until sEdges.size) {
@@ -143,9 +145,14 @@ case class Experiments(config: Params) extends Serializable {
         numSteps(nr)(ec) = ns
         numWalkers(nr)(ec) = nw
         val nEdges = GraphMap.getNumEdges
+        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
+        meanErrors(nr)(ec) = meanE
+        maxErrors(nr)(ec) = maxE
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         println(s"Number of walks: ${prevWalks.size}")
+        println(s"Mean Error: ${meanE}")
+        println(s"Max Error: ${maxE}")
         //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         //          config.numWalks
         //        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
@@ -157,6 +164,8 @@ case class Experiments(config: Params) extends Serializable {
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
+    fm.saveErrors(meanErrors, Property.meanErrors.toString)
+    fm.saveErrors(maxErrors, Property.maxErrors.toString)
   }
 
   def streamingAddAndRun(targetEdge: (Int, (Int, Float)), paths: ParSeq[Seq[Int]]):
@@ -263,6 +272,9 @@ case class Experiments(config: Params) extends Serializable {
     val edges = fm.readEdgeListByYear()
     val numSteps = Array.ofDim[Int](config.numRuns, edges.length)
     val numWalkers = Array.ofDim[Int](config.numRuns, edges.length)
+    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
+
 
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
@@ -274,22 +286,30 @@ case class Experiments(config: Params) extends Serializable {
         prevWalks = result._1
         val ns = result._2
         val nw = result._3
+        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
         numSteps(nr)(ec) = ns
         numWalkers(nr)(ec) = nw
+        meanErrors(nr)(ec) = meanE
+        maxErrors(nr)(ec) = maxE
         val nEdges = GraphMap.getNumEdges
         println(s"Year: ${year}")
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         println(s"Number of walks: ${prevWalks.size}")
-
-        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-          config.numWalks
-        }-$year")
+        println(s"Mean Error: ${meanE}")
+        println(s"Max Error: ${maxE}")
+        //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        //          config.numWalks
+        //        }-$year")
       }
-
+      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        config.numWalks
+      }-final")
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
+    fm.saveErrors(meanErrors, Property.meanErrors.toString)
+    fm.saveErrors(maxErrors, Property.maxErrors.toString)
   }
 
   def streamingAddAndRun(updates: ParSeq[(Int, Int, Int)], paths: ParSeq[Seq[Int]]):
