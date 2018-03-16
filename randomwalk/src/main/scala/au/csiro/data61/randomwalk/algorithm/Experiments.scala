@@ -1,7 +1,7 @@
 package au.csiro.data61.randomwalk.algorithm
 
 import au.csiro.data61.randomwalk.common.CommandParser.{RrType, WalkType}
-import au.csiro.data61.randomwalk.common.{FileManager, GraphUtils, Params, Property}
+import au.csiro.data61.randomwalk.common._
 
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
@@ -117,56 +117,108 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def streamingUpdates(): Unit = {
-    val g1 = fm.readFromFile(directed = true) // read it as directed
-    val edges: ParSeq[(Int, (Int, Float))] = extractEdges(g1)
-    print(s"Number of edges: ${edges.length}")
-    val rand = new Random(config.seed)
-    val sEdges = rand.shuffle(edges.seq)
-    val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
-    val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
-    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
-    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
+//  def streamingUpdates(): Unit = {
+//    val g1 = fm.readFromFile(directed = true) // read it as directed
+//    val edges: ParSeq[(Int, (Int, Float))] = extractEdges(g1)
+//    print(s"Number of edges: ${edges.length}")
+//    val rand = new Random(config.seed)
+//    val sEdges = rand.shuffle(edges.seq)
+//    val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
+//    val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
+//    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+//    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
+//
+//    fm.saveEdgeList(sEdges, "g")
+//    //    for (ec <- 0 until sEdges.size) {
+//    //      fm.saveEdgeList(sEdges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
+//    //    }
+//    for (nr <- 0 until config.numRuns) {
+//      GraphMap.reset
+//      var prevWalks = ParSeq.empty[Seq[Int]]
+//
+//      for (ec <- 0 until sEdges.size) {
+//        val e = sEdges(ec)
+//        val result = streamingAddAndRun(e, prevWalks)
+//        prevWalks = result._1
+//        val ns = result._2
+//        val nw = result._3
+//        numSteps(nr)(ec) = ns
+//        numWalkers(nr)(ec) = nw
+//        val nEdges = GraphMap.getNumEdges
+//        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
+//        meanErrors(nr)(ec) = meanE
+//        maxErrors(nr)(ec) = maxE
+//        println(s"Number of edges: ${nEdges}")
+//        println(s"Number of vertices: ${GraphMap.getNumVertices}")
+//        println(s"Number of walks: ${prevWalks.size}")
+//        println(s"Mean Error: ${meanE}")
+//        println(s"Max Error: ${maxE}")
+//        //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+//        //          config.numWalks
+//        //        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+//
+//      }
+//      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+//        config.numWalks
+//      }-$nr")
+//    }
+//    fm.saveComputations(numSteps, Property.stepsToCompute.toString)
+//    fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
+//    fm.saveErrors(meanErrors, Property.meanErrors.toString)
+//    fm.saveErrors(maxErrors, Property.maxErrors.toString)
+//  }
+def streamingUpdates(): Unit = {
+  val g1 = fm.readFromFile(directed = true) // read it as directed
+  val edges: ParSeq[(Int, (Int, Float))] = extractEdges(g1)
+  print(s"Number of edges: ${edges.length}")
+  val rand = new Random(config.seed)
+  val sEdges = rand.shuffle(edges.seq)
+  val numSteps = Array.ofDim[Int](config.numRuns, sEdges.length)
+  val numWalkers = Array.ofDim[Int](config.numRuns, sEdges.length)
+  val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+  val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
 
-    fm.saveEdgeList(sEdges, "g")
-    //    for (ec <- 0 until sEdges.size) {
-    //      fm.saveEdgeList(sEdges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
-    //    }
-    for (nr <- 0 until config.numRuns) {
-      GraphMap.reset
-      var prevWalks = ParSeq.empty[Seq[Int]]
+//  fm.saveEdgeList(sEdges, "g")
+  //    for (ec <- 0 until sEdges.size) {
+  //      fm.saveEdgeList(sEdges.splitAt(ec + 1)._1, s"g-e${(ec + 1) * 2}")
+  //    }
+  for (nr <- 0 until config.numRuns) {
+    GraphMap.reset
+    WalkStorage.reset
+    var prevWalks = ParSeq.empty[Seq[Int]]
 
-      for (ec <- 0 until sEdges.size) {
-        val e = sEdges(ec)
-        val result = streamingAddAndRun(e, prevWalks)
-        prevWalks = result._1
-        val ns = result._2
-        val nw = result._3
-        numSteps(nr)(ec) = ns
-        numWalkers(nr)(ec) = nw
-        val nEdges = GraphMap.getNumEdges
-        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
-        meanErrors(nr)(ec) = meanE
-        maxErrors(nr)(ec) = maxE
-        println(s"Number of edges: ${nEdges}")
-        println(s"Number of vertices: ${GraphMap.getNumVertices}")
-        println(s"Number of walks: ${prevWalks.size}")
-        println(s"Mean Error: ${meanE}")
-        println(s"Max Error: ${maxE}")
-        //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-        //          config.numWalks
-        //        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
+    for (ec <- 0 until sEdges.size) {
+      val e = sEdges(ec)
+      val result = streamingAddAndRun(e, prevWalks)
+      prevWalks = result._1
+      val ns = result._2
+      val nw = result._3
+      numSteps(nr)(ec) = ns
+      numWalkers(nr)(ec) = nw
+      val nEdges = GraphMap.getNumEdges
+      val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1, config)
+      meanErrors(nr)(ec) = meanE
+      maxErrors(nr)(ec) = maxE
+      println(s"Number of edges: ${nEdges}")
+      println(s"Number of vertices: ${GraphMap.getNumVertices}")
+      println(s"Number of walks: ${prevWalks.size}")
+      println(s"Mean Error: ${meanE}")
+      println(s"Max Error: ${maxE}")
+      //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+      //          config.numWalks
+      //        }-e${nEdges}-s${e._1.toString}-d${e._2._1.toString}-$nr")
 
-      }
-      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-        config.numWalks
-      }-$nr")
     }
-    fm.saveComputations(numSteps, Property.stepsToCompute.toString)
-    fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
-    fm.saveErrors(meanErrors, Property.meanErrors.toString)
-    fm.saveErrors(maxErrors, Property.maxErrors.toString)
+    fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+      config.numWalks
+    }-$nr")
   }
+  fm.saveComputations(numSteps, Property.stepsToCompute.toString)
+  fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
+  fm.saveErrors(meanErrors, Property.meanErrors.toString)
+  fm.saveErrors(maxErrors, Property.maxErrors.toString)
+}
+
 
   def streamingAddAndRun(targetEdge: (Int, (Int, Float)), paths: ParSeq[Seq[Int]]):
   (ParSeq[Seq[Int]],
@@ -183,6 +235,9 @@ case class Experiments(config: Params) extends Serializable {
 
     println(s"Added Edge: $src <-> $dst")
     val afs1 = Seq(src, dst)
+    val afSet = new mutable.HashSet[Int]()
+    afSet.add(src)
+    afSet.add(dst)
 
     val result = config.rrType match {
       case RrType.m1 => {
@@ -223,23 +278,25 @@ case class Experiments(config: Params) extends Serializable {
         (np, ns, nw)
       }
       case RrType.m3 => {
-        var walkers = filterSplitPaths(paths, afs1)
-        if (paths.forall(_.head != src)) {
-          walkers ++= rwalk.initWalker(src)
-        }
-        if (paths.forall(_.head != dst)) {
-          walkers ++= rwalk.initWalker(dst)
-        }
-        val ns = computeNumSteps(walkers)
-        val nw = computeNumWalkers(walkers)
+        val walkers = WalkStorage.filterAffectedPaths(afSet, config)
+//        if (paths.forall(_.head != src)) {
+//          walkers ++= rwalk.initWalker(src)
+//        }
+//        if (paths.forall(_.head != dst)) {
+//          walkers ++= rwalk.initWalker(dst)
+//        }
+        val ns = computeNumStepsWithIds(walkers)
+        val nw = computeNumWalkersWithIds(walkers)
         //        numSteps(i)(j) = ns
         //        numWalkers(i)(j) = nw
         val partialPaths = config.wType match {
-          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
-          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+//          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalkWitIds(walkers)
         }
-        val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
-        val newPaths = unaffectedPaths.union(partialPaths)
+//        val unaffectedPaths = filterUnaffectedPaths(paths, afs1)
+//        val newPaths = unaffectedPaths.union(partialPaths)
+        WalkStorage.updatePaths(partialPaths)
+        val newPaths = WalkStorage.getPaths()
         (newPaths, ns, nw)
       }
       case RrType.m4 => {
@@ -268,6 +325,54 @@ case class Experiments(config: Params) extends Serializable {
     result
   }
 
+  //  def streamingCoAuthors(): Unit = {
+  //    val edges = fm.readEdgeListByYear()
+  //    val numSteps = Array.ofDim[Int](config.numRuns, edges.length)
+  //    val numWalkers = Array.ofDim[Int](config.numRuns, edges.length)
+  //    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+  //    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
+  //
+  //
+  //    for (nr <- 0 until config.numRuns) {
+  //      GraphMap.reset
+  //      var prevWalks = ParSeq.empty[Seq[Int]]
+  //
+  //      for (ec <- 0 until edges.length) {
+  //        val (year, updates) = edges(ec)
+  //        val result = streamingAddAndRun(updates, prevWalks)
+  //        prevWalks = result._1
+  //        val ns = result._2
+  //        val nw = result._3
+  //
+  //        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1,
+  // config)
+  //        numSteps(nr)(ec) = ns
+  //        numWalkers(nr)(ec) = nw
+  //        meanErrors(nr)(ec) = meanE
+  //        maxErrors(nr)(ec) = maxE
+  //        val nEdges = GraphMap.getNumEdges
+  //        println(s"Year: ${year}")
+  //        println(s"Number of edges: ${nEdges}")
+  //        println(s"Number of vertices: ${GraphMap.getNumVertices}")
+  //        println(s"Number of walks: ${prevWalks.size}")
+  //        println(s"Mean Error: ${meanE}")
+  //        println(s"Max Error: ${maxE}")
+  //        println(s"Number of actual steps: $ns")
+  //        println(s"Number of actual walks: $nw")
+  //        //        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config
+  // .walkLength}-nw${
+  //        //          config.numWalks
+  //        //        }-$year")
+  //      }
+  //      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+  //        config.numWalks
+  //      }-final")
+  //    }
+  //    fm.saveComputations(numSteps, Property.stepsToCompute.toString)
+  //    fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
+  //    fm.saveErrors(meanErrors, Property.meanErrors.toString)
+  //    fm.saveErrors(maxErrors, Property.maxErrors.toString)
+  //  }
   def streamingCoAuthors(): Unit = {
     val edges = fm.readEdgeListByYear()
     val numSteps = Array.ofDim[Int](config.numRuns, edges.length)
@@ -278,11 +383,12 @@ case class Experiments(config: Params) extends Serializable {
 
     for (nr <- 0 until config.numRuns) {
       GraphMap.reset
+      WalkStorage.reset
       var prevWalks = ParSeq.empty[Seq[Int]]
 
       for (ec <- 0 until edges.length) {
         val (year, updates) = edges(ec)
-        val result = streamingAddAndRun(updates, prevWalks)
+        val result = streamingAddAndRunWithId(updates, prevWalks)
         prevWalks = result._1
         val ns = result._2
         val nw = result._3
@@ -313,6 +419,101 @@ case class Experiments(config: Params) extends Serializable {
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
     fm.saveErrors(meanErrors, Property.meanErrors.toString)
     fm.saveErrors(maxErrors, Property.maxErrors.toString)
+  }
+
+  def streamingAddAndRunWithId(updates: ParSeq[(Int, Int, Int)], paths: ParSeq[Seq[Int]]):
+  (ParSeq[Seq[Int]],
+    Int, Int) = {
+    val afs = new mutable.HashSet[Int]()
+    for (u <- updates) {
+      val src = u._1
+      val dst = u._2
+      val w = 1f
+      var sNeighbors = GraphMap.getNeighbors(src)
+      var dNeighbors = GraphMap.getNeighbors(dst)
+      sNeighbors ++= Seq((dst, w))
+      dNeighbors ++= Seq((src, w))
+      GraphMap.putVertex(src, sNeighbors)
+      GraphMap.putVertex(dst, dNeighbors)
+
+      //      println(s"Added Edge: $src <-> $dst")
+      afs.add(src)
+      afs.add(dst)
+    }
+
+    println("******* Updated the graph ********")
+
+
+    val result = config.rrType match {
+      case RrType.m1 => {
+        val init = rwalk.createWalkersByVertices(GraphMap.getVertices().par)
+        val ns = computeNumSteps(init)
+        val nw = computeNumWalkers(init)
+        val p = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(init)
+          case WalkType.secondorder => rwalk.secondOrderWalk(init)
+        }
+        (p, ns, nw)
+      }
+      case RrType.m2 => {
+        var fWalkers: ParSeq[(Int, Seq[Int])] = filterUniqueWalkers(paths, afs)
+        for (a <- afs) {
+          if (fWalkers.count(_._1 == a) == 0) {
+            fWalkers ++= ParSeq((a, Seq(a)))
+          }
+        }
+        val walkers: ParSeq[(Int, Seq[Int])] = ParSeq.fill(config.numWalks)(fWalkers).flatten
+        val ns = computeNumSteps(walkers)
+        val nw = computeNumWalkers(walkers)
+
+        val pp = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+        }
+        val aws = fWalkers.map(tuple => tuple._1).seq
+        val up = paths.filter { case p =>
+          !aws.contains(p.head)
+        }
+
+        val np = up.union(pp)
+        (np, ns, nw)
+      }
+      case RrType.m3 => {
+        val walkers = WalkStorage.filterAffectedPaths(afs, config)
+
+        val ns = computeNumStepsWithIds(walkers)
+        val nw = computeNumWalkersWithIds(walkers)
+        val partialPaths = config.wType match {
+          //          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalkWitIds(walkers)
+        }
+        WalkStorage.updatePaths(partialPaths)
+        //        val unaffectedPaths = filterUnaffectedPaths(paths, afs)
+        //        val newPaths = unaffectedPaths.union(partialPaths)
+        val newPaths = WalkStorage.getPaths()
+        (newPaths, ns, nw)
+      }
+      case RrType.m4 => {
+        var walkers = filterWalkers(paths, afs)
+        for (a <- afs) {
+          if (walkers.count(_._1 == a) == 0) {
+            walkers ++= rwalk.initWalker(a)
+          }
+        }
+
+        val ns = computeNumSteps(walkers)
+        val nw = computeNumWalkers(walkers)
+        val partialPaths = config.wType match {
+          case WalkType.firstorder => rwalk.firstOrderWalk(walkers)
+          case WalkType.secondorder => rwalk.secondOrderWalk(walkers)
+        }
+        val unaffectedPaths = filterUnaffectedPaths(paths, afs)
+        val newPaths = unaffectedPaths.union(partialPaths)
+        (newPaths, ns, nw)
+      }
+    }
+
+    result
   }
 
   def streamingAddAndRun(updates: ParSeq[(Int, Int, Int)], paths: ParSeq[Seq[Int]]):
@@ -522,7 +723,19 @@ case class Experiments(config: Params) extends Serializable {
     }.reduce(_ + _)
   }
 
+  def computeNumStepsWithIds(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
+    println("%%%%% Compuing number of steps %%%%%")
+    val bcWalkLength = config.walkLength + 1
+    walkers.map {
+      case (_, (_, path)) => bcWalkLength - path.length
+    }.reduce(_ + _)
+  }
+
   def computeNumWalkers(walkers: ParSeq[(Int, Seq[Int])]) = {
+    walkers.length
+  }
+
+  def computeNumWalkersWithIds(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
     walkers.length
   }
 }

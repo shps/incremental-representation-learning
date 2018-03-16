@@ -1,6 +1,6 @@
 package au.csiro.data61.randomwalk.algorithm
 
-import au.csiro.data61.randomwalk.common.CommandParser.TaskName
+import au.csiro.data61.randomwalk.common.CommandParser.{RrType, TaskName, WalkType}
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.scalatest.BeforeAndAfter
 
@@ -202,17 +202,17 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     }
   }
 
-  //  test("streaming updates") {
-  //    // Undirected graph
-  //    val wLength = 4
-  //
-  //    val config = Params(input = karate, directed = false, walkLength =
-  //      wLength, rddPartitions = 8, numWalks = 10, rrType = RrType.m3)
-  //
-  //    val exp = Experiments(config)
-  //    exp.streamingUpdates()
-  //
-  //  }
+    test("streaming updates") {
+      // Undirected graph
+      val wLength = 4
+
+      val config = Params(input = karate, directed = false, walkLength =
+        wLength, rddPartitions = 8, numWalks = 1, rrType = RrType.m3, numVertices = 34, wType = WalkType.secondorder)
+
+      val exp = Experiments(config)
+      exp.streamingUpdates()
+
+    }
 
   //  test("addAndRun m2") {
   //    // Undirected graph
