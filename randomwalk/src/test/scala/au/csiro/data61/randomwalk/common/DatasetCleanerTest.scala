@@ -8,10 +8,10 @@ import org.scalatest.FunSuite
   */
 class DatasetCleanerTest extends FunSuite {
 
-  private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/datasets/"
+  private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/affected-experiments/"
 
   test("testCheckDataSet") {
-    val fName = dataset + "coauthors-edge-list.txt"
+    val fName = dataset + "facebook_combined.txt"
     val initId = 0
     val config = Params(input = fName)
     DatasetCleaner.checkDataSet(config, initId)

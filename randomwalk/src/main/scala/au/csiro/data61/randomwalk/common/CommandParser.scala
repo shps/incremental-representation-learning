@@ -6,7 +6,7 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1, coAuthors, sca =
+    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1, coAuthors, sca, ae =
       Value
   }
 
@@ -37,6 +37,7 @@ object CommandParser {
   val NODE_IDS = "nodes"
   val NUM_VERTICES = "nVertices"
   val SEED = "seed"
+  val DELIMITER = "d"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -81,6 +82,9 @@ object CommandParser {
       .required()
       .text("Input edge file path: empty")
       .action((x, c) => c.copy(input = x))
+    opt[String](DELIMITER)
+      .text("Delimiter: ")
+      .action((x, c) => c.copy(delimiter = x))
     opt[String](OUTPUT)
       .required()
       .text("Output path: empty")

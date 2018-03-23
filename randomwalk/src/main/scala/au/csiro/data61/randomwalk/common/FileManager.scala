@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import better.files._
 
 import scala.collection.mutable
-import scala.collection.parallel.ParSeq
+import scala.collection.parallel.{ParSeq, immutable}
 import scala.io.Source
 import scala.util.Try
 
@@ -15,11 +15,22 @@ import scala.util.Try
   */
 case class FileManager(config: Params) {
 
+  def readCountFile(): ParSeq[(Int, Int)] = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
+
+    lines.flatMap { triplet =>
+      val parts = triplet.split(config.delimiter)
+
+      Seq((parts.head.toInt, parts(1).toInt))
+    }
+  }
+
+
   def readFromFile(directed: Boolean): ParSeq[(Int, Seq[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
     lines.flatMap { triplet =>
-      val parts = triplet.split("\\s+")
+      val parts = triplet.split(config.delimiter)
       // if the weights are not specified it sets it to 1.0
 
       val weight = config.weighted && parts.length > 2 match {
@@ -61,21 +72,21 @@ case class FileManager(config: Params) {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
     lines.flatMap { triplet =>
-      val parts = triplet.split("\\s+")
+      val parts = triplet.split(config.delimiter)
 
       Seq((parts.head.toInt, parts(1).toInt))
     }
 
   }
 
-  def readEdgeListByYear():Seq[(Int, ParSeq[(Int, Int, Int)])] = {
+  def readEdgeListByYear(): Seq[(Int, ParSeq[(Int, Int, Int)])] = {
     val lines = Source.fromFile(config.input).getLines.toSeq.par
 
     lines.flatMap { triplet =>
-      val parts = triplet.split("\\s+")
+      val parts = triplet.split(config.delimiter)
 
       Seq((parts.head.toInt, parts(1).toInt, parts(2).toInt))
-    }.groupBy(_._3).toSeq.seq.sortWith(_._1<_._1)
+    }.groupBy(_._3).toSeq.seq.sortWith(_._1 < _._1)
   }
 
   def saveProbs(probs: Seq[Seq[Double]]): Unit = {
@@ -168,13 +179,24 @@ case class FileManager(config: Params) {
     paths
   }
 
-  def saveCounts(counts: Seq[(Int, (Int, Int))]) = {
+  //  def saveCounts(counts: Seq[(Int, (Int, Int))]) = {
+  //    config.output.toFile.createIfNotExists(true)
+  //    val file = new File(s"${config.output}/${Property.countsSuffix}.txt")
+  //    val bw = new BufferedWriter(new FileWriter(file))
+  //    bw.write(counts.sortWith(_._2._2 > _._2._2).map {
+  //      case (vId, (count, occurs)) =>
+  //        s"$vId\t$count\t$occurs"
+  //    }.mkString("\n"))
+  //    bw.flush()
+  //    bw.close()
+  //  }
+  def saveCounts(counts: Seq[(Int, Int)], fName: String) = {
     config.output.toFile.createIfNotExists(true)
-    val file = new File(s"${config.output}/${Property.countsSuffix}.txt")
+    val file = new File(s"${config.output}/$fName.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(counts.sortWith(_._2._2 > _._2._2).map {
-      case (vId, (count, occurs)) =>
-        s"$vId\t$count\t$occurs"
+    bw.write(counts.map {
+      case (vId, count) =>
+        s"$vId\t$count"
     }.mkString("\n"))
     bw.flush()
     bw.close()
@@ -241,11 +263,20 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def saveNumAuthors(ua: String, fname:String): Unit = {
+  def saveNumAuthors(ua: String, fname: String): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/$fname.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(ua)
+    bw.flush()
+    bw.close()
+  }
+
+  def saveCountGroups(groups: Array[Int]): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/count-groups.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(groups.zipWithIndex.map { case (c, g) => s"$g\t$c" }.mkString("\n"))
     bw.flush()
     bw.close()
   }

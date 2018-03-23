@@ -57,6 +57,9 @@ object Main {
       case TaskName.sca =>
         exp.streamingCoAuthors()
         null
+      case TaskName.ae => // Empirical analysis of affected vertices, edges, and walks
+        exp.streamingAffecteds()
+        null
     }
 
     params.cmd match {
