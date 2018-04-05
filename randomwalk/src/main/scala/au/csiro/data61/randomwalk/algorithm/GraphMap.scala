@@ -10,8 +10,26 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 object GraphMap {
 
-  private lazy val srcVertexMap: mutable.Map[Int, Seq[(Int, Float)]] = new HashMap[Int, Seq[(Int,
-    Float)]]()
+  /**
+    *
+    * @param src
+    * @param dst
+    * @param w
+    * @return true if the edge does not exist before. false if it updates an existing edge.
+    */
+  def addUndirectedEdge(src: Int, dst: Int, w: Float): Boolean = synchronized {
+    val sNeighbors = GraphMap.getNeighbors(src)
+    val dNeighbors = GraphMap.getNeighbors(dst)
+    sNeighbors.add((dst, w))
+    val isNew = dNeighbors.add((src, w))
+    GraphMap.putVertex(src, sNeighbors)
+    GraphMap.putVertex(dst, dNeighbors)
+    isNew
+  }
+
+
+  private lazy val srcVertexMap: mutable.Map[Int, mutable.Set[(Int, Float)]] = new HashMap[Int,
+    mutable.Set[(Int, Float)]]()
   //  private lazy val offsets: ArrayBuffer[Int] = new ArrayBuffer()
   //  private lazy val lengths: ArrayBuffer[Int] = new ArrayBuffer()
   //  private lazy val edges: ArrayBuffer[(Int, Float)] = new ArrayBuffer()
@@ -20,7 +38,7 @@ object GraphMap {
   private var firstGet: Boolean = true
 
 
-  def addVertex(vId: Int, neighbors: Seq[(Int, Float)]): Unit = synchronized {
+  def addVertex(vId: Int, neighbors: mutable.Set[(Int, Float)]): Unit = synchronized {
     srcVertexMap.get(vId) match {
       case None => {
         srcVertexMap.put(vId, neighbors)
@@ -29,7 +47,7 @@ object GraphMap {
     }
   }
 
-  def putVertex(vId: Int, neighbors: Seq[(Int, Float)]): Unit = synchronized {
+  def putVertex(vId: Int, neighbors: mutable.Set[(Int, Float)]): Unit = synchronized {
     srcVertexMap.put(vId, neighbors)
   }
 
@@ -60,7 +78,7 @@ object GraphMap {
   }
 
   def addVertex(vId: Int): Unit = synchronized {
-    srcVertexMap.put(vId, ArrayBuffer.empty[(Int, Float)])
+    srcVertexMap.put(vId, mutable.Set.empty[(Int, Float)])
   }
 
   def getNumVertices: Int = {
@@ -80,7 +98,7 @@ object GraphMap {
     srcVertexMap.clear()
   }
 
-  def getNeighbors(vid: Int): Seq[(Int, Float)] = {
-    srcVertexMap.getOrElse(vid, Seq.empty[(Int, Float)])
+  def getNeighbors(vid: Int): mutable.Set[(Int, Float)] = {
+    srcVertexMap.getOrElse(vid, mutable.Set.empty[(Int, Float)])
   }
 }

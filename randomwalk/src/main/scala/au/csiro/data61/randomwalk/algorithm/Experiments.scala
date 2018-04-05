@@ -112,7 +112,7 @@ case class Experiments(config: Params) extends Serializable {
     fm.saveNumSteps(vertices, numWalkers, Property.walkersToCompute.toString)
   }
 
-  def extractEdges(g1: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, (Int, Float))] = {
+  def extractEdges(g1: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Float))] = {
     g1.flatMap { case (src, neighbors) =>
       neighbors.map { case (dst, w) => (src, (dst, w)) }
     }
@@ -229,15 +229,10 @@ case class Experiments(config: Params) extends Serializable {
     val src = targetEdge._1
     val dst = targetEdge._2._1
     val w = targetEdge._2._2
-    var sNeighbors = GraphMap.getNeighbors(src)
-    var dNeighbors = GraphMap.getNeighbors(dst)
-    sNeighbors ++= Seq((dst, w))
-    dNeighbors ++= Seq((src, w))
-    GraphMap.putVertex(src, sNeighbors)
-    GraphMap.putVertex(dst, dNeighbors)
+    GraphMap.addUndirectedEdge(src, dst, w)
 
     println(s"Added Edge: $src <-> $dst")
-    val afs1 = Seq(src, dst)
+    val afs1 = mutable.Set(src, dst)
     val afSet = new mutable.HashSet[Int]()
     afSet.add(src)
     afSet.add(dst)
@@ -428,7 +423,7 @@ case class Experiments(config: Params) extends Serializable {
   (ParSeq[Seq[Int]],
     Int, Int) = {
     val afs = new mutable.HashSet[Int]()
-    for (u <- updates) {
+    for (u <- updates.seq) {
       val src = u._1
       val dst = u._2
       val w = 1f
@@ -523,7 +518,7 @@ case class Experiments(config: Params) extends Serializable {
   (ParSeq[Seq[Int]],
     Int, Int) = {
     val afs = new mutable.HashSet[Int]()
-    for (u <- updates) {
+    for (u <- updates.seq) {
       val src = u._1
       val dst = u._2
       val w = 1f
@@ -635,7 +630,7 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def removeVertex(g: ParSeq[(Int, Seq[(Int, Float)])], target: Int): ParSeq[(Int, Seq[(Int,
+  def removeVertex(g: ParSeq[(Int, mutable.Set[(Int, Float)])], target: Int): ParSeq[(Int, mutable.Set[(Int,
     Float)])] = {
     g.filter(_._1 != target).map {
       case (vId, neighbors) =>
@@ -644,7 +639,7 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterUniqueWalkers(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterUniqueWalkers(paths: ParSeq[Seq[Int]], afs1: mutable.Set[Int]) = {
     println("&&&&&&&&& filterUniqueWalkers &&&&&&&&&")
     filterWalkers(paths, afs1).groupBy(_._1).map {
       case (_, p) =>
@@ -660,7 +655,7 @@ case class Experiments(config: Params) extends Serializable {
     }.toSeq
   }
 
-  def filterWalkers(paths: ParSeq[Seq[Int]], afs1: Seq[Int]): ParSeq[(Int, Seq[Int])] = {
+  def filterWalkers(paths: ParSeq[Seq[Int]], afs1: mutable.Set[Int]): ParSeq[(Int, Seq[Int])] = {
     filterAffectedPaths(paths, afs1).map(a => (a.head, Seq(a.head)))
   }
 
@@ -668,7 +663,7 @@ case class Experiments(config: Params) extends Serializable {
     filterAffectedPaths(paths, afs).map(a => (a.head, Seq(a.head)))
   }
 
-  def filterSplitPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterSplitPaths(paths: ParSeq[Seq[Int]], afs1: mutable.Set[Int]) = {
     println("&&&&&&&&& filterSplitPaths &&&&&&&&&")
     filterAffectedPaths(paths, afs1).map {
       a =>
@@ -686,7 +681,7 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterAffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterAffectedPaths(paths: ParSeq[Seq[Int]], afs1: mutable.Set[Int]) = {
     println("&&&&&&&&& filterAffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>
@@ -702,7 +697,7 @@ case class Experiments(config: Params) extends Serializable {
     }
   }
 
-  def filterUnaffectedPaths(paths: ParSeq[Seq[Int]], afs1: Seq[Int]) = {
+  def filterUnaffectedPaths(paths: ParSeq[Seq[Int]], afs1: mutable.Set[Int]) = {
     println("&&&&&&&&& filterUnaffectedPaths &&&&&&&&&")
     paths.filter {
       case p =>

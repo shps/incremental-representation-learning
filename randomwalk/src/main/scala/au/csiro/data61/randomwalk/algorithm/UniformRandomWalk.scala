@@ -5,8 +5,8 @@ import java.util
 import au.csiro.data61.randomwalk.common.{FileManager, Params}
 import org.apache.log4j.LogManager
 
+import scala.collection.mutable
 import scala.collection.parallel.ParSeq
-import scala.collection.parallel.mutable.ParArray
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
@@ -47,7 +47,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     val n = vertices.length
     val degs = new Array[(Int, Int)](n)
     for (i <- 0 until n) {
-      degs(i) = (vertices(i), GraphMap.getNeighbors(vertices(i)).length)
+      degs(i) = (vertices(i), GraphMap.getNeighbors(vertices(i)).size)
     }
     degs
   }
@@ -86,7 +86,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     */
   def loadGraph(): ParSeq[(Int, Seq[Int])] = {
 
-    val g: ParSeq[(Int, Seq[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
+    val g: ParSeq[(Int, mutable.Set[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
     initRandomWalk(g)
   }
 
@@ -104,7 +104,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   }
 
 
-  def initRandomWalk(g: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
+  def initRandomWalk(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
     println("****** Initializing random walk ******")
     buildGraphMap(g.seq)
 
@@ -120,7 +120,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     createWalkers(g)
   }
 
-  def createWalkers(g: ParSeq[(Int, Seq[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
+  def createWalkers(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
     g.flatMap {
       case (vId: Int, _) => Seq.fill(config.numWalks)((vId, Seq(vId)))
     }
@@ -140,7 +140,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       breakable {
         while (path.length < walkLength + 1) {
           val neighbors = GraphMap.getNeighbors(path.last)
-          if (neighbors.length > 0) {
+          if (neighbors.size > 0) {
             val (nextStep, _) = rSample.sample(neighbors)
             path = path ++ Seq(nextStep)
           } else {
@@ -163,7 +163,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)
         val neighbors = GraphMap.getNeighbors(s1.head)
-        if (neighbors.length > 0) {
+        if (neighbors.size > 0) {
           val (nextStep, _) = rSample.sample(neighbors)
           init = s1 ++ Seq(nextStep)
         }
@@ -181,7 +181,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
             val prev = path(path.length - 2)
             val currNeighbors = GraphMap.getNeighbors(curr)
             val prevNeighbors = GraphMap.getNeighbors(prev)
-            if (currNeighbors.length > 0) {
+            if (currNeighbors.size > 0) {
               val (nextStep, _) = rSample.secondOrderSample(p = config.p, q = config.q, prevId =
                 prev, prevNeighbors = prevNeighbors, currNeighbors = currNeighbors)
               path = path ++ Seq(nextStep)
@@ -207,7 +207,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)
         val neighbors = GraphMap.getNeighbors(s1._2.head)
-        if (neighbors.length > 0) {
+        if (neighbors.size > 0) {
           val (nextStep, _) = rSample.sample(neighbors)
           init = s1._2 ++ Seq(nextStep)
         }
@@ -226,7 +226,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
             val prev = path(path.length - 2)
             val currNeighbors = GraphMap.getNeighbors(curr)
             val prevNeighbors = GraphMap.getNeighbors(prev)
-            if (currNeighbors.length > 0) {
+            if (currNeighbors.size > 0) {
               val (nextStep, _) = rSample.secondOrderSample(p = config.p, q = config.q, prevId =
                 prev, prevNeighbors = prevNeighbors, currNeighbors = currNeighbors)
               path = path ++ Seq(nextStep)
@@ -242,7 +242,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     walks
   }
 
-  def buildGraphMap(graph: Seq[(Int, Seq[(Int, Float)])]): Unit = {
+  def buildGraphMap(graph: Seq[(Int, mutable.Set[(Int, Float)])]): Unit = {
     GraphMap.reset // This is only to run on a single executor.
     graph.foreach { case (vId, neighbors) =>
       GraphMap.addVertex(vId, neighbors)

@@ -55,9 +55,9 @@ class GraphUtilsTest extends FunSuite with BeforeAndAfter {
     val v2 = 2
     val v3 = 3
     val w = 1f
-    val v1N = Seq((v2, w))
-    val v2N = Seq((v1, w), (v3, w))
-    val v3N = Seq((v2, w))
+    val v1N = mutable.Set((v2, w))
+    val v2N = mutable.Set((v1, w), (v3, w))
+    val v3N = mutable.Set((v2, w))
     val p1 = Seq(v1, v2, v1, v2, v1)
 //    val p12 = Seq(v1, v2, v1, v2, v3)
     val p2 = Seq(v2, v1, v2, v3, v2)

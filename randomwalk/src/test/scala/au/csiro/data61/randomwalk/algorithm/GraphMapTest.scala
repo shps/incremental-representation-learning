@@ -2,13 +2,15 @@ package au.csiro.data61.randomwalk.algorithm
 
 import org.scalatest.FunSuite
 
+import scala.collection.mutable
+
 class GraphMapTest extends FunSuite {
 
   test("test GraphMap data structure") {
-    val e1 = Array((2, 1.0f))
-    val e2 = Array((3, 1.0f))
-    val e3 = Array((3, 1.0f))
-    val e4 = Array((1, 1.0f))
+    val e1 = mutable.Set((2, 1.0f))
+    val e2 = mutable.Set((3, 1.0f))
+    val e3 = mutable.Set((3, 1.0f))
+    val e4 = mutable.Set((1, 1.0f))
     var v2N = Array((1, e1))
     GraphMap.addVertex(1, e1)
     GraphMap.addVertex(2)
@@ -32,7 +34,7 @@ class GraphMapTest extends FunSuite {
     assertMap(v2N, GraphMap)
   }
 
-  private def assertMap(verticesToNeighbors: Array[(Int, Array[(Int,Float)])], gMap: GraphMap
+  private def assertMap(verticesToNeighbors: Array[(Int, mutable.Set[(Int,Float)])], gMap: GraphMap
     .type) = {
     for (v <- verticesToNeighbors) {
       var neighbors: Array[(Int, Float)] = Array()

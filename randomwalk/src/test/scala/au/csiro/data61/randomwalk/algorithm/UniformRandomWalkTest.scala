@@ -50,7 +50,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val neighbors = GraphMap.getNeighbors(target)
       val nDegrees = new mutable.HashMap[Int, Int]()
       for (n <- neighbors) {
-        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).length)
+        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
       }
 
       val after = Experiments(config).removeVertex(before, target)
@@ -60,7 +60,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       for (n <- neighbors) {
         val dstNeighbors = GraphMap.getNeighbors(n._1)
         assert(!dstNeighbors.map(_._1).contains(target))
-        val newDegree = dstNeighbors.length
+        val newDegree = dstNeighbors.size
         nDegrees.get(n._1) match {
           case Some(d) => assert(d - 1 == newDegree)
           case None => assert(false)
@@ -80,7 +80,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val neighbors = GraphMap.getNeighbors(target)
       val nDegrees = new mutable.HashMap[Int, Int]()
       for (n <- neighbors) {
-        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).length)
+        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
       }
 
       val after = exp.removeVertex(before, target)
@@ -88,7 +88,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val neighbors2 = GraphMap.getNeighbors(target)
       val nDegrees2 = new mutable.HashMap[Int, Int]()
       for (n <- neighbors2) {
-        nDegrees2.put(n._1, GraphMap.getNeighbors(n._1).length)
+        nDegrees2.put(n._1, GraphMap.getNeighbors(n._1).size)
       }
       assert(neighbors2 sameElements neighbors)
       assert(nDegrees2 sameElements nDegrees)
@@ -99,7 +99,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val p1 = Seq(1, 2, 1, 2)
     val p2 = Seq(3, 4, 3, 4)
     val p3 = Seq(5, 6, 5, 6)
-    val afs = Seq(1, 5, 6)
+    val afs = mutable.Set(1, 5, 6)
     val pRdd = ParSeq(p1, p2, p3)
     val config = Params()
     val rw = Experiments(config)
@@ -114,7 +114,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val p2 = Seq(3, 4, 3, 4)
     val p3 = Seq(4, 6, 5, 6)
     val p4 = Seq(4, 3, 5, 6)
-    val afs = Seq(1, 5, 6)
+    val afs = mutable.Set(1, 5, 6)
     val pRdd = ParSeq(p1, p2, p3, p4)
     val config = Params()
     val rw = Experiments(config)
@@ -151,7 +151,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(paths.length == 2 * rw.nVertices) // a path per vertex
     val rw2 = UniformRandomWalk(config)
     val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
-      case (k, v) => (k, v.flatMap(_._2).seq)
+      case (k, v) => (k, mutable.Set(v.seq :_*).flatMap(_._2))
     }
     val rSampler = RandomSample(nextFloatGen)
     paths.seq.foreach { case (p: Seq[Int]) =>
@@ -173,7 +173,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(paths.length == rw.nVertices) // a path per vertex
     val rSampler = RandomSample(nextFloatGen)
     val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
-      case (k, v) => (k, v.flatMap(_._2).seq)
+      case (k, v) => (k, mutable.Set(v.seq :_*).flatMap(_._2))
     }
     paths.seq.foreach { case (p: Seq[Int]) =>
       val p2 = doSecondOrderRandomWalk(gMap.seq, p(0), wLength, rSampler, 1.0f, 1.0f)
@@ -194,7 +194,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(paths.length == rw.nVertices) // a path per vertex
     val rSampler = RandomSample(nextFloatGen)
     val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
-      case (k, v) => (k, v.flatMap(_._2).seq)
+      case (k, v) => (k, mutable.Set(v.seq :_*).flatMap(_._2))
     }
     paths.seq.foreach { case (p: Seq[Int]) =>
       val p2 = doSecondOrderRandomWalk(gMap.seq, p(0), wLength, rSampler, p = config.p, q = config.q)
@@ -285,7 +285,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(counts1.seq.sortBy(_._1) sameElements counts2.seq.sortBy(_._1))
   }
 
-  private def doFirstOrderRandomWalk(gMap: Map[Int, Seq[(Int, Float)]], src: Int,
+  private def doFirstOrderRandomWalk(gMap: Map[Int, mutable.Set[(Int, Float)]], src: Int,
                                      walkLength: Int, rSampler: RandomSample): Array[Int]
   = {
     var path = Array(src)
@@ -295,7 +295,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val curr = path.last
       val currNeighbors = gMap.get(curr) match {
         case Some(neighbors) => neighbors
-        case None => Seq.empty[(Int, Float)]
+        case None => mutable.Set.empty[(Int, Float)]
       }
       if (currNeighbors.size > 0) {
         path = path ++ Array(rSampler.sample(currNeighbors)._1)
@@ -307,16 +307,16 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     path
   }
 
-  private def doSecondOrderRandomWalk(gMap: Map[Int, Seq[(Int, Float)]], src: Int,
+  private def doSecondOrderRandomWalk(gMap: Map[Int, mutable.Set[(Int, Float)]], src: Int,
                                       walkLength: Int, rSampler: RandomSample, p: Float,
                                       q: Float): Seq[Int]
   = {
     var path = Array(src)
     val neighbors = gMap.get(src) match {
       case Some(neighbors) => neighbors
-      case None => Seq.empty[(Int, Float)]
+      case None => mutable.Set.empty[(Int, Float)]
     }
-    if (neighbors.length > 0) {
+    if (neighbors.size > 0) {
       path = path ++ Array(rSampler.sample(neighbors)._1)
     }
     else {
@@ -329,12 +329,12 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       val prev = path(path.length - 2)
       val currNeighbors = gMap.get(curr) match {
         case Some(neighbors) => neighbors
-        case None => Seq.empty[(Int, Float)]
+        case None => mutable.Set.empty[(Int, Float)]
       }
-      if (currNeighbors.length > 0) {
+      if (currNeighbors.size > 0) {
         val prevNeighbors = gMap.get(prev) match {
           case Some(neighbors) => neighbors
-          case None => Seq.empty[(Int, Float)]
+          case None => mutable.Set.empty[(Int, Float)]
         }
         path = path ++ Array(rSampler.secondOrderSample(p, q, prev, prevNeighbors, currNeighbors)
           ._1)

@@ -15,6 +15,7 @@ import scala.util.Try
   */
 case class FileManager(config: Params) {
 
+
   def readCountFile(): ParSeq[(Int, Int)] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
@@ -26,7 +27,7 @@ case class FileManager(config: Params) {
   }
 
 
-  def readFromFile(directed: Boolean): ParSeq[(Int, Seq[(Int, Float)])] = {
+  def readFromFile(directed: Boolean): ParSeq[(Int, mutable.Set[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
     lines.flatMap { triplet =>
@@ -40,12 +41,12 @@ case class FileManager(config: Params) {
 
       val (src, dst) = (parts.head.toInt, parts(1).toInt)
       if (directed) {
-        Seq((src, Seq((dst, weight))), (dst, Seq.empty[(Int, Float)]))
+        mutable.Set((src, mutable.Set((dst, weight))), (dst, mutable.Set.empty[(Int, Float)]))
       } else {
-        Seq((src, Seq((dst, weight))), (dst, Seq((src, weight))))
+        Seq((src, mutable.Set((dst, weight))), (dst, mutable.Set((src, weight))))
       }
     }.groupBy(_._1).map { case (src, edges) =>
-      val neighbors = edges.foldLeft(Seq.empty[(Int, Float)])(_ ++ _._2)
+      val neighbors = edges.foldLeft(mutable.Set.empty[(Int, Float)])(_ ++ _._2)
       (src, neighbors)
     }.toSeq
   }
@@ -277,6 +278,15 @@ case class FileManager(config: Params) {
     val file = new File(s"${config.output}/count-groups.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(groups.zipWithIndex.map { case (c, g) => s"$g\t$c" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveGraphStreamStats(results: Seq[(Int, Int, Int, Int, Int)], fName: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$fName")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(results.map { case (t, uV, uE, nV, nE) => s"$t\t$uV\t$uE\t$nV\t$nE" }.mkString("\n"))
     bw.flush()
     bw.close()
   }

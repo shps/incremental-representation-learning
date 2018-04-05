@@ -1,5 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
+import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
+
 import scala.collection.parallel.ParSeq
 
 
@@ -22,6 +24,7 @@ object DatasetCleaner {
   def checkDataSet(config: Params, initId: Int): Unit = {
     val fm = FileManager(config)
     val edges = fm.readEdgeList()
+    UniformRandomWalk(config).loadGraph()
     println(s"Number of edges: ${edges.size}")
     val deduplicated = edges.distinct
     println(s"Number of edges after deduplication: ${deduplicated.size}")
@@ -63,16 +66,37 @@ object DatasetCleaner {
     }.seq.sortWith(_._3 < _._3).par
     // saves as indirected, removes duplicates.
     fm.saveCoAuthors(coAuthorIded)
-    val groups = coAuthorIded.groupBy(_._3)
+    val groups = coAuthorIded.groupBy(_._3).toSeq.seq.sortWith(_._1 < _._1).par
+
+    GraphMap.reset
+    var results = Seq.empty[(Int, Int, Int, Int, Int)]
+    for (updates <- groups.seq) {
+      val year = updates._1
+      val edges = updates._2.distinct
+      val uVertices = edges.flatMap { case (src, dst, _) => Seq(src, dst) }.distinct.length
+      val nBefore = GraphMap.getNumVertices
+      val mBefore = GraphMap.getNumEdges
+      for (e <- edges) {
+        GraphMap.addUndirectedEdge(e._1, e._2, 1f)
+      }
+      val nAfter = GraphMap.getNumVertices
+      val mAfter = GraphMap.getNumEdges
+      val newVertices = nAfter - nBefore
+      val newEdges = mAfter - mBefore
+      results ++= Seq((year, uVertices, edges.length, newVertices, newEdges / 2))
+    }
+
+    fm.saveGraphStreamStats(results.sortWith(_._1 < _._1), "streaming-stats.txt")
+
     val sums = groups.map { case (y, edges) =>
       (y, edges.length)
-    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
+    }.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
     fm.saveNumAuthors(sums, "coauthors-per-year")
 
     val ua = groups.map { case (y, edges) =>
       val count = edges.flatMap { case (src, dst, _) => Seq(src, dst) }.distinct.length
       (y, count)
-    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
+    }.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
     fm.saveNumAuthors(ua, "unique-authors-per-year")
 
     //    val ra = groups.map { case (y, edges) =>

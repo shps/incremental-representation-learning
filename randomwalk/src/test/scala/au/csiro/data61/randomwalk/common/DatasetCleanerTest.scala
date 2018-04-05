@@ -11,9 +11,9 @@ class DatasetCleanerTest extends FunSuite {
   private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/affected-experiments/"
 
   test("testCheckDataSet") {
-    val fName = dataset + "facebook_combined.txt"
-    val initId = 0
-    val config = Params(input = fName)
+    val fName = dataset + "blogcatalog-edges.txt"
+    val initId = 1
+    val config = Params(input = fName, delimiter = ",")
     DatasetCleaner.checkDataSet(config, initId)
 
   }
@@ -24,7 +24,7 @@ class DatasetCleanerTest extends FunSuite {
     val fName = dataset + "test.json"
     val output = dataset
     val config = Params(input = fName, output = output)
-    val filtered = DatasetCleaner.convertJsonFile(config)
+    DatasetCleaner.convertJsonFile(config)
 
   }
 

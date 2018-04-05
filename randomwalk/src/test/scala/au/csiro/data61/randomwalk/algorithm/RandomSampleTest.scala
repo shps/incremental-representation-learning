@@ -2,6 +2,8 @@ package au.csiro.data61.randomwalk.algorithm
 
 import org.scalatest.FunSuite
 
+import scala.collection.mutable
+
 class RandomSampleTest extends FunSuite {
 
   // TODO assert can move to a function for DRY purpose.
@@ -12,7 +14,7 @@ class RandomSampleTest extends FunSuite {
     val e1 = (1, 1.0f)
     val e2 = (2, 1.0f)
     val e3 = (3, 1.0f)
-    val edges = Array(e1, e2, e3)
+    val edges = mutable.Set(e1, e2, e3)
     assert(random.sample(edges) == e1)
     rValue = 0.4f
     random = RandomSample(nextFloat = () => rValue)
