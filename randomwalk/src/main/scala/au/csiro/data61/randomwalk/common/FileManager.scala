@@ -154,7 +154,7 @@ case class FileManager(config: Params) {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(pairs.map { case (t, c) => s"($t , $c)" }.mkString("\n"))
+    bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
     bw.flush()
     bw.close()
   }
