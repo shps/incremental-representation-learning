@@ -55,7 +55,8 @@ object Main {
       case TaskName.coAuthors =>
         DatasetCleaner.convertJsonFile(params)
       case TaskName.sca =>
-        exp.streamingCoAuthors()
+//        exp.streamingCoAuthors()
+        exp.streamEdges()
         null
       case TaskName.ae => // Empirical analysis of affected vertices, edges, and walks
         exp.streamingAffecteds()

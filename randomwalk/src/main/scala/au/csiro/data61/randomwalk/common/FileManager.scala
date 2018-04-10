@@ -7,7 +7,7 @@ import better.files._
 import scala.collection.mutable
 import scala.collection.parallel.{ParSeq, immutable}
 import scala.io.Source
-import scala.util.Try
+import scala.util.{Random, Try}
 
 
 /**
@@ -88,14 +88,25 @@ case class FileManager(config: Params) {
 
   }
 
-  def readEdgeListByYear(): Seq[(Int, ParSeq[(Int, Int, Int)])] = {
-    val lines = Source.fromFile(config.input).getLines.toSeq.par
+  def readPartitionedEdgeList(): Seq[(Int, Seq[(Int, Int)])] = {
+    val lines = readEdgeList().seq
+    val edgePerPartition: Int = Math.max(lines.size / 1000, 1)
+    println(s"Number of edges per step: $edgePerPartition")
+    Random.setSeed(config.seed)
 
+    Random.shuffle(lines).sliding(edgePerPartition, edgePerPartition).toSeq
+      .zipWithIndex.map(a => (a._2, a._1))
+  }
+
+  def readEdgeListByYear(): Seq[(Int, Seq[(Int, Int)])] = {
+    val lines = Source.fromFile(config.input).getLines.toSeq.par
     lines.flatMap { triplet =>
       val parts = triplet.split(config.delimiter)
 
       Seq((parts.head.toInt, parts(1).toInt, parts(2).toInt))
-    }.groupBy(_._3).toSeq.seq.sortWith(_._1 < _._1)
+    }.groupBy(_._3).toSeq.map { case (year, tuple) =>
+      (year, tuple.map(a => (a._1, a._2)).seq)
+    }.seq.sortWith(_._1 < _._1)
   }
 
   def saveProbs(probs: Seq[Seq[Double]]): Unit = {
