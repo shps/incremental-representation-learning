@@ -6,7 +6,8 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr, ar, s1, coAuthors, sca, ae =
+    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr,
+    ar, s1, coAuthors, sca, ae, gPairs =
       Value
   }
 
@@ -38,6 +39,8 @@ object CommandParser {
   val NUM_VERTICES = "nVertices"
   val SEED = "seed"
   val DELIMITER = "d"
+  val W2V_WINDOW = "w2vWindow"
+  val W2V_SKIP_SIZE = "w2vSkip"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -63,15 +66,15 @@ object CommandParser {
     opt[Int](AL)
       .text(s"numWalks: ${defaultParams.affectedLength}")
       .action((x, c) => c.copy(affectedLength = x))
+    opt[Int](W2V_WINDOW)
+      .text(s"Word2Vec window size: ${defaultParams.w2vWindow}")
+      .action((x, c) => c.copy(w2vWindow = x))
+    opt[Int](W2V_SKIP_SIZE)
+      .text(s"Word2Vec skip size: ${defaultParams.w2vSkipSize}")
+      .action((x, c) => c.copy(w2vSkipSize = x))
     opt[Long](SEED)
       .text(s"seed: ${defaultParams.seed}")
       .action((x, c) => c.copy(seed = x))
-    opt[Int](RDD_PARTITIONS)
-      .text(s"Number of RDD partitions in running Random Walk and Word2vec: ${
-        defaultParams
-          .rddPartitions
-      }")
-      .action((x, c) => c.copy(rddPartitions = x))
     opt[Boolean](WEIGHTED)
       .text(s"weighted: ${defaultParams.weighted}")
       .action((x, c) => c.copy(weighted = x))

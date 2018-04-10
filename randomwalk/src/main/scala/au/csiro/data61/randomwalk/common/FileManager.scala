@@ -26,6 +26,14 @@ case class FileManager(config: Params) {
     }
   }
 
+  def readWalks(): ParSeq[Seq[Int]] = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
+
+    lines.map { triplet =>
+      triplet.split(config.delimiter).map(a => a.toInt).toSeq
+    }
+  }
+
 
   def readFromFile(directed: Boolean): ParSeq[(Int, mutable.Set[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
@@ -140,6 +148,15 @@ case class FileManager(config: Params) {
     bw.flush()
     bw.close()
 
+  }
+
+  def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], suffix: String) {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(pairs.map { case (t, c) => s"($t , $c)" }.mkString("\n"))
+    bw.flush()
+    bw.close()
   }
 
   def savePaths(paths: ParSeq[Seq[Int]], suffix: String): ParSeq[Seq[Int]] = {

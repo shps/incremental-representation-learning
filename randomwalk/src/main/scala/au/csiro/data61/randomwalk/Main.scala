@@ -60,6 +60,10 @@ object Main {
       case TaskName.ae => // Empirical analysis of affected vertices, edges, and walks
         exp.streamingAffecteds()
         null
+      case TaskName.gPairs =>
+        val pairs = Word2VecUtils.createPairs(fm.readWalks(), numSkips = params.w2vSkipSize,
+          window = params.w2vWindow)
+        fm.saveTargetContextPairs(pairs, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
     }
 
     params.cmd match {
