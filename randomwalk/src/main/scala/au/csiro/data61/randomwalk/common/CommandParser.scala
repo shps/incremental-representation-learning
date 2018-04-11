@@ -41,6 +41,7 @@ object CommandParser {
   val DELIMITER = "d"
   val W2V_WINDOW = "w2vWindow"
   val W2V_SKIP_SIZE = "w2vSkip"
+  val SAVE_PERIOD = "save"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -66,6 +67,9 @@ object CommandParser {
     opt[Int](AL)
       .text(s"numWalks: ${defaultParams.affectedLength}")
       .action((x, c) => c.copy(affectedLength = x))
+    opt[Int](SAVE_PERIOD)
+      .text(s"Save Period: ${defaultParams.savePeriod}")
+      .action((x, c) => c.copy(savePeriod = x))
     opt[Int](W2V_WINDOW)
       .text(s"Word2Vec window size: ${defaultParams.w2vWindow}")
       .action((x, c) => c.copy(w2vWindow = x))

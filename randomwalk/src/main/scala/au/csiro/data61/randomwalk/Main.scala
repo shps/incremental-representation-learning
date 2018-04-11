@@ -1,6 +1,6 @@
 package au.csiro.data61.randomwalk
 
-import au.csiro.data61.randomwalk.algorithm.{Experiments, UniformRandomWalk}
+import au.csiro.data61.randomwalk.algorithm.{Experiments, StreamingExperiment, UniformRandomWalk}
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common._
 import org.apache.log4j.LogManager
@@ -56,7 +56,7 @@ object Main {
         DatasetCleaner.convertJsonFile(params)
       case TaskName.sca =>
 //        exp.streamingCoAuthors()
-        exp.streamEdges()
+        StreamingExperiment(params).streamEdges()
         null
       case TaskName.ae => // Empirical analysis of affected vertices, edges, and walks
         exp.streamingAffecteds()

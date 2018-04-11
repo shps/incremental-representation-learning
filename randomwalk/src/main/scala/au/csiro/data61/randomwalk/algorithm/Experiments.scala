@@ -10,7 +10,7 @@ import scala.util.Random
 /**
   * Created by Hooman on 2018-02-16.
   */
-case class Experiments(config: Params) extends Serializable {
+case class Experiments(config: Params){
 
 
   val fm = FileManager(config)
@@ -769,11 +769,11 @@ case class Experiments(config: Params) extends Serializable {
     }.reduce(_ + _)
   }
 
-  def computeNumStepsWithIds(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
+  def computeNumStepsWithIds(walkers: ParSeq[(Int, Seq[Int])]) = {
     println("%%%%% Compuing number of steps %%%%%")
     val bcWalkLength = config.walkLength + 1
     walkers.map {
-      case (_, (_, path)) => bcWalkLength - path.length
+      case (_, path) => bcWalkLength - path.length
     }.reduce(_ + _)
   }
 
@@ -781,7 +781,7 @@ case class Experiments(config: Params) extends Serializable {
     walkers.length
   }
 
-  def computeNumWalkersWithIds(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
+  def computeNumWalkersWithIds(walkers: ParSeq[(Int, Seq[Int])]) = {
     walkers.length
   }
 

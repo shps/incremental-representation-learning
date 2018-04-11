@@ -86,7 +86,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     */
   def loadGraph(): ParSeq[(Int, Seq[Int])] = {
 
-    val g: ParSeq[(Int, mutable.Set[(Int, Float)])] = FileManager(config).readFromFile(config.directed)
+    val g: ParSeq[(Int, mutable.Set[(Int, Float)])] = FileManager(config).readFromFile(config
+      .directed)
     initRandomWalk(g)
   }
 
@@ -197,11 +198,11 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     walks
   }
 
-  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float = Random
+  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
     .nextFloat): ParSeq[(Int, Seq[Int])] = {
     println("%%%%% Starting random walk %%%%%")
     val walkLength = config.walkLength
-    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case (_, s1) =>
+    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case s1 =>
       val id = s1._1
       var init = s1._2
       if (init.length == 1) {

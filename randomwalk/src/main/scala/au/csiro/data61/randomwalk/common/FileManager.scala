@@ -90,7 +90,7 @@ case class FileManager(config: Params) {
 
   def readPartitionedEdgeList(): Seq[(Int, Seq[(Int, Int)])] = {
     val lines = readEdgeList().seq
-    val edgePerPartition: Int = Math.max(lines.size / 1000, 1)
+    val edgePerPartition: Int = Math.max(lines.size / 10000, 1)
     println(s"Number of edges per step: $edgePerPartition")
     Random.setSeed(config.seed)
 
