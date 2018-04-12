@@ -98,6 +98,17 @@ case class FileManager(config: Params) {
       .zipWithIndex.map(a => (a._2, a._1))
   }
 
+  def readPartitionedEdgeListWithInitEdges(): (Seq[(Int, Int)], Seq[(Int, Seq[(Int, Int)])]) = {
+    val lines = readEdgeList().seq
+    val edgePerPartition: Int = Math.max(lines.size / 10000, 1)
+    println(s"Number of edges per step: $edgePerPartition")
+    Random.setSeed(config.seed)
+
+    val (part1, part2) = Random.shuffle(lines).splitAt(lines.size / 2)
+    (part1, part2.sliding(edgePerPartition, edgePerPartition).toSeq
+      .zipWithIndex.map(a => (a._2, a._1)))
+  }
+
   def readEdgeListByYear(): Seq[(Int, Seq[(Int, Int)])] = {
     val lines = Source.fromFile(config.input).getLines.toSeq.par
     lines.flatMap { triplet =>
@@ -161,20 +172,26 @@ case class FileManager(config: Params) {
 
   }
 
-  def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], suffix: String) {
+  def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], vocabs: ParSeq[Int], suffix: String) {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
     bw.flush()
     bw.close()
+
+    val file2 = new File(s"${config.output}/${config.cmd}-vocabs-$suffix.txt")
+    val bw2 = new BufferedWriter(new FileWriter(file2))
+    bw2.write(vocabs.mkString("\n"))
+    bw2.flush()
+    bw2.close()
   }
 
-  def savePaths(paths: ParSeq[Seq[Int]], suffix: String): ParSeq[Seq[Int]] = {
+  def savePaths(paths: ParSeq[(Int, Seq[Int])], suffix: String): ParSeq[(Int, Seq[Int])] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(paths.map { case (path) =>
+    bw.write(paths.map { case (wVersion, path) =>
       val pathString = path.mkString("\t")
       s"$pathString"
     }.mkString("\n"))
@@ -306,6 +323,15 @@ case class FileManager(config: Params) {
     val file = new File(s"${config.output}/count-groups.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(groups.zipWithIndex.map { case (c, g) => s"$g\t$c" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveLabels(labels: ParSeq[(Int, ParSeq[Int])]): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/sorted-labels.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(labels.map { case (v, labels) => s"$v\t${labels.mkString("\t")}" }.mkString("\n"))
     bw.flush()
     bw.close()
   }

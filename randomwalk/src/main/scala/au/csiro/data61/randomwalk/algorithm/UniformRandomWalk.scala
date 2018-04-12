@@ -100,8 +100,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }
   }
 
-  def initWalker(v: Int): Seq[(Int, Seq[Int])] = {
-    Seq.fill(config.numWalks)(Seq((v, Seq(v)))).flatten
+  def initWalker(v: Int): Seq[(Int, (Int, Seq[Int]))] = {
+    Seq.fill(config.numWalks)(Seq((v, (1, Seq(v))))).flatten
   }
 
 
@@ -127,8 +127,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }
   }
 
-  def createWalkersByVertices(vertices: ParSeq[Int]): ParSeq[(Int, Seq[Int])] = {
-    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, Seq(vId))) }
+  def createWalkersByVertices(vertices: ParSeq[Int]): ParSeq[(Int, (Int, Seq[Int]))] = {
+    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, (1, Seq(vId)))) }
   }
 
   def firstOrderWalk(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
@@ -155,56 +155,13 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     paths
   }
 
-  def secondOrderWalk(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
-    .nextFloat): ParSeq[Seq[Int]] = {
-    println("%%%%% Starting random walk %%%%%")
-    val walkLength = config.walkLength
-    val paths: ParSeq[Seq[Int]] = initPaths.map { case (_, s1) =>
-      var init = s1
-      if (init.length == 1) {
-        val rSample = RandomSample(nextFloat)
-        val neighbors = GraphMap.getNeighbors(s1.head)
-        if (neighbors.size > 0) {
-          val (nextStep, _) = rSample.sample(neighbors)
-          init = s1 ++ Seq(nextStep)
-        }
-      }
-      init
-    }
-
-    val walks = paths.map { case steps =>
-      var path = steps
-      if (path.length > 1) {
-        val rSample = RandomSample(nextFloat)
-        breakable {
-          while (path.length < walkLength + 2) {
-            val curr = path.last
-            val prev = path(path.length - 2)
-            val currNeighbors = GraphMap.getNeighbors(curr)
-            val prevNeighbors = GraphMap.getNeighbors(prev)
-            if (currNeighbors.size > 0) {
-              val (nextStep, _) = rSample.secondOrderSample(p = config.p, q = config.q, prevId =
-                prev, prevNeighbors = prevNeighbors, currNeighbors = currNeighbors)
-              path = path ++ Seq(nextStep)
-            } else {
-              break
-            }
-          }
-        }
-      }
-      path
-    }
-    println("%%%%% Finished random walk %%%%%")
-    walks
-  }
-
-  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
+  def secondOrderWalk(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float = Random
     .nextFloat): ParSeq[(Int, Seq[Int])] = {
     println("%%%%% Starting random walk %%%%%")
     val walkLength = config.walkLength
-    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case s1 =>
-      val id = s1._1
+    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case (_, s1) =>
       var init = s1._2
+      val wVersion = s1._1
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)
         val neighbors = GraphMap.getNeighbors(s1._2.head)
@@ -213,12 +170,12 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           init = s1._2 ++ Seq(nextStep)
         }
       }
-      (id, init)
+      (wVersion, init)
     }
 
     val walks = paths.map { case steps =>
-      val id = steps._1
       var path = steps._2
+      val wVersion = steps._1
       if (path.length > 1) {
         val rSample = RandomSample(nextFloat)
         breakable {
@@ -237,7 +194,55 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           }
         }
       }
-      (id, path)
+      (wVersion, path)
+    }
+    println("%%%%% Finished random walk %%%%%")
+    walks
+  }
+
+  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float =
+  Random
+    .nextFloat): ParSeq[(Int, (Int, Seq[Int]))] = {
+    println("%%%%% Starting random walk %%%%%")
+    val walkLength = config.walkLength
+    val paths: ParSeq[(Int, (Int, Seq[Int]))] = initPaths.map { case s1 =>
+      val id = s1._1
+      val wVersion = s1._2._1
+      var init = s1._2._2
+      if (init.length == 1) {
+        val rSample = RandomSample(nextFloat)
+        val neighbors = GraphMap.getNeighbors(s1._2._2.head)
+        if (neighbors.size > 0) {
+          val (nextStep, _) = rSample.sample(neighbors)
+          init = s1._2._2 ++ Seq(nextStep)
+        }
+      }
+      (id, (wVersion, init))
+    }
+
+    val walks = paths.map { case steps =>
+      val id = steps._1
+      val wVersion = steps._2._1
+      var path = steps._2._2
+      if (path.length > 1) {
+        val rSample = RandomSample(nextFloat)
+        breakable {
+          while (path.length < walkLength + 2) {
+            val curr = path.last
+            val prev = path(path.length - 2)
+            val currNeighbors = GraphMap.getNeighbors(curr)
+            val prevNeighbors = GraphMap.getNeighbors(prev)
+            if (currNeighbors.size > 0) {
+              val (nextStep, _) = rSample.secondOrderSample(p = config.p, q = config.q, prevId =
+                prev, prevNeighbors = prevNeighbors, currNeighbors = currNeighbors)
+              path = path ++ Seq(nextStep)
+            } else {
+              break
+            }
+          }
+        }
+      }
+      (id, (wVersion, path))
     }
     println("%%%%% Finished random walk %%%%%")
     walks

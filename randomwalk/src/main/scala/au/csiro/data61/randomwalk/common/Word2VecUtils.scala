@@ -26,4 +26,8 @@ object Word2VecUtils {
       pairs
     }
   }
+
+  def createVocabulary(walks: ParSeq[Seq[Int]]): ParSeq[Int] = {
+    walks.flatten.distinct.seq.sortWith(_ < _).par
+  }
 }

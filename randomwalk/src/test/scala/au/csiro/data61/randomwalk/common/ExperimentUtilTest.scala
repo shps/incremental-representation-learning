@@ -7,12 +7,18 @@ import org.scalatest.FunSuite
   */
 class ExperimentUtilTest extends FunSuite {
 
-  private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/affected-experiments/output/ae/fbp20q005/"
-
   test("testParseCountFile") {
+    val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/affected-experiments/output/ae/fbp20q005/"
     val fName = dataset + "counts-0.txt"
     val config = Params(input=fName, output=dataset)
     ExperimentUtil.parseCountFile(config)
+  }
+
+  test("cleanAndSaveLabels") {
+    val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/output/blog-catalog/"
+    val fName = dataset + "group-edges.txt"
+    val config = Params(input=fName, output=dataset, delimiter = ",")
+    ExperimentUtil.cleanAndSaveLabels(config)
   }
 
 }

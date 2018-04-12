@@ -1,6 +1,6 @@
 package au.csiro.data61.randomwalk
 
-import au.csiro.data61.randomwalk.algorithm.{Experiments, StreamingExperiment, UniformRandomWalk}
+import au.csiro.data61.randomwalk.algorithm.{StreamingExperiment, UniformRandomWalk}
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common._
 import org.apache.log4j.LogManager
@@ -19,7 +19,7 @@ object Main {
   def execute(params: Params): Unit = {
     val rw = UniformRandomWalk(params)
     val fm = FileManager(params)
-    val exp = Experiments(params)
+    //    val exp = Experiments(params)
     val paths = params.cmd match {
       case TaskName.firstorder =>
         val g = rw.loadGraph()
@@ -40,13 +40,13 @@ object Main {
         fm.saveAffecteds(affecteds)
         null
       case TaskName.rr =>
-        exp.removeAndRun()
+        //        exp.removeAndRun()
         null
       case TaskName.ar =>
-        exp.addAndRun()
+        //        exp.addAndRun()
         null
       case TaskName.s1 =>
-        exp.streamingUpdates()
+        //        exp.streamingUpdates()
         null
       case TaskName.soProbs =>
         rw.loadGraph()
@@ -55,16 +55,18 @@ object Main {
       case TaskName.coAuthors =>
         DatasetCleaner.convertJsonFile(params)
       case TaskName.sca =>
-//        exp.streamingCoAuthors()
+        //        exp.streamingCoAuthors()
         StreamingExperiment(params).streamEdges()
         null
       case TaskName.ae => // Empirical analysis of affected vertices, edges, and walks
-        exp.streamingAffecteds()
+        //        exp.streamingAffecteds()
         null
       case TaskName.gPairs =>
-        val pairs = Word2VecUtils.createPairs(fm.readWalks(), numSkips = params.w2vSkipSize,
-          window = params.w2vWindow)
-        fm.saveTargetContextPairs(pairs, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
+        val walks = fm.readWalks()
+        val pairs = Word2VecUtils.createPairs(walks, numSkips = params.w2vSkipSize, window =
+          params.w2vWindow)
+        val vocab = Word2VecUtils.createVocabulary(walks)
+        fm.saveTargetContextPairs(pairs, vocab, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
     }
 
     params.cmd match {
