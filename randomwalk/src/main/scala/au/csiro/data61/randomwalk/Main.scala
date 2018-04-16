@@ -1,8 +1,9 @@
 package au.csiro.data61.randomwalk
 
-import au.csiro.data61.randomwalk.algorithm.{StreamingExperiment, UniformRandomWalk}
+import au.csiro.data61.randomwalk.algorithm.UniformRandomWalk
 import au.csiro.data61.randomwalk.common.CommandParser.TaskName
 import au.csiro.data61.randomwalk.common._
+import au.csiro.data61.randomwalk.experiments.StreamingExperiment
 import org.apache.log4j.LogManager
 
 object Main {

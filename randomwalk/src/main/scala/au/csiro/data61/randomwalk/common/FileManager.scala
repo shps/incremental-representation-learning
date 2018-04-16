@@ -98,15 +98,15 @@ case class FileManager(config: Params) {
       .zipWithIndex.map(a => (a._2, a._1))
   }
 
-  def readPartitionedEdgeListWithInitEdges(): (Seq[(Int, Int)], Seq[(Int, Seq[(Int, Int)])]) = {
+  def readPartitionedEdgeListWithInitEdges(seedIncrement:Int): (Seq[(Int, Int)], Seq[(Int, Seq[(Int, Int)])]) = {
     val lines = readEdgeList().seq
     val edgePerPartition: Int = Math.max(lines.size / 10000, 1)
     println(s"Number of edges per step: $edgePerPartition")
-    Random.setSeed(config.seed)
+    Random.setSeed(config.seed+seedIncrement)
 
     val (part1, part2) = Random.shuffle(lines).splitAt(lines.size / 2)
     (part1, part2.sliding(edgePerPartition, edgePerPartition).toSeq
-      .zipWithIndex.map(a => (a._2, a._1)))
+      .zipWithIndex.map(a => (a._2+1, a._1)))
   }
 
   def readEdgeListByYear(): Seq[(Int, Seq[(Int, Int)])] = {

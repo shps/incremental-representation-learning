@@ -1,6 +1,7 @@
-package au.csiro.data61.randomwalk.algorithm
+package au.csiro.data61.randomwalk.experiments
 
-import au.csiro.data61.randomwalk.common.CommandParser.{RrType, WalkType}
+import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
+import au.csiro.data61.randomwalk.common.CommandParser.RrType
 import au.csiro.data61.randomwalk.common._
 
 import scala.collection.mutable
@@ -14,56 +15,60 @@ case class StreamingExperiment(config: Params) {
   val rwalk = UniformRandomWalk(config)
 
   def streamEdges(): Unit = {
-        val edges = fm.readPartitionedEdgeList()
-//    val (initEdges, edges) = fm.readPartitionedEdgeListWithInitEdges()
-    val numSteps = Array.ofDim[Int](config.numRuns, edges.length)
-    val numWalkers = Array.ofDim[Int](config.numRuns, edges.length)
-    val meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
-    val maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
-
+    //        val edges = fm.readPartitionedEdgeList()
+    var numSteps = Array.empty[Array[Int]]
+    var numWalkers = Array.empty[Array[Int]]
+    var stepTimes = Array.empty[Array[Long]]
+    var meanErrors = Array.empty[Array[Double]]
+    var maxErrors = Array.empty[Array[Double]]
 
     for (nr <- 0 until config.numRuns) {
+      var totalTime:Long = 0
       GraphMap.reset
       WalkStorage.reset
       var prevWalks = ParSeq.empty[(Int, Seq[Int])]
 
-//      println("******* Building the graph ********")
-//      for (u <- initEdges) {
-//        val src = u._1
-//        val dst = u._2
-//        val w = 1f
-//        var sNeighbors = GraphMap.getNeighbors(src)
-//        var dNeighbors = GraphMap.getNeighbors(dst)
-//        sNeighbors ++= Seq((dst, w))
-//        dNeighbors ++= Seq((src, w))
-//        GraphMap.putVertex(src, sNeighbors)
-//        GraphMap.putVertex(dst, dNeighbors)
-//      }
-//
-//      println(s"Number of edges: ${GraphMap.getNumEdges}")
-//      println(s"Number of vertices: ${GraphMap.getNumVertices}")
-//
-//      println("******* Initialized Graph the graph ********")
-//      val result = streamingAddAndRunWithId(initEdges, prevWalks)
-//      prevWalks = result._1
+      println("******* Building the graph ********")
+      val (initEdges, edges) = fm.readPartitionedEdgeListWithInitEdges(nr)
+
+      numSteps = Array.ofDim[Int](config.numRuns, edges.length)
+      numWalkers = Array.ofDim[Int](config.numRuns, edges.length)
+      meanErrors = Array.ofDim[Double](config.numRuns, edges.length)
+      maxErrors = Array.ofDim[Double](config.numRuns, edges.length)
+
+      // Construct initial graph
+      println("******* Initialized Graph the graph ********")
+      var afs = updateGraph(initEdges)
+      println(s"Number of edges: ${GraphMap.getNumEdges}")
+      println(s"Number of vertices: ${GraphMap.getNumVertices}")
+      val result = streamingAddAndRunWithId(afs, prevWalks)
+      prevWalks = result._1
+      totalTime = result._4
+      println(s"Total random walk time: $totalTime")
 
       var saveCount = 0
       for (ec <- 0 until edges.length) {
         saveCount += 1
-        val (year, updates) = edges(ec)
-        val result = streamingAddAndRunWithId(updates, prevWalks)
+        val (step, updates) = edges(ec)
+        afs = updateGraph(updates)
+        val result = streamingAddAndRunWithId(afs, prevWalks)
         prevWalks = result._1
         val ns = result._2
         val nw = result._3
+        val stepTime = result._4
+        totalTime += stepTime
 
         //        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result
         // ._1, config)
         numSteps(nr)(ec) = ns
         numWalkers(nr)(ec) = nw
+        stepTimes(nr)(ec) = stepTime
         //        meanErrors(nr)(ec) = meanE
         //        maxErrors(nr)(ec) = maxE
         val nEdges = GraphMap.getNumEdges
-        println(s"Step: ${year}")
+        println(s"Step: ${step}")
+        println(s"Step time: $stepTime")
+        println(s"Total time: $totalTime")
         println(s"Number of edges: ${nEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         println(s"Number of walks: ${prevWalks.size}")
@@ -71,10 +76,11 @@ case class StreamingExperiment(config: Params) {
         //        println(s"Max Error: ${maxE}")
         println(s"Number of actual steps: $ns")
         println(s"Number of actual walks: $nw")
+
         if (saveCount % config.savePeriod == 0)
           fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
             config.numWalks
-          }-$year")
+          }-$step")
       }
       fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         config.numWalks
@@ -86,9 +92,7 @@ case class StreamingExperiment(config: Params) {
     fm.saveErrors(maxErrors, Property.maxErrors.toString)
   }
 
-  def streamingAddAndRunWithId(updates: Seq[(Int, Int)], paths: ParSeq[(Int, Seq[Int])]):
-  (ParSeq[(Int, Seq[Int])],
-    Int, Int) = {
+  def updateGraph(updates: Seq[(Int, Int)]): mutable.HashSet[Int] = {
     val afs = new mutable.HashSet[Int]()
     for (u <- updates) {
       val src = u._1
@@ -101,25 +105,33 @@ case class StreamingExperiment(config: Params) {
       GraphMap.putVertex(src, sNeighbors)
       GraphMap.putVertex(dst, dNeighbors)
 
-      //      println(s"Added Edge: $src <-> $dst")
       afs.add(src)
       afs.add(dst)
     }
 
-    println("******* Updated the graph ********")
+    return afs
+  }
 
+  def streamingAddAndRunWithId(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Seq[Int])]):
+  (ParSeq[(Int, Seq[Int])], Int, Int, Long) = {
 
     val result = config.rrType match {
       case RrType.m1 => {
+        val sTime = System.currentTimeMillis()
+
         val init = rwalk.createWalkersByVertices(GraphMap.getVertices().par)
-        //        val ns = 0
-        //        val nw = 0
+        val p = rwalk.secondOrderWalk(init)
+
+        val tTime = System.currentTimeMillis() - sTime
+
         val ns = computeNumSteps(init)
         val nw = init.length
-        val p = rwalk.secondOrderWalk(init)
-        (p, ns, nw)
+
+        (p, ns, nw, tTime)
       }
       case RrType.m2 => {
+        val sTime = System.currentTimeMillis()
+
         var fWalkers: ParSeq[(Int, (Int, Seq[Int]))] = filterUniqueWalkers(paths, afs)
         for (a <- afs) {
           if (fWalkers.count(_._1 == a) == 0) {
@@ -127,46 +139,54 @@ case class StreamingExperiment(config: Params) {
           }
         }
         val walkers: ParSeq[(Int, (Int, Seq[Int]))] = ParSeq.fill(config.numWalks)(fWalkers).flatten
-        val ns = computeNumSteps(walkers)
-        val nw = walkers.length
-
         val pp = rwalk.secondOrderWalk(walkers)
 
         val aws = fWalkers.map(tuple => tuple._1).seq
         val up = paths.filter { case p =>
           !aws.contains(p._2.head)
         }
-
         val np = up.union(pp)
-        (np, ns, nw)
-      }
-      case RrType.m3 => {
-        val walkers = WalkStorage.filterAffectedPaths(afs, config)
-        //        val ns = 0
-        //        val nw = 0
-        val ns = computeNumStepsWithIds(walkers)
-        val nw = walkers.length
-        val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
-        WalkStorage.updatePaths(partialPaths)
-        //        val unaffectedPaths = filterUnaffectedPaths(paths, afs)
-        //        val newPaths = unaffectedPaths.union(partialPaths)
-        val newPaths = WalkStorage.getPaths()
-        (newPaths, ns, nw)
-      }
-      case RrType.m4 => {
-        var walkers = filterWalkers(paths, afs)
-        for (a <- afs) {
-          if (walkers.count(_._1 == a) == 0) {
-            walkers ++= rwalk.initWalker(a)
-          }
-        }
+
+        val tTime = System.currentTimeMillis() - sTime
 
         val ns = computeNumSteps(walkers)
         val nw = walkers.length
-        val partialPaths = rwalk.secondOrderWalk(walkers)
-        val unaffectedPaths = filterUnaffectedPaths(paths, afs)
-        val newPaths = unaffectedPaths.union(partialPaths)
-        (newPaths, ns, nw)
+        (np, ns, nw, tTime)
+      }
+      case RrType.m3 => {
+        val sTime = System.currentTimeMillis()
+
+        val walkers = WalkStorage.filterAffectedPathsForM3(afs, config)
+        val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
+        WalkStorage.updatePaths(partialPaths)
+        val newPaths = WalkStorage.getPaths()
+
+        val tTime = System.currentTimeMillis() - sTime
+
+        val ns = computeNumStepsWithIds(walkers)
+        val nw = walkers.length
+        (newPaths, ns, nw, tTime)
+      }
+      case RrType.m4 => {
+        val sTime = System.currentTimeMillis()
+        val walkers = WalkStorage.filterAffectedPathsForM4(afs, config)
+//        var walkers = filterWalkers(paths, afs)
+//        for (a <- afs) {
+//          if (walkers.count(_._1 == a) == 0) {
+//            walkers ++= rwalk.initWalker(a)
+//          }
+//        }
+        val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
+//        val unaffectedPaths = filterUnaffectedPaths(paths, afs)
+//        val newPaths = unaffectedPaths.union(partialPaths)
+        WalkStorage.updatePaths(partialPaths)
+        val newPaths = WalkStorage.getPaths()
+
+        val tTime = System.currentTimeMillis() - sTime
+
+        val ns = computeNumSteps(walkers)
+        val nw = walkers.length
+        (newPaths, ns, nw, tTime)
       }
     }
 
@@ -174,7 +194,7 @@ case class StreamingExperiment(config: Params) {
   }
 
   def computeNumStepsWithIds(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
-    println("%%%%% Compuing number of steps %%%%%")
+    println("%%%%% Computing number of steps %%%%%")
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path._2.length
@@ -182,7 +202,7 @@ case class StreamingExperiment(config: Params) {
   }
 
   def computeNumSteps(walkers: ParSeq[(Int, (Int, Seq[Int]))]) = {
-    println("%%%%% Compuing number of steps %%%%%")
+    println("%%%%% Computing number of steps %%%%%")
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path._2.length

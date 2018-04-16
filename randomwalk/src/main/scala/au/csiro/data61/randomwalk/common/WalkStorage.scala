@@ -32,16 +32,35 @@ object WalkStorage {
 
 
   def getPaths(): ParSeq[(Int, Seq[Int])] = {
-    walkMap.toMap.par.values.toSeq
+//    walkMap.toMap.par.values.toSeq
+    walkMap.values.toSeq.par
   }
 
   def walkSize(): Int = {
     walkMap.size()
   }
 
-  def filterAffectedPaths(afs: mutable.HashSet[Int], config: Params) = {
+  def filterAffectedPathsForM3(afs: mutable.HashSet[Int], config: Params) = {
     println("****** WalkStorage: Filter Affected Paths ******")
 
+    filterAffectedPaths(afs, config).map { case (wId, duplicates) =>
+      val wVersion = duplicates.head._2._1
+      val walk = duplicates.head._2._2
+      val first = walk.indexWhere(e => afs.contains(e))
+      (wId, (wVersion, walk.splitAt(first + 1)._1))
+    }.toSeq
+  }
+  def filterAffectedPathsForM4(afs: mutable.HashSet[Int], config: Params) = {
+    println("****** WalkStorage: Filter Affected Paths ******")
+
+    filterAffectedPaths(afs, config).map { case (wId, duplicates) =>
+      val wVersion = duplicates.head._2._1
+      val walk = duplicates.head._2._2
+      (wId, (wVersion, Seq(walk.head)))
+    }.toSeq
+  }
+
+  def filterAffectedPaths(afs: mutable.HashSet[Int], config: Params) = {
     afs.par.flatMap { case v =>
       val ws = vertexWalkMap.get(v)
 
@@ -67,12 +86,7 @@ object WalkStorage {
 
         allWalks
       }
-    }.groupBy(_._1).map { case (wId, duplicates) =>
-      val wVersion = duplicates.head._2._1
-      val walk = duplicates.head._2._2
-      val first = walk.indexWhere(e => afs.contains(e))
-      (wId, (wVersion, walk.splitAt(first + 1)._1))
-    }.toSeq
+    }.groupBy(_._1)
   }
 
   def reset: Unit = {
