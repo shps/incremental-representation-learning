@@ -211,12 +211,12 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def savePaths(paths: ParSeq[Seq[Int]]): ParSeq[Seq[Int]] = {
+  def savePaths(paths: ParSeq[(Int, Seq[Int])]): ParSeq[(Int, Seq[Int])] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.pathSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(paths.map {
-      case (path) =>
+      case (wVersion, path) =>
         val pathString = path.mkString("\t")
         s"$pathString"
     }.mkString("\n"))

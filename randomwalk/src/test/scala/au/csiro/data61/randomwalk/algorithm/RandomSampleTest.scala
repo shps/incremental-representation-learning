@@ -15,12 +15,16 @@ class RandomSampleTest extends FunSuite {
     val e2 = (2, 1.0f)
     val e3 = (3, 1.0f)
     val edges = mutable.Set(e1, e2, e3)
-    assert(random.sample(edges) == e1)
+    var expected = Seq.empty[(Int, Float)]
+    for (e <- edges) {
+      expected ++= Seq(e)
+    }
+    assert(random.sample(edges) == expected(0))
     rValue = 0.4f
     random = RandomSample(nextFloat = () => rValue)
-    assert(random.sample(edges) == e2)
+    assert(random.sample(edges) == expected(1))
     rValue = 0.7f
     random = RandomSample(nextFloat = () => rValue)
-    assert(random.sample(edges) == e3)
+    assert(random.sample(edges) == expected(2))
   }
 }

@@ -75,7 +75,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   var nVertices: Int = 0
   var nEdges: Int = 0
 
-  def execute(): ParSeq[Seq[Int]] = {
+  def execute(): ParSeq[(Int, Seq[Int])] = {
     firstOrderWalk(loadGraph())
   }
 
@@ -84,7 +84,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     *
     * @return
     */
-  def loadGraph(): ParSeq[(Int, Seq[Int])] = {
+  def loadGraph(): ParSeq[(Int, (Int, Seq[Int]))] = {
 
     val g: ParSeq[(Int, mutable.Set[(Int, Float)])] = FileManager(config).readFromFile(config
       .directed)
@@ -105,7 +105,8 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   }
 
 
-  def initRandomWalk(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
+  def initRandomWalk(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Seq[Int]))]
+  = {
     println("****** Initializing random walk ******")
     buildGraphMap(g.seq)
 
@@ -121,9 +122,9 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     createWalkers(g)
   }
 
-  def createWalkers(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, Seq[Int])] = {
+  def createWalkers(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Seq[Int]))] = {
     g.flatMap {
-      case (vId: Int, _) => Seq.fill(config.numWalks)((vId, Seq(vId)))
+      case (vId: Int, _) => Seq.fill(config.numWalks)((vId, (1, Seq(vId))))
     }
   }
 
@@ -131,12 +132,13 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, (1, Seq(vId)))) }
   }
 
-  def firstOrderWalk(initPaths: ParSeq[(Int, Seq[Int])], nextFloat: () => Float = Random
-    .nextFloat): ParSeq[Seq[Int]] = {
+  def firstOrderWalk(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float = Random
+    .nextFloat): ParSeq[(Int, Seq[Int])] = {
     val walkLength = config.walkLength
 
-    val paths: ParSeq[Seq[Int]] = initPaths.map { case (_, steps) =>
-      var path = steps
+    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case (_, steps) =>
+      var path = steps._2
+      val wVersion = steps._1
       val rSample = RandomSample(nextFloat)
       breakable {
         while (path.length < walkLength + 1) {
@@ -149,7 +151,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           }
         }
       }
-      path
+      (wVersion, path)
     }
 
     paths
@@ -256,34 +258,24 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
   }
 
-  def queryPaths(paths: Seq[Seq[Int]]): Seq[(Int, (Int, Int))] = {
+  def queryPaths(paths: Seq[(Int, Seq[Int])]): Seq[(Int, (Int, Int))] = {
     var nodes: Seq[Int] = Seq.empty[Int]
     var numOccurrences: Array[(Int, (Int, Int))] = null
     if (config.nodes.isEmpty) {
-      numOccurrences = paths.flatMap { case steps =>
-        steps.groupBy(a => a).map { case (a, occurs) => (a, (occurs.length, 1)) }
-      }.groupBy(_._1).map { case (a, summary) =>
-        var occurs = 0
-        var appeared = 0
-        summary.foreach { case (_, (occ, app)) =>
-          occurs += occ
-          appeared += app
-        }
-        (a, (occurs, appeared))
-      }.toArray
-
+      nodes = GraphMap.getVertices()
     } else {
       nodes = config.nodes.split("\\s+").map(s => s.toInt)
-      numOccurrences = new Array[(Int, (Int, Int))](nodes.length)
+    }
 
-      for (i <- 0 until nodes.length) {
-        numOccurrences(i) = (nodes(i),
-          paths.map { case steps =>
-            val counts = steps.count(s => s == nodes(i))
-            val occurs = if (counts > 0) 1 else 0
-            (counts, occurs)
-          }.reduce((c, o) => (c._1 + o._1, c._2 + o._2)))
-      }
+    numOccurrences = new Array[(Int, (Int, Int))](nodes.length)
+
+    for (i <- 0 until nodes.length) {
+      numOccurrences(i) = (nodes(i),
+        paths.map { case (_, steps) =>
+          val counts = steps.count(s => s == nodes(i))
+          val occurs = if (counts > 0) 1 else 0
+          (counts, occurs)
+        }.reduce((c, o) => (c._1 + o._1, c._2 + o._2)))
     }
 
     numOccurrences
