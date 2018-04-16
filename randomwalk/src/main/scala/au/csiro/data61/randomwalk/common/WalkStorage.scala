@@ -16,37 +16,13 @@ object WalkStorage {
   val walkMap = new ConcurrentHashMap[Int, (Int, Seq[Int])]()
   val vertexWalkMap = new ConcurrentHashMap[Int, ConcurrentHashMap[Int, Int]]()
 
-  //  def getNewAndRemovedVertices(prevWalk: Seq[Int], walk: Seq[Int]):
-  //  (mutable.Set[Int], mutable.Set[Int]) = {
-  //    val prevSet = prevWalk.toSet
-  //    val added = mutable.Set(walk: _*)
-  //    val removed = mutable.Set[Int]()
-  //    for (pw <- prevSet) {
-  //      if (!added.contains(pw)) {
-  //        removed.add(pw)
-  //      }
-  //    }
-  //
-  //    (added, removed)
-  //  }
 
   def updatePaths(partialPaths: ParSeq[(Int, (Int, Seq[Int]))]) = {
     println("****** Updating WalkStorage ******")
     partialPaths.foreach { case walk =>
       val walkId = walk._1
-      //      var prevWalk = walkMap.getOrDefault(walkId, (0, Seq[Int]()))
-      //      val (added, removed) = getNewAndRemovedVertices(prevWalk, walk._2)
       val wVersion = walk._2._1 + 1
       walkMap.put(walkId, (wVersion, walk._2._2))
-      // Needs improvement
-      //      removed.foreach { case v =>
-      //        vertexWalkMap.computeIfAbsent(v, _ => new ConcurrentHashMap[Int, Unit]()).remove
-      // (walkId)
-      //      }
-      //      added.foreach { case v =>
-      //        vertexWalkMap.computeIfAbsent(v, _ => new ConcurrentHashMap[Int, Unit]()).put
-      // (walkId,
-      //          null)
       walk._2._2.foreach { case v =>
         vertexWalkMap.computeIfAbsent(v, _ => new ConcurrentHashMap[Int, Int]()).put(walkId,
           wVersion)
@@ -65,26 +41,7 @@ object WalkStorage {
 
   def filterAffectedPaths(afs: mutable.HashSet[Int], config: Params) = {
     println("****** WalkStorage: Filter Affected Paths ******")
-    //    afs.par.flatMap { case v =>
-    //      val ws = vertexWalkMap.get(v)
-    //
-    //      if (ws == null) {
-    //        Seq.tabulate(config.numWalks)(_ => {
-    //          Seq((v, (idCounter.incrementAndGet(), Seq(v))))
-    //        }).flatten
-    //      } else {
-    //        var allWalks = Seq.empty[(Int, (Int, Seq[Int]))]
-    //        for (id <- ws.keys()) {
-    //          val w = walkMap.get(id)
-    //          if (w == null || w.isEmpty) {
-    //            println("Something is wrong!!! w is null!!")
-    //          }
-    //          val first = w.indexWhere(e => afs.contains(e))
-    //          allWalks ++= Seq((w.head, (id, w.splitAt(first + 1)._1)))
-    //        }
-    //        allWalks
-    //      }
-    //    }.groupBy(_._2._1).map { case (v, duplicates) => (v, duplicates.head._2) }.toSeq
+
     afs.par.flatMap { case v =>
       val ws = vertexWalkMap.get(v)
 
@@ -107,13 +64,7 @@ object WalkStorage {
             it.remove() // vertex-index is old and needs to be removed.
           }
         }
-        //        for (id <- ws.keys()) {
-        //          val (wVersion, w) = walkMap.get(id)
-        //          if (w == null || w.isEmpty) {
-        //            println("Something is wrong!!! w is null!!")
-        //          }
-        //          allWalks ++= Seq((id, w))
-        //        }
+
         allWalks
       }
     }.groupBy(_._1).map { case (wId, duplicates) =>

@@ -225,17 +225,6 @@ case class FileManager(config: Params) {
     paths
   }
 
-  //  def saveCounts(counts: Seq[(Int, (Int, Int))]) = {
-  //    config.output.toFile.createIfNotExists(true)
-  //    val file = new File(s"${config.output}/${Property.countsSuffix}.txt")
-  //    val bw = new BufferedWriter(new FileWriter(file))
-  //    bw.write(counts.sortWith(_._2._2 > _._2._2).map {
-  //      case (vId, (count, occurs)) =>
-  //        s"$vId\t$count\t$occurs"
-  //    }.mkString("\n"))
-  //    bw.flush()
-  //    bw.close()
-  //  }
   def saveCounts(counts: Seq[(Int, Int)], fName: String) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/$fName.txt")

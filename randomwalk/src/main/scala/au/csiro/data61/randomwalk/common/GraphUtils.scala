@@ -82,15 +82,7 @@ object GraphUtils {
     println("******* Starting Empirical Errors ********")
     val countMap = new ConcurrentHashMap[(Int, Int, Int), LongAdder]()
     val sumMap = new ConcurrentHashMap[(Int, Int), LongAdder]()
-    //    val preTransition = walks.map { case w =>
-    //      var countTriples = Seq.empty[((Int, Int, Int), Int)]
-    //      var countEdges = Seq.empty[((Int, Int), Int)]
-    //      for (i <- 0 until w.length - 2) {
-    //        countTriples ++= Seq(((w(i), w(i + 1), w(i + 2)), 1))
-    //        countEdges ++= Seq(((w(i), w(i + 1)), 1))
-    //      }
-    //      (countTriples, countEdges)
-    //    }
+
     walks.foreach { case (_, w) =>
       for (i <- 0 until w.length - 2) {
         countMap.computeIfAbsent((w(i), w(i + 1), w(i + 2)), _ => new LongAdder()).increment()
@@ -98,19 +90,9 @@ object GraphUtils {
       }
     }
 
-//    val transitions: ParMap[(Int, Int, Int), Int] = preTransition.map(_._1).flatten.groupBy(_._1)
-//      .map { case (k, counts) => (k, counts.foldLeft(0)(_ + _._2))
-//      }
-//
-//    val sums: ParMap[(Int, Int), Int] = preTransition.map(_._2).flatten.groupBy(_._1)
-//      .map { case (k, counts) => (k, counts.foldLeft(0)(_ + _._2)) }
 
     val mProbs = possibleSteps.toSeq.map { case (prev, curr, dst) =>
-//      val currNeighbors = GraphMap.getNeighbors(curr)
-      //      var sum: Double = 0
-      //      for (n <- currNeighbors) {
-      //        sum += transitions.getOrElse((prev, curr, n._1), 0)
-      //      }
+
       val sum = sumMap.getOrDefault((prev, curr), new LongAdder()).intValue()
       val count = countMap.getOrDefault((prev, curr, dst), new LongAdder()).doubleValue()
       val tp = count / math.max(sum, 1.0)

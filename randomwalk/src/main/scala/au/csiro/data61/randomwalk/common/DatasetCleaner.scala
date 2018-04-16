@@ -99,12 +99,6 @@ object DatasetCleaner {
     }.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
     fm.saveNumAuthors(ua, "unique-authors-per-year")
 
-    //    val ra = groups.map { case (y, edges) =>
-    //      val count = edges.flatMap { case (src, dst, _) => Seq((src, dst),(dst, src)) }
-    // .distinct.length
-    //      (y, edges.length*2 - count)
-    //    }.toSeq.seq.sortWith(_._1 < _._1).map { case (y, n) => s"$y\t$n" }.mkString("\n")
-    //    println(ra)
   }
 
 }
