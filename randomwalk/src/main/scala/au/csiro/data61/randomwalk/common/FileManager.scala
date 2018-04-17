@@ -15,7 +15,6 @@ import scala.util.{Random, Try}
   */
 case class FileManager(config: Params) {
 
-
   def readCountFile(): ParSeq[(Int, Int)] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
@@ -98,15 +97,16 @@ case class FileManager(config: Params) {
       .zipWithIndex.map(a => (a._2, a._1))
   }
 
-  def readPartitionedEdgeListWithInitEdges(seedIncrement:Int): (Seq[(Int, Int)], Seq[(Int, Seq[(Int, Int)])]) = {
+  def readPartitionedEdgeListWithInitEdges(seedIncrement: Int): (Seq[(Int, Int)], Seq[(Int, Seq[
+    (Int, Int)])]) = {
     val lines = readEdgeList().seq
-    val edgePerPartition: Int = Math.max(lines.size / 10000, 1)
+    val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
     println(s"Number of edges per step: $edgePerPartition")
-    Random.setSeed(config.seed+seedIncrement)
+    Random.setSeed(config.seed + seedIncrement)
 
-    val (part1, part2) = Random.shuffle(lines).splitAt(lines.size / 2)
+    val (part1, part2) = Random.shuffle(lines).splitAt((lines.size * config.initEdgeSize).toInt)
     (part1, part2.sliding(edgePerPartition, edgePerPartition).toSeq
-      .zipWithIndex.map(a => (a._2+1, a._1)))
+      .zipWithIndex.map(a => (a._2 + 1, a._1)))
   }
 
   def readEdgeListByYear(): Seq[(Int, Seq[(Int, Int)])] = {
@@ -158,6 +158,20 @@ case class FileManager(config: Params) {
 
   }
 
+  def saveTimeSteps(times: Array[Array[Long]], suffix: String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
+      config.walkLength
+    }-nw${config.numWalks}.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    for (t <- times) {
+      bw.write(s"${t.mkString("\t")}\n")
+    }
+    bw.flush()
+    bw.close()
+
+  }
+
   def saveErrors(numSteps: Array[Array[Double]], suffix: String): Unit = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.rrType}-$suffix-wl${
@@ -187,12 +201,13 @@ case class FileManager(config: Params) {
     bw2.close()
   }
 
-  def savePaths(paths: ParSeq[(Int, Seq[Int])], suffix: String): ParSeq[(Int, Seq[Int])] = {
+  def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
+    ] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(paths.map { case (wVersion, path) =>
-      val pathString = path.mkString("\t")
+    bw.write(paths.map { case (wVersion, firstIndex, path) =>
+      val pathString = s"$wVersion\t$firstIndex\t" + path.mkString("\t")
       s"$pathString"
     }.mkString("\n"))
     bw.flush()
@@ -211,18 +226,27 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def savePaths(paths: ParSeq[(Int, Seq[Int])]): ParSeq[(Int, Seq[Int])] = {
+  def savePaths(paths: ParSeq[(Int, Int, Seq[Int])]): ParSeq[(Int, Int, Seq[Int])] = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${Property.pathSuffix}.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(paths.map {
-      case (wVersion, path) =>
-        val pathString = path.mkString("\t")
+      case (wVersion, firstIndex, path) =>
+        val pathString = s"$wVersion\t$firstIndex\t" + path.mkString("\t")
         s"$pathString"
     }.mkString("\n"))
     bw.flush()
     bw.close()
     paths
+  }
+
+  def saveAffectedVertices(afs: mutable.HashSet[Int], suffix: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(afs.toSeq.sortWith(_ < _).mkString("\n"))
+    bw.flush()
+    bw.close()
   }
 
   def saveCounts(counts: Seq[(Int, Int)], fName: String) = {

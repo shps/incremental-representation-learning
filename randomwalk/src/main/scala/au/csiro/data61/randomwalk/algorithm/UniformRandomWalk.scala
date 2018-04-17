@@ -75,7 +75,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
   var nVertices: Int = 0
   var nEdges: Int = 0
 
-  def execute(): ParSeq[(Int, Seq[Int])] = {
+  def execute(): ParSeq[(Int, Int, Seq[Int])] = {
     firstOrderWalk(loadGraph())
   }
 
@@ -84,7 +84,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     *
     * @return
     */
-  def loadGraph(): ParSeq[(Int, (Int, Seq[Int]))] = {
+  def loadGraph(): ParSeq[(Int, (Int, Int, Seq[Int]))] = {
 
     val g: ParSeq[(Int, mutable.Set[(Int, Float)])] = FileManager(config).readFromFile(config
       .directed)
@@ -100,12 +100,12 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }
   }
 
-  def initWalker(v: Int): Seq[(Int, (Int, Seq[Int]))] = {
-    Seq.fill(config.numWalks)(Seq((v, (1, Seq(v))))).flatten
+  def initWalker(v: Int): Seq[(Int, (Int, Int, Seq[Int]))] = {
+    Seq.fill(config.numWalks)(Seq((v, (1, 1, Seq(v))))).flatten
   }
 
 
-  def initRandomWalk(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Seq[Int]))]
+  def initRandomWalk(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Int, Seq[Int]))]
   = {
     println("****** Initializing random walk ******")
     buildGraphMap(g.seq)
@@ -122,23 +122,24 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     createWalkers(g)
   }
 
-  def createWalkers(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Seq[Int]))] = {
+  def createWalkers(g: ParSeq[(Int, mutable.Set[(Int, Float)])]): ParSeq[(Int, (Int, Int, Seq[Int]))] = {
     g.flatMap {
-      case (vId: Int, _) => Seq.fill(config.numWalks)((vId, (1, Seq(vId))))
+      case (vId: Int, _) => Seq.fill(config.numWalks)((vId, (1, 1, Seq(vId))))
     }
   }
 
-  def createWalkersByVertices(vertices: ParSeq[Int]): ParSeq[(Int, (Int, Seq[Int]))] = {
-    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, (1, Seq(vId)))) }
+  def createWalkersByVertices(vertices: ParSeq[Int]): ParSeq[(Int, (Int, Int, Seq[Int]))] = {
+    vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, (1, 1, Seq(vId)))) }
   }
 
-  def firstOrderWalk(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float = Random
-    .nextFloat): ParSeq[(Int, Seq[Int])] = {
+  def firstOrderWalk(initPaths: ParSeq[(Int, (Int, Int, Seq[Int]))], nextFloat: () => Float = Random
+    .nextFloat): ParSeq[(Int, Int, Seq[Int])] = {
     val walkLength = config.walkLength
 
-    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case (_, steps) =>
-      var path = steps._2
+    val paths: ParSeq[(Int, Int, Seq[Int])] = initPaths.map { case (_, steps) =>
+      var path = steps._3
       val wVersion = steps._1
+      val firstIndex = steps._2
       val rSample = RandomSample(nextFloat)
       breakable {
         while (path.length < walkLength + 1) {
@@ -151,32 +152,34 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           }
         }
       }
-      (wVersion, path)
+      (wVersion, firstIndex, path)
     }
 
     paths
   }
 
-  def secondOrderWalk(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float = Random
-    .nextFloat): ParSeq[(Int, Seq[Int])] = {
+  def secondOrderWalk(initPaths: ParSeq[(Int, (Int, Int, Seq[Int]))], nextFloat: () => Float = Random
+    .nextFloat): ParSeq[(Int, Int, Seq[Int])] = {
     println("%%%%% Starting random walk %%%%%")
     val walkLength = config.walkLength
-    val paths: ParSeq[(Int, Seq[Int])] = initPaths.map { case (_, s1) =>
-      var init = s1._2
+    val paths: ParSeq[(Int, Int, Seq[Int])] = initPaths.map { case (_, s1) =>
+      var init = s1._3
       val wVersion = s1._1
+      val firstIndex = s1._2
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)
-        val neighbors = GraphMap.getNeighbors(s1._2.head)
+        val neighbors = GraphMap.getNeighbors(s1._3.head)
         if (neighbors.size > 0) {
           val (nextStep, _) = rSample.sample(neighbors)
-          init = s1._2 ++ Seq(nextStep)
+          init = s1._3 ++ Seq(nextStep)
         }
       }
-      (wVersion, init)
+      (wVersion, firstIndex, init)
     }
 
     val walks = paths.map { case steps =>
-      var path = steps._2
+      var path = steps._3
+      val firstIndex = steps._2
       val wVersion = steps._1
       if (path.length > 1) {
         val rSample = RandomSample(nextFloat)
@@ -196,36 +199,38 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           }
         }
       }
-      (wVersion, path)
+      (wVersion, firstIndex, path)
     }
     println("%%%%% Finished random walk %%%%%")
     walks
   }
 
-  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, (Int, Seq[Int]))], nextFloat: () => Float =
+  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, (Int, Int, Seq[Int]))], nextFloat: () => Float =
   Random
-    .nextFloat): ParSeq[(Int, (Int, Seq[Int]))] = {
+    .nextFloat): ParSeq[(Int, (Int, Int, Seq[Int]))] = {
     println("%%%%% Starting random walk %%%%%")
     val walkLength = config.walkLength
-    val paths: ParSeq[(Int, (Int, Seq[Int]))] = initPaths.map { case s1 =>
+    val paths: ParSeq[(Int, (Int, Int, Seq[Int]))] = initPaths.map { case s1 =>
       val id = s1._1
       val wVersion = s1._2._1
-      var init = s1._2._2
+      val firstIndex = s1._2._2
+      var init = s1._2._3
       if (init.length == 1) {
         val rSample = RandomSample(nextFloat)
-        val neighbors = GraphMap.getNeighbors(s1._2._2.head)
+        val neighbors = GraphMap.getNeighbors(s1._2._3.head)
         if (neighbors.size > 0) {
           val (nextStep, _) = rSample.sample(neighbors)
-          init = s1._2._2 ++ Seq(nextStep)
+          init = s1._2._3 ++ Seq(nextStep)
         }
       }
-      (id, (wVersion, init))
+      (id, (wVersion, firstIndex, init))
     }
 
     val walks = paths.map { case steps =>
       val id = steps._1
       val wVersion = steps._2._1
-      var path = steps._2._2
+      val firstIndex = steps._2._2
+      var path = steps._2._3
       if (path.length > 1) {
         val rSample = RandomSample(nextFloat)
         breakable {
@@ -244,7 +249,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
           }
         }
       }
-      (id, (wVersion, path))
+      (id, (wVersion, firstIndex, path))
     }
     println("%%%%% Finished random walk %%%%%")
     walks

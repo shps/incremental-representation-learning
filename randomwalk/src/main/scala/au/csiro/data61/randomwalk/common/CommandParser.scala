@@ -42,6 +42,10 @@ object CommandParser {
   val W2V_WINDOW = "w2vWindow"
   val W2V_SKIP_SIZE = "w2vSkip"
   val SAVE_PERIOD = "save"
+  val LOG_ERRORS = "logErrors"
+  val INIT_EDGE_Size = "initEdgeSize"
+  val EDGE_STREAM_Size = "edgeStreamSize"
+  val MAX_STEPS = "maxSteps"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -61,6 +65,12 @@ object CommandParser {
     opt[Double](Q)
       .text(s"numWalks: ${defaultParams.q}")
       .action((x, c) => c.copy(q = x.toFloat))
+    opt[Double](INIT_EDGE_Size)
+      .text(s"Percentage of edges to be used to construct the initial graph before streaming: ${defaultParams.initEdgeSize}")
+      .action((x, c) => c.copy(initEdgeSize = x.toFloat))
+    opt[Double](EDGE_STREAM_Size)
+      .text(s"Percentage of edges to stream at every step: ${defaultParams.edgeStreamSize}")
+      .action((x, c) => c.copy(edgeStreamSize = x.toFloat))
     opt[Int](NUM_VERTICES)
       .text(s"numWalks: ${defaultParams.numVertices}")
       .action((x, c) => c.copy(numVertices = x))
@@ -70,6 +80,9 @@ object CommandParser {
     opt[Int](SAVE_PERIOD)
       .text(s"Save Period: ${defaultParams.savePeriod}")
       .action((x, c) => c.copy(savePeriod = x))
+    opt[Int](MAX_STEPS)
+      .text(s"Max number of steps to run experiments: ${defaultParams.maxSteps}")
+      .action((x, c) => c.copy(maxSteps = x))
     opt[Int](W2V_WINDOW)
       .text(s"Word2Vec window size: ${defaultParams.w2vWindow}")
       .action((x, c) => c.copy(w2vWindow = x))
@@ -85,6 +98,9 @@ object CommandParser {
     opt[Boolean](DIRECTED)
       .text(s"directed: ${defaultParams.directed}")
       .action((x, c) => c.copy(directed = x))
+    opt[Boolean](LOG_ERRORS)
+      .text(s"Log Errors (increases run time): ${defaultParams.logErrors}")
+      .action((x, c) => c.copy(logErrors = x))
     opt[String](INPUT)
       .required()
       .text("Input edge file path: empty")
