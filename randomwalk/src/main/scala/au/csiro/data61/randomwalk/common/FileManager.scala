@@ -97,7 +97,7 @@ case class FileManager(config: Params) {
       .zipWithIndex.map(a => (a._2, a._1))
   }
 
-  def readPartitionedEdgeListWithInitEdges(seedIncrement: Int): (Seq[(Int, Int)], Seq[(Int, Seq[
+  def readPartitionEdgeListWithInitEdges(seedIncrement: Int): (Seq[(Int, Int)], Seq[(Int, Seq[
     (Int, Int)])]) = {
     val lines = readEdgeList().seq
     val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
@@ -118,6 +118,20 @@ case class FileManager(config: Params) {
     }.groupBy(_._3).toSeq.map { case (year, tuple) =>
       (year, tuple.map(a => (a._1, a._2)).seq)
     }.seq.sortWith(_._1 < _._1)
+  }
+
+  def readAlreadyPartitionedEdgeList(): (Seq[(Int, Int)], Seq[(Int, Seq[
+    (Int, Int)])]) = {
+    val lines = Source.fromFile(config.input).getLines.toSeq.par
+    val partitions = lines.flatMap { triplet =>
+      val parts = triplet.split(config.delimiter)
+
+      Seq((parts.head.toInt, parts(1).toInt, parts(2).toInt))
+    }.groupBy(_._3).toSeq.map { case (year, tuple) =>
+      (year, tuple.map(a => (a._1, a._2)).seq)
+    }.seq.sortWith(_._1 < _._1)
+    val (part1, part2) = partitions.splitAt((partitions.size * config.initEdgeSize).toInt)
+    (part1.flatMap(_._2), part2)
   }
 
   def saveProbs(probs: Seq[Seq[Double]]): Unit = {

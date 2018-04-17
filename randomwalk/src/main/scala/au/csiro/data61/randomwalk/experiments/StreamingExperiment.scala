@@ -30,7 +30,10 @@ case class StreamingExperiment(config: Params) {
       var prevWalks = ParSeq.empty[(Int, Int, Seq[Int])]
 
       println("******* Building the graph ********")
-      val (initEdges, edges) = fm.readPartitionedEdgeListWithInitEdges(nr)
+      val (initEdges, edges) = config.grouped match {
+        case false => fm.readPartitionEdgeListWithInitEdges(nr)
+        case true => fm.readAlreadyPartitionedEdgeList()
+      }
 
       val logSize = Math.min(edges.length, config.maxSteps) + 1
       numSteps = Array.ofDim[Int](config.numRuns, logSize)
@@ -71,9 +74,9 @@ case class StreamingExperiment(config: Params) {
       println(s"Total random walk time: $totalTime")
 
       breakable {
-        for (ec <- 0 until edges.length) {
+        for (ec <- 1 until edges.length + 1) {
           val (step, updates) = edges(ec)
-          if (step > config.maxSteps)
+          if (ec > config.maxSteps)
             break
           afs = updateGraph(updates)
           val result = streamingAddAndRunWithId(afs, prevWalks)
@@ -83,12 +86,12 @@ case class StreamingExperiment(config: Params) {
           val stepTime = result._4
           totalTime += stepTime
 
-          numSteps(nr)(ec + 1) = ns
-          numWalkers(nr)(ec + 1) = nw
-          stepTimes(nr)(ec + 1) = stepTime
+          numSteps(nr)(ec) = ns
+          numWalkers(nr)(ec) = nw
+          stepTimes(nr)(ec) = stepTime
 
           val nEdges = GraphMap.getNumEdges
-          println(s"Step: ${step}")
+          println(s"Group-ID: ${step}")
           println(s"Step time: $stepTime")
           println(s"Total time: $totalTime")
           println(s"Number of edges: ${nEdges}")
@@ -97,15 +100,15 @@ case class StreamingExperiment(config: Params) {
           if (config.logErrors) {
             val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1,
               config)
-            meanErrors(nr)(ec + 1) = meanE
-            maxErrors(nr)(ec + 1) = maxE
+            meanErrors(nr)(ec) = meanE
+            maxErrors(nr)(ec) = maxE
             println(s"Mean Error: ${meanE}")
             println(s"Max Error: ${maxE}")
           }
           println(s"Number of actual steps: $ns")
           println(s"Number of actual walks: $nw")
 
-          if (step % config.savePeriod == 0) {
+          if (ec % config.savePeriod == 0) {
             if (config.rrType != RrType.m1) {
               fm.saveAffectedVertices(
                 afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${

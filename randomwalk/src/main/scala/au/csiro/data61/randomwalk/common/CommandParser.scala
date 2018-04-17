@@ -46,6 +46,7 @@ object CommandParser {
   val INIT_EDGE_Size = "initEdgeSize"
   val EDGE_STREAM_Size = "edgeStreamSize"
   val MAX_STEPS = "maxSteps"
+  val GROUPED = "grouped"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -101,6 +102,9 @@ object CommandParser {
     opt[Boolean](LOG_ERRORS)
       .text(s"Log Errors (increases run time): ${defaultParams.logErrors}")
       .action((x, c) => c.copy(logErrors = x))
+    opt[Boolean](GROUPED)
+      .text(s"Are edges already grouped for streaming: ${defaultParams.grouped}")
+      .action((x, c) => c.copy(grouped = x))
     opt[String](INPUT)
       .required()
       .text("Input edge file path: empty")
