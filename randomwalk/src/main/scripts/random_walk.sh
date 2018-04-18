@@ -22,8 +22,8 @@ GROUPED=false         # whether the edge list is already tagged with group numbe
 
 # You can customize the JVM memory size by modifying -Xms.
 
-nohup java -Xms5g -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
+java -Xms5g -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
     --input $INPUT_EDGE_LIST --output $OUTPUT_DIR --nRuns $NUM_RUNS --directed $DIRECTED --p $P \
     --q $Q --seed $SEED --d "$DELIMITER" --rrType $METHOD_TYPE --wType $WALK_TYPE --save $LOG_PERIOD \
     --logErrors $LOG_ERRORS --initEdgeSize $INIT_EDGE_SIZE --edgeStreamSize $STREAM_SIZE \
-    --maxSteps $MAX_STEPS --grouped $GROUPED > "$OUTPUT_DIR/log.txt"
+    --maxSteps $MAX_STEPS --grouped $GROUPED
