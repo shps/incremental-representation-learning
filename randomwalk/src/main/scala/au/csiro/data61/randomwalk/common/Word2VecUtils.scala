@@ -8,6 +8,13 @@ import scala.util.Random
   */
 object Word2VecUtils {
 
+  /**
+    * Generates a sequence of target-context pairs.
+    * @param walks
+    * @param numSkips
+    * @param window
+    * @return
+    */
   def createPairs(walks: ParSeq[Seq[Int]], numSkips: Int, window: Int): ParSeq[(Int, Int)] = {
     walks.flatMap { case walk =>
       var pairs = Seq.empty[(Int, Int)]

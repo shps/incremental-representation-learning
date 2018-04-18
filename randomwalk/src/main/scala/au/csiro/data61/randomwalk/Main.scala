@@ -63,11 +63,16 @@ object Main {
         //        exp.streamingAffecteds()
         null
       case TaskName.gPairs =>
+        println("Reading the walks...")
         val walks = fm.readWalks()
+        println("Generating the pairs...")
         val pairs = Word2VecUtils.createPairs(walks, numSkips = params.w2vSkipSize, window =
           params.w2vWindow)
+        println("Extracting the vocabulary...")
         val vocab = Word2VecUtils.createVocabulary(walks)
+        println("Writing to the file...")
         fm.saveTargetContextPairs(pairs, vocab, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
+        println("Completed!")
     }
 
     params.cmd match {
