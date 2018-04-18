@@ -100,13 +100,13 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val p2 = Seq(3, 4, 3, 4)
     val p3 = Seq(5, 6, 5, 6)
     val afs = mutable.Set(1, 5, 6)
-    val pRdd = ParSeq((1, p1), (1, p2), (1, p3))
+    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3))
     val config = Params()
     val rw = Experiments(config)
     val result = rw.filterAffectedPaths(pRdd, afs)
     assert(result.size == 2)
-    assert(result(0)._2 sameElements p1)
-    assert(result(1)._2 sameElements p3)
+    assert(result(0)._3 sameElements p1)
+    assert(result(1)._3 sameElements p3)
   }
 
   test("filter split paths") {
@@ -115,7 +115,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val p3 = Seq(4, 6, 5, 6)
     val p4 = Seq(4, 3, 5, 6)
     val afs = mutable.Set(1, 5, 6)
-    val pRdd = ParSeq((1, p1), (1, p2), (1, p3), (1, p4))
+    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3), (1, 1, p4))
     val config = Params()
     val rw = Experiments(config)
     val result = rw.filterSplitPaths(pRdd, afs)
@@ -123,9 +123,9 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val vertices = result.map(_._1)
     assert(vertices sameElements Array(1, 4, 4))
     val paths = result.map(_._2)
-    assert(paths(0)._2 sameElements Array(1))
-    assert(paths(1)._2 sameElements Array(4, 6))
-    assert(paths(2)._2 sameElements Array(4, 3, 5))
+    assert(paths(0)._3 sameElements Array(1))
+    assert(paths(1)._3 sameElements Array(4, 6))
+    assert(paths(2)._3 sameElements Array(4, 3, 5))
   }
 
   test("init walker") {
@@ -134,7 +134,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val v = 1
     val walkers = rw.initWalker(v)
     assert(walkers.length == config.numWalks)
-    assert(walkers.forall { case (a, b) => a == v && (b._2 sameElements Array(v)) })
+    assert(walkers.forall { case (a, b) => a == v && (b._3 sameElements Array(v)) })
   }
 
   test("first order walk") {
@@ -154,7 +154,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       case (k, v) => (k, mutable.Set(v.seq: _*).flatMap(_._2))
     }
     val rSampler = RandomSample(nextFloatGen)
-    paths.seq.foreach { case (_, p: Seq[Int]) =>
+    paths.seq.foreach { case (_, _, p: Seq[Int]) =>
       val p2 = doFirstOrderRandomWalk(gMap.seq, p(0), wLength, rSampler)
       assert(p sameElements p2)
     }
@@ -175,7 +175,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
       case (k, v) => (k, mutable.Set(v.seq: _*).flatMap(_._2))
     }
-    paths.seq.foreach { case (_, p: Seq[Int]) =>
+    paths.seq.foreach { case (_, _, p: Seq[Int]) =>
       val p2 = doSecondOrderRandomWalk(gMap.seq, p(0), wLength, rSampler, 1.0f, 1.0f)
       assert(p sameElements p2)
     }
@@ -196,7 +196,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     val gMap = FileManager(config).readFromFile(config.directed).groupBy(_._1).map {
       case (k, v) => (k, mutable.Set(v.seq: _*).flatMap(_._2))
     }
-    paths.seq.foreach { case (_, p: Seq[Int]) =>
+    paths.seq.foreach { case (_, _, p: Seq[Int]) =>
       val p2 = doSecondOrderRandomWalk(gMap.seq, p(0), wLength, rSampler, p = config.p, q =
         config.q)
       assert(p sameElements p2)

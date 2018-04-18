@@ -67,7 +67,7 @@ object Main {
         val walks = fm.readWalks()
         println("Generating the pairs...")
         val pairs = Word2VecUtils.createPairs(walks, numSkips = params.w2vSkipSize, window =
-          params.w2vWindow)
+          params.w2vWindow, params.selfContext)
         println("Extracting the vocabulary...")
         val vocab = Word2VecUtils.createVocabulary(walks)
         println("Writing to the file...")

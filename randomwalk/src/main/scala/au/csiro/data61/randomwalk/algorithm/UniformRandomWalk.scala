@@ -263,7 +263,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
   }
 
-  def queryPaths(paths: Seq[(Int, Seq[Int])]): Seq[(Int, (Int, Int))] = {
+  def queryPaths(paths: Seq[(Int, Int, Seq[Int])]): Seq[(Int, (Int, Int))] = {
     var nodes: Seq[Int] = Seq.empty[Int]
     var numOccurrences: Array[(Int, (Int, Int))] = null
     if (config.nodes.isEmpty) {
@@ -276,7 +276,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
 
     for (i <- 0 until nodes.length) {
       numOccurrences(i) = (nodes(i),
-        paths.map { case (_, steps) =>
+        paths.map { case (_, _, steps) =>
           val counts = steps.count(s => s == nodes(i))
           val occurs = if (counts > 0) 1 else 0
           (counts, occurs)

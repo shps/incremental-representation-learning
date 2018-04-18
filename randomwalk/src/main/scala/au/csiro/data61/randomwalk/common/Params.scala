@@ -30,6 +30,7 @@ case class Params(walkLength: Int = 80,
                   logErrors: Boolean = false,
                   grouped: Boolean = false,
                   seed: Long = System.currentTimeMillis(),
+                  selfContext: Boolean = false,
                   wType: WalkType = WalkType.firstorder,
                   delimiter:String = "\\s+",
                   cmd: TaskName = TaskName.ar) extends AbstractParams[Params]
