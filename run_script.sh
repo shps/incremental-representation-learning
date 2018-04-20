@@ -25,15 +25,18 @@ FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=58125312
 
 
-source $TENSORFLOW_BIN_DIR/activate tensorflow  --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR \
-    --train_file $TRAIN_FILE --label_file $LABEL_FILE --degrees_file $DEGREES_FILE \
-    --checkpoint_file $CHECKPOINT_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE \
-    --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT \
-    --LEARING_RATE $learning_rate --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE \
-    --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE \
-    --freeze_embeddings $FREEZE_EMBEDDINGS
+source $TENSORFLOW_BIN_DIR/activate tensorflow
 
 
 
 
-python -m $N2V_SCRIPT_DIR/node2vec_pregen
+python -m $N2V_SCRIPT_DIR/node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR \
+      --train_file $TRAIN_FILE --label_file $LABEL_FILE --degrees_file $DEGREES_FILE \
+      --checkpoint_file $CHECKPOINT_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE \
+      --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT \
+      --LEARING_RATE $learning_rate --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE \
+      --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE \
+      --freeze_embeddings $FREEZE_EMBEDDINGS
+
+
+deactivate
