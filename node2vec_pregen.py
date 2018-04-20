@@ -646,8 +646,6 @@ flags.DEFINE_integer('vocab_size', 10400, 'Size of vocabulary.')
 flags.DEFINE_integer('n_epochs', 10, 'Number of epochs.')
 flags.DEFINE_integer('neg_sample_size', 2, 'number of negative samples')
 flags.DEFINE_integer('batch_size', 20, 'minibatch size.')
-flags.DEFINE_integer('sim_comp_freq', 10000, 'Frequency of computing similarity.')
-flags.DEFINE_integer('avg_loss_comp_freq', 1000, 'Frequency of average loss computation.')
 flags.DEFINE_boolean('freeze_embeddings', True,
                      'If true, the embeddings will be frozen otherwise the contexts will be frozen.')
 
