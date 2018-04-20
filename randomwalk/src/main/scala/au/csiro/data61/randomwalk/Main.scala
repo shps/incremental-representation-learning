@@ -33,7 +33,7 @@ object Main {
         fm.savePaths(rw.firstOrderWalk(g))
       case TaskName.degrees =>
         rw.loadGraph()
-        fm.saveDegrees(rw.degrees())
+        fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}")
         null
       case TaskName.affecteds =>
         val vertices = rw.loadGraph().map { case (v, p) => v }

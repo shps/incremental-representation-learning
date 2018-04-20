@@ -42,17 +42,6 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     }.sortBy(_._2.last)
   }
 
-  def degrees(): Seq[(Int, Int)] = {
-    val vertices = GraphMap.getVertices()
-    val n = vertices.length
-    val degs = new Array[(Int, Int)](n)
-    for (i <- 0 until n) {
-      degs(i) = (vertices(i), GraphMap.getNeighbors(vertices(i)).size)
-    }
-    degs
-  }
-
-
   def computeProbs(paths: Seq[Seq[Int]]): Array[Array[Double]] = {
     val n = GraphMap.getVertices().length
     val matrix = Array.ofDim[Double](n, n)
@@ -91,14 +80,14 @@ case class UniformRandomWalk(config: Params) extends Serializable {
     initRandomWalk(g)
   }
 
-  def checkGraphMap() = {
-    //    save(degrees())
-    println(degrees().sortBy(_._1).map { case (v, d) => s"$v\t$d" }.mkString("\n"))
-    for (v <- GraphMap.getVertices().sortBy(a => a)) {
-      val n = GraphMap.getNeighbors(v).map(_._1)
-      println(s"$v -> ${n.mkString(" ")}")
-    }
-  }
+//  def checkGraphMap() = {
+//    //    save(degrees())
+//    println(degrees().sortBy(_._1).map { case (v, d) => s"$v\t$d" }.mkString("\n"))
+//    for (v <- GraphMap.getVertices().sortBy(a => a)) {
+//      val n = GraphMap.getNeighbors(v).map(_._1)
+//      println(s"$v -> ${n.mkString(" ")}")
+//    }
+//  }
 
   def initWalker(v: Int): Seq[(Int, (Int, Int, Seq[Int]))] = {
     Seq.fill(config.numWalks)(Seq((v, (1, 1, Seq(v))))).flatten

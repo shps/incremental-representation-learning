@@ -200,20 +200,20 @@ case class FileManager(config: Params) {
 
   }
 
-  def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], vocabs: ParSeq[Int], suffix: String) {
-    config.output.toFile.createIfNotExists(true)
-    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
-    bw.flush()
-    bw.close()
+    def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], vocabs: ParSeq[Int], suffix: String) {
+      config.output.toFile.createIfNotExists(true)
+      val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+      val bw = new BufferedWriter(new FileWriter(file))
+      bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
+      bw.flush()
+      bw.close()
 
-    val file2 = new File(s"${config.output}/${config.cmd}-vocabs-$suffix.txt")
-    val bw2 = new BufferedWriter(new FileWriter(file2))
-    bw2.write(vocabs.mkString("\n"))
-    bw2.flush()
-    bw2.close()
-  }
+      val file2 = new File(s"${config.output}/${config.cmd}-vocabs-$suffix.txt")
+      val bw2 = new BufferedWriter(new FileWriter(file2))
+      bw2.write(vocabs.mkString("\n"))
+      bw2.flush()
+      bw2.close()
+    }
 
   def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
     ] = {
@@ -275,9 +275,9 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def saveDegrees(degrees: Seq[(Int, Int)]) = {
+  def saveDegrees(degrees: Seq[(Int, Int)], suffix: String) = {
     config.output.toFile.createIfNotExists(true)
-    val file = new File(s"${config.output}/${Property.degreeSuffix}.txt")
+    val file = new File(s"${config.output}/$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(degrees.map { case (v, d) => s"$v\t$d" }.mkString("\n"))
     bw.flush()

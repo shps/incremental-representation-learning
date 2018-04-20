@@ -109,16 +109,20 @@ case class StreamingExperiment(config: Params) {
           println(s"Number of actual walks: $nw")
 
           if (ec % config.savePeriod == 0) {
-            if (config.rrType != RrType.m1) {
-              fm.saveAffectedVertices(
-                afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-                  config
-                    .walkLength
-                }-nw${config.numWalks}-$step")
-            }
+            //            if (config.rrType != RrType.m1) {
+            fm.saveAffectedVertices(
+              afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
+                config
+                  .walkLength
+              }-nw${config.numWalks}-$step")
+            //            }
             fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
               config.numWalks
             }-$step")
+            fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+              config.rrType
+                .toString
+            }-wl${config.walkLength}-nw${config.numWalks}-$step")
           }
         }
         if (config.rrType != RrType.m1) {

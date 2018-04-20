@@ -126,4 +126,14 @@ object GraphUtils {
       math.abs(tp - mp)
     }
   }
+
+  def degrees(): Seq[(Int, Int)] = {
+    val vertices = GraphMap.getVertices()
+    val n = vertices.length
+    val degs = new Array[(Int, Int)](n)
+    for (i <- 0 until n) {
+      degs(i) = (vertices(i), GraphMap.getNeighbors(vertices(i)).size)
+    }
+    degs
+  }
 }
