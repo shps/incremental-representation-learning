@@ -12,11 +12,15 @@ import numpy as np
 from contextlib import contextmanager
 import pickle
 import tensorflow as tf
-import networkx as nx
 
 from sklearn import model_selection, linear_model, metrics, svm
 
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+
 times = {}
+
+
 @contextmanager
 def timeit(name):
     startTime = time.time()
@@ -24,21 +28,26 @@ def timeit(name):
     elapsedTime = time.time() - startTime
     times[name] = elapsedTime + times.get(name, 0)
 
-class PregeneratedDataset:
-    def __init__(self, data_filename, n_nodes, delimiter=" ", force_offset=0, splits=[0.5,0.5]):
 
+class PregeneratedDataset:
+    def __init__(self, data_filename, n_nodes, delimiter=" ", force_offset=0, splits=[0.5, 0.5]):
         self.splits = splits
         self.n_splits = len(splits)
-        self.data_index = [0]*self.n_splits
+        self.data_index = [0] * self.n_splits
         self.split_sizes = []
         self.split_data = []
-        self.vocab_size = int(n_nodes)
+        self.vocab_size = n_nodes
         self.labels = None
+        self.affected_nodes = None
+        self.unigrams = None
 
         self.build_dataset(data_filename, delimiter, force_offset)
 
-    def set_node_degrees(self, degree):
-        self.unigrams = [degree[ii] for ii in range(self.vocab_size)]
+    def set_node_degrees(self, degree_file):
+        degrees = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
+                              dtype='int32', header=None).values
+        self.unigrams = np.zeros((self.vocab_size,), dtype=np.int32)
+        self.unigrams[degrees[:, 0] + FLAGS.force_offset] = degrees[:, 1]
 
     def epoch_done(self, batch_size=0, split=0):
         return self.data_index[split] + batch_size > self.split_sizes[split]
@@ -48,11 +57,15 @@ class PregeneratedDataset:
 
     def load_labels(self, label_filename, delimiter=" ", force_offset=0):
         raw_labels = pd.read_csv(label_filename, delimiter=delimiter,
-                                dtype='int32', header=None).values
+                                 dtype='int32', header=None).values
 
         self.labels = np.zeros(self.vocab_size, dtype=np.int32)
         for (index, label) in raw_labels:
             self.labels[index + force_offset] = label
+
+    def build_freeze_indices(self):
+        all_indices = np.zeros((self.vocab_size,), dtype=np.int32)
+        return np.delete(all_indices, self.affected_nodes)
 
     def build_dataset(self, data_filename, delimiter=" ", force_offset=0):
         """Process raw inputs into a dataset."""
@@ -70,6 +83,10 @@ class PregeneratedDataset:
         self.split_offset = [0] + self.split_sizes[:-1]
         self.data_index = [0] * self.n_splits
 
+        self.affected_nodes = pd.read_csv(FLAGS.affected_vertices_file, delimiter=FLAGS.delimiter,
+                                          dtype='int32', header=None).values
+        self.affected_nodes += force_offset
+
     def generate_batch(self, batch_size, split=0):
         """
         Generate data as (target_word, context_word) pairs.
@@ -80,11 +97,11 @@ class PregeneratedDataset:
         # Variable batch size - ensure model can handle this
         batch_size = min(batch_size, data_size - self.data_index[split])
 
-        batch = np.empty((batch_size), dtype=np.int32)
-        labels = np.empty((batch_size), dtype=np.int32)
+        batch = np.empty(batch_size, dtype=np.int32)
+        labels = np.empty(batch_size, dtype=np.int32)
 
-        batch[:] = self.data[data_offset : data_offset + batch_size, 0]
-        labels[:] = self.data[data_offset : data_offset + batch_size, 1]
+        batch[:] = self.data[data_offset: data_offset + batch_size, 0]
+        labels[:] = self.data[data_offset: data_offset + batch_size, 1]
 
         self.data_index[split] += batch_size
 
@@ -135,16 +152,16 @@ class W2V_Sampled:
                  neg_samples=64,
                  lr_decay=0.1):
 
-        self.vocabulary_size = vocabulary_size   #
-        self.batch_size = batch_size             #
+        self.vocabulary_size = vocabulary_size  #
+        self.batch_size = batch_size  #
         self.val_batch_size = val_batch_size
 
-        self.embedding_size = embedding_size     # Embeddings
+        self.embedding_size = embedding_size  # Embeddings
         self.analogy_k = 4
-        self.num_sampled = neg_samples           # Number of negative examples to sample.
-        self.learning_rate = learning_rate       # Initial learning rate
-        self.lr_decay = lr_decay * 1e-6          # LR exponential decay
-        self.save_path = save_path               # Where to store TF output
+        self.num_sampled = neg_samples  # Number of negative examples to sample.
+        self.learning_rate = learning_rate  # Initial learning rate
+        self.lr_decay = lr_decay * 1e-6  # LR exponential decay
+        self.save_path = save_path  # Where to store TF output
 
         self._model_variables = set()
 
@@ -234,7 +251,7 @@ class W2V_Sampled:
         Returns:
             Graph loss and inputs in a dictionary.
         """
-        input_size = None # self.batch_size
+        input_size = None  # self.batch_size
 
         # Input data.
         target_input = tf.placeholder(tf.int32, shape=[input_size])
@@ -244,16 +261,16 @@ class W2V_Sampled:
         batch_size_t = tf.cast(tf.shape(target_input)[0], tf.float32)
 
         # Variables.
-        init_width = 0.5/self.embedding_size
+        init_width = 0.5 / self.embedding_size
         embeddings = tf.get_variable("target_embeddings",
                                      shape=embeddings_shape,
                                      initializer=tf.glorot_normal_initializer())
         context_weights = tf.get_variable("context_embeddings",
-                                     shape=embeddings_shape,
-                                     initializer=tf.glorot_normal_initializer())
+                                          shape=embeddings_shape,
+                                          initializer=tf.glorot_normal_initializer())
         context_biases = tf.get_variable("context_biases",
-                                     shape=[self.vocabulary_size],
-                                     initializer=tf.zeros_initializer)
+                                         shape=[self.vocabulary_size],
+                                         initializer=tf.zeros_initializer)
 
         self._model_variables.update(
             [embeddings, context_weights, context_biases]
@@ -275,7 +292,7 @@ class W2V_Sampled:
         # Negative sampling.
         # Note true_classes needs to be tf.int64
         negative_sample_id, _, _ = tf.nn.fixed_unigram_candidate_sampler(
-            true_classes=tf.reshape(tf.cast(context_input, tf.int64), [-1,1]),
+            true_classes=tf.reshape(tf.cast(context_input, tf.int64), [-1, 1]),
             num_true=1,
             num_sampled=self.num_sampled,
             unique=True,
@@ -301,9 +318,11 @@ class W2V_Sampled:
 
         with tf.name_scope("negative_pair"):
             # Weights for sampled ids: [num_sampled, emb_dim]
-            negative_w = tf.nn.embedding_lookup(context_weights, negative_sample_id, name="neg_con_w")
+            negative_w = tf.nn.embedding_lookup(context_weights, negative_sample_id,
+                                                name="neg_con_w")
             # Biases for sampled ids: [num_sampled, 1]
-            negative_b = tf.nn.embedding_lookup(context_biases, negative_sample_id, name="neg_con_b")
+            negative_b = tf.nn.embedding_lookup(context_biases, negative_sample_id,
+                                                name="neg_con_b")
 
             # Sampled logits: [batch_size, num_sampled]
             negative_b_vec = tf.reshape(negative_b, [-1])
@@ -318,11 +337,10 @@ class W2V_Sampled:
             # NCE-loss is the sum of the true and noise (sampled words)
             # contributions, averaged over the batch.
             nce_loss = (tf.reduce_sum(true_xent)
-                        + tf.reduce_sum(sampled_xent))/batch_size_t
+                        + tf.reduce_sum(sampled_xent)) / batch_size_t
             tf.summary.scalar("NCE loss", nce_loss)
 
             normalized_embeddings = tf.nn.l2_normalize(embeddings, 1)
-
 
         self._skipgram_graph = {
             "target_input": target_input,
@@ -430,7 +448,7 @@ class W2V_Sampled:
 
         # print("Eval %4d/%d accuracy = %4.1f%%"%(correct, total,
         #                                         correct*100.0/total))
-        return correct/total
+        return correct / total
 
     def eval(self, sess, dataset, summary=None):
         sk_graph = self._skipgram_graph
@@ -460,11 +478,11 @@ class W2V_Sampled:
         nb_graph = self._nearby_graph
 
         nidx, nval = sess.run(
-            [nb_graph['nearby_index'],nb_graph['nearby_val']],
+            [nb_graph['nearby_index'], nb_graph['nearby_val']],
             {nb_graph['input_word']: ids}
-            )
+        )
 
-        for ii,word_id in enumerate(ids):
+        for ii, word_id in enumerate(ids):
             print("\n=====================================")
             print(word_id)
             for neighbor, distance in zip(nidx[ii], nval[ii]):
@@ -476,7 +494,7 @@ class W2V_Sampled:
 
         # Classifier choice
         classifier = linear_model.LogisticRegression(C=10)
-        #classifier = svm.SVC(C=1)
+        # classifier = svm.SVC(C=1)
 
         scoring = ['accuracy', 'f1_macro', 'f1_micro']
 
@@ -496,7 +514,8 @@ class W2V_Sampled:
         print("Test acc: {:0.3f}, f1: {:0.3f}"
               .format(test_acc, test_f1))
 
-        return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1, 'test_f1': test_f1}
+        return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
+                'test_f1': test_f1}
 
     def train(self, sess, dataset,
               analogy_dataset=None,
@@ -596,13 +615,14 @@ class W2V_Sampled:
                 if batch_ii % 1000 == 0:
                     # Evaluate and add evaluation info
                     sum_ii, ev_ii = self.eval(sess, dataset, summary=summary_op)
-                    summary_writer.add_summary(sum_ii, batch_ii//1000)
+                    summary_writer.add_summary(sum_ii, batch_ii // 1000)
 
                     train_wps = np.floor((dataset.data_index[0] - batch_index)
                                          / (time.time() - batch_time))
-                    pc_done = 100.0*dataset.data_index[0] / dataset.split_sizes[0]
-                    print("Epoch {} [{:0.1f}%], loss: {:0.1f}, val: {:0.3f}, ana: {:0.2f} word/sec: {:0.0f}  |  "
-                        .format(epoch, pc_done, loss_ii, ev_ii, ana_ii, train_wps), end="\r")
+                    pc_done = 100.0 * dataset.data_index[0] / dataset.split_sizes[0]
+                    print(
+                        "Epoch {} [{:0.1f}%], loss: {:0.1f}, val: {:0.3f}, ana: {:0.2f} word/sec: {:0.0f}  |  "
+                            .format(epoch, pc_done, loss_ii, ev_ii, ana_ii, train_wps), end="\r")
 
                     batch_time = time.time()
                     batch_index = dataset.data_index[0]
@@ -616,31 +636,58 @@ class W2V_Sampled:
             saver.save(sess, os.path.join(self.save_path, "model_epoch_"), global_step=epoch)
 
 
-if __name__ == "__main__":
-    karate = nx.karate_club_graph()
+flags.DEFINE_float('train_split', 0.8, 'initial learning rate.')
+flags.DEFINE_float('learning_rate', 0.2, 'initial learning rate.')
+flags.DEFINE_string('train_prefix', '',
+                    'name of the object file that stores the training data. must be specified.')
 
-    ds = PregeneratedDataset("gPairs-w3-s6.txt",
-                             n_nodes=karate.number_of_nodes(),
-                             delimiter="\t",
-                             force_offset=-1,
-                             splits=[0.8,0.2])
+flags.DEFINE_integer('embedding_size', 20, 'Size of output dim (final is 2x this, if using concat)')
+flags.DEFINE_integer('vocab_size', 10400, 'Size of vocabulary.')
+flags.DEFINE_integer('n_epochs', 10, 'Number of epochs.')
+flags.DEFINE_integer('neg_sample_size', 2, 'number of negative samples')
+flags.DEFINE_integer('batch_size', 20, 'minibatch size.')
+flags.DEFINE_integer('sim_comp_freq', 10000, 'Frequency of computing similarity.')
+flags.DEFINE_integer('avg_loss_comp_freq', 1000, 'Frequency of average loss computation.')
+flags.DEFINE_boolean('freeze_embeddings', True,
+                     'If true, the embeddings will be frozen otherwise the contexts will be frozen.')
+
+flags.DEFINE_string('base_log_dir', '.', 'base directory for logging and saving embeddings')
+flags.DEFINE_string('input_dir', '.', 'Input data directory.')
+flags.DEFINE_string('train_file', 'blah.txt', 'Input train file name.')
+flags.DEFINE_string('label_file', 'blah.txt', 'Input label file name.')
+flags.DEFINE_string('degrees_file', 'blah.txt', 'Input node degrees file name.')
+flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
+flags.DEFINE_string('affected_vertices_file', 'blah.txt', 'Input affected vertices file name.')
+# flags.DEFINE_string('existing_vocabs_file', '', 'Input existing vocab file name.')
+flags.DEFINE_string('delimiter', '\t', 'Delimiter.')
+flags.DEFINE_integer('print_every', 50, "How often to print training info.")
+flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
+flags.DEFINE_integer('seed', 58125312, "Seed for random generator.")
+
+if __name__ == "__main__":
+    ds = PregeneratedDataset(FLAGS.train_file,
+                             n_nodes=FLAGS.vocab_size,
+                             delimiter=FLAGS.delimiter,
+                             force_offset=FLAGS.force_offset,
+                             splits=[FLAGS.train_split, 1 - FLAGS.train_split])
 
     # We need to set the corresponding graph, in particular use the degree
-    # to control the negative sampling, as in node2vec paper
-    ds.set_node_degrees(karate.degree())
+    # to control the negative sampling, as in word2vec paper
+    ds.set_node_degrees(FLAGS.degrees_file)
 
     # Set labels
-    ds.load_labels("karate-labels.txt", delimiter="\t", force_offset=-1)
+    ds.load_labels(FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
 
     word2vec = W2V_Sampled(
-        embedding_size=20,
-        vocabulary_size=ds.vocab_size,
-        batch_size=20,
+        embedding_size=FLAGS.embedding_size,
+        vocabulary_size=FLAGS.vocab_size,
+        batch_size=FLAGS.batch_size,
         val_batch_size=None,
-        neg_samples=2,
-        save_path="n2v_{}".format(datetime.date.today()),
-        learning_rate=0.2
-        )
+        neg_samples=FLAGS.neg_sample_size,
+        # save_path="n2v_{}".format(datetime.date.today()),
+        save_path=FLAGS.base_log_dir,
+        learning_rate=FLAGS.learning_rate
+    )
 
     # freeze_context_indices = [199, 200, 399, 400]
     # freeze_indices = None
@@ -648,15 +695,16 @@ if __name__ == "__main__":
 
     freeze_context_indices = None
     freeze_indices = None
-    checkpoint_file = None
+
+    if FLAGS.freeze_embeddings:
+        freeze_indices = ds.build_freeze_indices()
+    else:
+        freeze_context_indices = ds.build_freeze_indices()
 
     with tf.Session() as session, tf.device('/cpu:0'):
-        tf.set_random_seed(58125312)
-
+        tf.set_random_seed(FLAGS.seed)
         word2vec.train(session, ds,
                        freeze_indices=freeze_indices,
                        freeze_context_indices=freeze_context_indices,
-                       restore_from_file=checkpoint_file,
-                       n_epochs=10)
-
-
+                       restore_from_file=FLAGS.checkpoint_file,
+                       n_epochs=FLAGS.n_epochs)
