@@ -63,9 +63,15 @@ class PregeneratedDataset:
         for (index, label) in raw_labels:
             self.labels[index + force_offset] = label
 
-    def build_freeze_indices(self):
-        all_indices = np.zeros((self.vocab_size,), dtype=np.int32)
-        return np.delete(all_indices, self.affected_nodes)
+    def build_freeze_indices(self, degree_file):
+        # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
+        all_ids = np.zeros((self.vocab_size,), dtype=np.int32)
+        existing_ids = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
+                                   dtype='int32', header=None).values
+        existing_ids = existing_ids[:, 0] + FLAGS.force_offset
+        unfreeze_ids = np.delete(all_ids, existing_ids)
+        unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
+        return np.delete(all_ids, unfreeze_ids)
 
     def build_dataset(self, data_filename, delimiter=" ", force_offset=0):
         """Process raw inputs into a dataset."""
@@ -612,20 +618,20 @@ class W2V_Sampled:
                                os.path.join(self.save_path, "checkpoint"),
                                global_step=self.global_step)
 
-                if batch_ii % 1000 == 0:
+                # if batch_ii % 1000 == 0:
                     # Evaluate and add evaluation info
-                    sum_ii, ev_ii = self.eval(sess, dataset, summary=summary_op)
-                    summary_writer.add_summary(sum_ii, batch_ii // 1000)
-
-                    train_wps = np.floor((dataset.data_index[0] - batch_index)
-                                         / (time.time() - batch_time))
-                    pc_done = 100.0 * dataset.data_index[0] / dataset.split_sizes[0]
-                    print(
-                        "Epoch {} [{:0.1f}%], loss: {:0.1f}, val: {:0.3f}, ana: {:0.2f} word/sec: {:0.0f}  |  "
-                            .format(epoch, pc_done, loss_ii, ev_ii, ana_ii, train_wps), end="\r")
-
-                    batch_time = time.time()
-                    batch_index = dataset.data_index[0]
+                    # sum_ii, ev_ii = self.eval(sess, dataset, summary=summary_op)
+                    # summary_writer.add_summary(sum_ii, batch_ii // 1000)
+                    #
+                    # train_wps = np.floor((dataset.data_index[0] - batch_index)
+                    #                      / (time.time() - batch_time))
+                    # pc_done = 100.0 * dataset.data_index[0] / dataset.split_sizes[0]
+                    # print(
+                    #     "Epoch {} [{:0.1f}%], loss: {:0.1f}, val: {:0.3f}, ana: {:0.2f} word/sec: {:0.0f}  |  "
+                    #         .format(epoch, pc_done, loss_ii, ev_ii, ana_ii, train_wps), end="\r")
+                    #
+                    # batch_time = time.time()
+                    # batch_index = dataset.data_index[0]
 
                 batch_ii += 1
 
@@ -695,9 +701,9 @@ if __name__ == "__main__":
     freeze_indices = None
 
     if FLAGS.freeze_embeddings:
-        freeze_indices = ds.build_freeze_indices()
+        freeze_indices = ds.build_freeze_indices(FLAGS.degrees_file)
     else:
-        freeze_context_indices = ds.build_freeze_indices()
+        freeze_context_indices = ds.build_freeze_indices(FLAGS.degrees_file)
 
     with tf.Session() as session, tf.device('/cpu:0'):
         tf.set_random_seed(FLAGS.seed)

@@ -1,11 +1,13 @@
 #!/bin/bash
 
-TENSORFLOW_BIN_DIR=your-dir/bin/
-N2V_SCRIPT_DIR=your-dir/
+TENSORFLOW_BIN_DIR=/Users/Ganymedian/Desktop/tensorflow/bin
+# your-dir/bin/
+N2V_SCRIPT_DIR=/Users/Ganymedian/Desktop/Projects/node2vec_experiments
+#your-dir/
 
 # N2V parameters
 TRAIN_SPLIT=0.8             # train validation split
-LEARING_RATE=0.2
+LEARNING_RATE=0.2
 EMBEDDING_SIZE=20
 VOCAB_SIZE=10400            # Size of vocabulary
 NEG_SAMPLE_SIZE=2
@@ -26,15 +28,14 @@ SEED=58125312
 
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
+cd $N2V_SCRIPT_DIR
 
 
-
-
-python -m $N2V_SCRIPT_DIR/node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR \
+python -m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR \
       --train_file $TRAIN_FILE --label_file $LABEL_FILE --degrees_file $DEGREES_FILE \
       --checkpoint_file $CHECKPOINT_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE \
       --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT \
-      --LEARING_RATE $learning_rate --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE \
+      --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE \
       --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE \
       --freeze_embeddings $FREEZE_EMBEDDINGS
 
