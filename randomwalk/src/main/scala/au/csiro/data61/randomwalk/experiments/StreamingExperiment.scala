@@ -75,7 +75,7 @@ case class StreamingExperiment(config: Params) {
 
       breakable {
         for (ec <- 1 until edges.length + 1) {
-          val (step, updates) = edges(ec)
+          val (step, updates) = edges(ec - 1)
           if (ec > config.maxSteps)
             break
           afs = updateGraph(updates)
