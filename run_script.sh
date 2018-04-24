@@ -33,11 +33,11 @@ cd $N2V_SCRIPT_DIR
 
 COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
 
-if [ "$LABEL_FILE" ne "" ]; then
+if [ "$LABEL_FILE" != "" ]; then
         COMMAND="$COMMAND --label_file $LABEL_FILE"
 fi
 
-if [ "$CHECKPOINT_FILE" ne "" ]; then
+if [ "$CHECKPOINT_FILE" != "" ]; then
         COMMAND="$COMMAND --checkpoint_file $CHECKPOINT_FILE"
 fi
 

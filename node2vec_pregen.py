@@ -48,6 +48,7 @@ class PregeneratedDataset:
                               dtype='int32', header=None).values
         self.unigrams = np.zeros((self.vocab_size,), dtype=np.int32)
         self.unigrams[degrees[:, 0] + FLAGS.force_offset] = degrees[:, 1]
+        self.unigrams = self.unigrams.tolist()
 
     def epoch_done(self, batch_size=0, split=0):
         return self.data_index[split] + batch_size > self.split_sizes[split]
