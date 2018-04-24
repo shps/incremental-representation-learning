@@ -89,7 +89,7 @@ class PregeneratedDataset:
         self.split_offset = [0] + self.split_sizes[:-1]
         self.data_index = [0] * self.n_splits
 
-        self.affected_nodes = pd.read_csv(FLAGS.affected_vertices_file, delimiter=FLAGS.delimiter,
+        self.affected_nodes = pd.read_csv(FLAGS.input_dir + FLAGS.affected_vertices_file, delimiter=FLAGS.delimiter,
                                           dtype='int32', header=None).values
         self.affected_nodes += force_offset
 
@@ -658,7 +658,7 @@ flags.DEFINE_boolean('freeze_embeddings', True,
 flags.DEFINE_string('base_log_dir', '.', 'base directory for logging and saving embeddings')
 flags.DEFINE_string('input_dir', '.', 'Input data directory.')
 flags.DEFINE_string('train_file', 'blah.txt', 'Input train file name.')
-flags.DEFINE_string('label_file', 'blah.txt', 'Input label file name.')
+flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', 'blah.txt', 'Input node degrees file name.')
 flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
 flags.DEFINE_string('affected_vertices_file', 'blah.txt', 'Input affected vertices file name.')
@@ -669,7 +669,7 @@ flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
 flags.DEFINE_integer('seed', 58125312, "Seed for random generator.")
 
 if __name__ == "__main__":
-    ds = PregeneratedDataset(FLAGS.train_file,
+    ds = PregeneratedDataset(FLAGS.input_dir + FLAGS.train_file,
                              n_nodes=FLAGS.vocab_size,
                              delimiter=FLAGS.delimiter,
                              force_offset=FLAGS.force_offset,
@@ -677,10 +677,11 @@ if __name__ == "__main__":
 
     # We need to set the corresponding graph, in particular use the degree
     # to control the negative sampling, as in word2vec paper
-    ds.set_node_degrees(FLAGS.degrees_file)
+    ds.set_node_degrees(FLAGS.input_dir + FLAGS.degrees_file)
 
     # Set labels
-    ds.load_labels(FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
+    if FLAGS.label_file is not None:
+        ds.load_labels(FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
@@ -701,14 +702,17 @@ if __name__ == "__main__":
     freeze_indices = None
 
     if FLAGS.freeze_embeddings:
-        freeze_indices = ds.build_freeze_indices(FLAGS.degrees_file)
+        freeze_indices = ds.build_freeze_indices(FLAGS.input_dir + FLAGS.degrees_file)
     else:
-        freeze_context_indices = ds.build_freeze_indices(FLAGS.degrees_file)
+        freeze_context_indices = ds.build_freeze_indices(FLAGS.input_dir + FLAGS.degrees_file)
 
     with tf.Session() as session, tf.device('/cpu:0'):
         tf.set_random_seed(FLAGS.seed)
+        checkpoint_file = None
+        if FLAGS.checkpoint_file is not None:
+            checkpoint_file = FLAGS.input_dir + FLAGS.checkpoint_file
         word2vec.train(session, ds,
                        freeze_indices=freeze_indices,
                        freeze_context_indices=freeze_context_indices,
-                       restore_from_file=FLAGS.checkpoint_file,
+                       restore_from_file=checkpoint_file,
                        n_epochs=FLAGS.n_epochs)
