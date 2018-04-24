@@ -88,10 +88,12 @@ case class FileManager(config: Params) {
   }
 
   def convertDelimiter() = {
-    val lines = Source.fromFile(config.input).getLines.toArray.par
-
-    lines.map { triplet =>
-      triplet.split(config.delimiter).mkString(config.delimiter2)
+    println(s"Convert from del ${config.delimiter} to del ${config.delimiter2}")
+    var d2 = config.delimiter2
+    if (d2.contains("\\s+"))
+      d2 = "\t"
+    val lines = Source.fromFile(config.input).getLines.toArray.par.map { triplet =>
+      triplet.split(config.delimiter).mkString(d2)
     }
 
     config.output.toFile.createIfNotExists(true)
