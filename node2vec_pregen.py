@@ -682,7 +682,7 @@ if __name__ == "__main__":
 
     # Set labels
     if FLAGS.label_file is not None:
-        ds.load_labels(FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
+        ds.load_labels(FLAGS.input_dir + FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
