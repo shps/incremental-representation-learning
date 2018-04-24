@@ -87,6 +87,21 @@ case class FileManager(config: Params) {
 
   }
 
+  def convertDelimiter() = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
+
+    lines.map { triplet =>
+      triplet.split(config.delimiter).mkString(config.delimiter2)
+    }
+
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(config.output)
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(lines.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
   def readPartitionedEdgeList(): Seq[(Int, Seq[(Int, Int)])] = {
     val lines = readEdgeList().seq
     val edgePerPartition: Int = Math.max(lines.size / 10000, 1)
@@ -200,20 +215,20 @@ case class FileManager(config: Params) {
 
   }
 
-    def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], vocabs: ParSeq[Int], suffix: String) {
-      config.output.toFile.createIfNotExists(true)
-      val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
-      val bw = new BufferedWriter(new FileWriter(file))
-      bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
-      bw.flush()
-      bw.close()
+  def saveTargetContextPairs(pairs: ParSeq[(Int, Int)], vocabs: ParSeq[Int], suffix: String) {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
+    bw.flush()
+    bw.close()
 
-      val file2 = new File(s"${config.output}/${config.cmd}-vocabs-$suffix.txt")
-      val bw2 = new BufferedWriter(new FileWriter(file2))
-      bw2.write(vocabs.mkString("\n"))
-      bw2.flush()
-      bw2.close()
-    }
+    val file2 = new File(s"${config.output}/${config.cmd}-vocabs-$suffix.txt")
+    val bw2 = new BufferedWriter(new FileWriter(file2))
+    bw2.write(vocabs.mkString("\n"))
+    bw2.flush()
+    bw2.close()
+  }
 
   def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
     ] = {

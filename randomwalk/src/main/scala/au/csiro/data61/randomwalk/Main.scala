@@ -74,6 +74,10 @@ object Main {
         println("Writing to the file...")
         fm.saveTargetContextPairs(pairs, vocab, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
         println("Completed!")
+      case TaskName.cd =>
+        println("Started converting...")
+        FileManager(params).convertDelimiter()
+        println("Conversion completed!")
     }
 
     params.cmd match {

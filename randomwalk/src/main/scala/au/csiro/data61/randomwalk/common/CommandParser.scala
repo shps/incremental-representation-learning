@@ -7,7 +7,7 @@ object CommandParser {
   object TaskName extends Enumeration {
     type TaskName = Value
     val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr,
-    ar, s1, coAuthors, sca, ae, gPairs =
+    ar, s1, coAuthors, sca, ae, gPairs, cd =
       Value
   }
 
@@ -48,6 +48,7 @@ object CommandParser {
   val MAX_STEPS = "maxSteps"
   val GROUPED = "grouped"
   val SELF_CONTEXT = "selfContext"
+  val DELIMITER2 = "d2"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -116,6 +117,9 @@ object CommandParser {
     opt[String](DELIMITER)
       .text("Delimiter: ")
       .action((x, c) => c.copy(delimiter = x))
+    opt[String](DELIMITER2)
+      .text("Convert to delimiter: ")
+      .action((x, c) => c.copy(delimiter2 = x))
     opt[String](OUTPUT)
       .required()
       .text("Output path: empty")

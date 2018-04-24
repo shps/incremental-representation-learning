@@ -33,4 +33,5 @@ case class Params(walkLength: Int = 80,
                   selfContext: Boolean = false,
                   wType: WalkType = WalkType.firstorder,
                   delimiter:String = "\\s+",
+                  delimiter2:String = ",",
                   cmd: TaskName = TaskName.ar) extends AbstractParams[Params]
