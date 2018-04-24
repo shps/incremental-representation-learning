@@ -95,7 +95,7 @@ case class FileManager(config: Params) {
     }
 
     config.output.toFile.createIfNotExists(true)
-    val file = new File(config.output)
+    val file = new File(s"${config.output}/converted.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(lines.mkString("\n"))
     bw.flush()
