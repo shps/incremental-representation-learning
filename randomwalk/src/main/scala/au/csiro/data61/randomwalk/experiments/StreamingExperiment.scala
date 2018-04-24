@@ -44,34 +44,39 @@ case class StreamingExperiment(config: Params) {
 
       // Construct initial graph
       println("******* Initialized Graph the graph ********")
-      var afs = updateGraph(initEdges)
-      println(s"Number of edges: ${GraphMap.getNumEdges}")
-      println(s"Number of vertices: ${GraphMap.getNumVertices}")
-      val result = streamingAddAndRunWithId(afs, prevWalks)
-      prevWalks = result._1
-      totalTime = result._4
-      numSteps(nr)(0) = result._2
-      numWalkers(nr)(0) = result._3
-      stepTimes(nr)(0) = result._4
-      if (config.logErrors) {
-        val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result
-          ._1, config)
-        meanErrors(nr)(0) = meanE
-        maxErrors(nr)(0) = maxE
-        println(s"Mean Error: ${meanE}")
-        println(s"Max Error: ${maxE}")
+      var afs = mutable.HashSet.empty[Int]
+      if (!initEdges.isEmpty) {
+        afs = updateGraph(initEdges)
+        println(s"Number of edges: ${GraphMap.getNumEdges}")
+        println(s"Number of vertices: ${GraphMap.getNumVertices}")
+        val result = streamingAddAndRunWithId(afs, prevWalks)
+        prevWalks = result._1
+        totalTime = result._4
+        numSteps(nr)(0) = result._2
+        numWalkers(nr)(0) = result._3
+        stepTimes(nr)(0) = result._4
+        if (config.logErrors) {
+          val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result
+            ._1, config)
+          meanErrors(nr)(0) = meanE
+          maxErrors(nr)(0) = maxE
+          println(s"Mean Error: ${meanE}")
+          println(s"Max Error: ${maxE}")
+        }
+        if (config.rrType != RrType.m1) {
+          fm.saveAffectedVertices(
+            afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
+              config
+                .walkLength
+            }-nw${config.numWalks}-0")
+        }
+        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+          config.numWalks
+        }-0")
+        println(s"Total random walk time: $totalTime")
+      } else{
+        println("Initial graph is empty.")
       }
-      if (config.rrType != RrType.m1) {
-        fm.saveAffectedVertices(
-          afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-            config
-              .walkLength
-          }-nw${config.numWalks}-0")
-      }
-      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-        config.numWalks
-      }-0")
-      println(s"Total random walk time: $totalTime")
 
       breakable {
         for (ec <- 1 until edges.length + 1) {
