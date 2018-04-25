@@ -45,7 +45,7 @@ class PregeneratedDataset:
 
     def set_node_degrees(self, degree_file):
         degrees = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
-                              dtype='int32', header=None).values
+                              dtype='int32', header=None, engine='python').values
         self.unigrams = np.zeros((self.vocab_size,), dtype=np.int32)
         self.unigrams[degrees[:, 0] + FLAGS.force_offset] = degrees[:, 1]
         self.unigrams = self.unigrams.tolist()
@@ -58,7 +58,7 @@ class PregeneratedDataset:
 
     def load_labels(self, label_filename, delimiter=" ", force_offset=0):
         raw_labels = pd.read_csv(label_filename, delimiter=delimiter,
-                                 dtype='int32', header=None).values
+                                 dtype='int32', header=None, engine='python').values
 
         self.labels = np.zeros(self.vocab_size, dtype=np.int32)
         for (index, label) in raw_labels:
@@ -68,7 +68,7 @@ class PregeneratedDataset:
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
         all_ids = np.zeros((self.vocab_size,), dtype=np.int32)
         existing_ids = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
-                                   dtype='int32', header=None).values
+                                   dtype='int32', header=None, engine='python').values
         existing_ids = existing_ids[:, 0] + FLAGS.force_offset
         unfreeze_ids = np.delete(all_ids, existing_ids)
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
@@ -80,7 +80,7 @@ class PregeneratedDataset:
         # Load all data
         print("Loading target-context pairs from {}".format(data_filename))
         self.data = pd.read_csv(data_filename, delimiter=delimiter,
-                                dtype='int32', header=None).values
+                                dtype='int32', header=None, engine='python').values
 
         # Force an adjustment to the node indices
         self.data += force_offset
@@ -90,8 +90,9 @@ class PregeneratedDataset:
         self.split_offset = [0] + self.split_sizes[:-1]
         self.data_index = [0] * self.n_splits
 
-        self.affected_nodes = pd.read_csv(FLAGS.input_dir + FLAGS.affected_vertices_file, delimiter=FLAGS.delimiter,
-                                          dtype='int32', header=None).values
+        self.affected_nodes = pd.read_csv(FLAGS.input_dir + FLAGS.affected_vertices_file,
+                                          delimiter=FLAGS.delimiter,
+                                          dtype='int32', header=None, engine='python').values
         self.affected_nodes += force_offset
 
     def generate_batch(self, batch_size, split=0):
@@ -619,7 +620,7 @@ class W2V_Sampled:
                                os.path.join(self.save_path, "checkpoint"),
                                global_step=self.global_step)
 
-                # if batch_ii % 1000 == 0:
+                    # if batch_ii % 1000 == 0:
                     # Evaluate and add evaluation info
                     # sum_ii, ev_ii = self.eval(sess, dataset, summary=summary_op)
                     # summary_writer.add_summary(sum_ii, batch_ii // 1000)
@@ -682,7 +683,8 @@ if __name__ == "__main__":
 
     # Set labels
     if FLAGS.label_file is not None:
-        ds.load_labels(FLAGS.input_dir + FLAGS.label_file, delimiter=FLAGS.delimiter, force_offset=FLAGS.force_offset)
+        ds.load_labels(FLAGS.input_dir + FLAGS.label_file, delimiter=FLAGS.delimiter,
+                       force_offset=FLAGS.force_offset)
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
