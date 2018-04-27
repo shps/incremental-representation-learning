@@ -37,6 +37,7 @@ class PregeneratedDataset:
         self.split_sizes = []
         self.split_data = []
         self.vocab_size = n_nodes
+        self.existing_vocab = []
         self.labels = None
         self.affected_nodes = None
         self.unigrams = None
@@ -46,8 +47,9 @@ class PregeneratedDataset:
     def set_node_degrees(self, degree_file):
         degrees = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
                               dtype='int32', header=None, engine='python').values
+        self.existing_vocab = degrees[:, 0] + FLAGS.force_offset
         self.unigrams = np.zeros((self.vocab_size,), dtype=np.int32)
-        self.unigrams[degrees[:, 0] + FLAGS.force_offset] = degrees[:, 1]
+        self.unigrams[self.existing_vocab] = degrees[:, 1]
         self.unigrams = self.unigrams.tolist()
 
     def epoch_done(self, batch_size=0, split=0):
@@ -64,13 +66,10 @@ class PregeneratedDataset:
         for (index, label) in raw_labels:
             self.labels[index + force_offset] = label
 
-    def build_freeze_indices(self, degree_file):
+    def build_freeze_indices(self):
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
         all_ids = np.zeros((self.vocab_size,), dtype=np.int32)
-        existing_ids = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
-                                   dtype='int32', header=None, engine='python').values
-        existing_ids = existing_ids[:, 0] + FLAGS.force_offset
-        unfreeze_ids = np.delete(all_ids, existing_ids)
+        unfreeze_ids = np.delete(all_ids, self.existing_vocab)
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
         return np.delete(all_ids, unfreeze_ids)
 
@@ -496,7 +495,7 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, train_size):
+    def eval_classification(self, session, labels, existing_vocab, train_size):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
@@ -509,7 +508,7 @@ class W2V_Sampled:
         shuffle = model_selection.StratifiedShuffleSplit(n_splits=5, test_size=0.8)
 
         cv_scores = model_selection.cross_validate(
-            classifier, node_embeddings, labels,
+            classifier, node_embeddings[existing_vocab], labels[existing_vocab],
             scoring=scoring, cv=shuffle, return_train_score=True
         )
         train_acc = cv_scores['train_accuracy'].mean()
@@ -598,7 +597,7 @@ class W2V_Sampled:
 
             if dataset.labels is not None:
                 print("\nClassification evaluation:")
-                self.eval_classification(sess, dataset.labels, 0.2)
+                self.eval_classification(sess, dataset.labels, ds.existing_vocab, 0.2)
 
             batch_index = 0
             batch_time = time.time()
