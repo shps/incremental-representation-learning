@@ -5,6 +5,7 @@
 #
 
 import datetime
+import six
 import os
 import time
 import pandas as pd
@@ -13,14 +14,16 @@ from contextlib import contextmanager
 import pickle
 import tensorflow as tf
 
-from sklearn import model_selection, linear_model, metrics, svm
+from sklearn import (model_selection, linear_model, multiclass,
+                     metrics, svm, preprocessing, exceptions)
 
-flags = tf.app.flags
-FLAGS = flags.FLAGS
+import warnings
+
+# Ignore metric warnings from scikit-learn. These often occur with
+# multi-label prediction when there are few examples of some classes.
+warnings.simplefilter("ignore", exceptions.UndefinedMetricWarning)
 
 times = {}
-
-
 @contextmanager
 def timeit(name):
     startTime = time.time()
@@ -41,13 +44,16 @@ class PregeneratedDataset:
         self.labels = None
         self.affected_nodes = None
         self.unigrams = None
+        self.affected_nodes = []
+        self.force_offset = force_offset
 
-        self.build_dataset(data_filename, delimiter, force_offset)
+        self.build_dataset(data_filename, delimiter)
 
-    def set_node_degrees(self, degree_file):
-        degrees = pd.read_csv(degree_file, delimiter=FLAGS.delimiter,
-                              dtype='int32', header=None, engine='python').values
-        self.existing_vocab = degrees[:, 0] + FLAGS.force_offset
+    def set_node_degrees(self, degree_file, delimiter=" "):
+        degrees = pd.read_csv(degree_file, delimiter=delimiter,
+                              dtype='int32', header=None).values
+
+        self.existing_vocab = degrees[:, 0] + self.force_offset
         self.unigrams = np.zeros((self.vocab_size,), dtype=np.int32)
         self.unigrams[self.existing_vocab] = degrees[:, 1]
         self.unigrams = self.unigrams.tolist()
@@ -58,13 +64,39 @@ class PregeneratedDataset:
     def reset_index(self, split=0):
         self.data_index[split] = 0
 
-    def load_labels(self, label_filename, delimiter=" ", force_offset=0):
-        raw_labels = pd.read_csv(label_filename, delimiter=delimiter,
-                                 dtype='int32', header=None, engine='python').values
+    def load_labels(self, label_filename, delimiter=" "):
+        """Load labels file. Supports single or multiple labels"""
+        raw_labels = {}
+        min_labels = np.inf
+        max_labels = 0
+        with open(label_filename) as f:
+            for line in f.readlines():
+                values = [int(x) for x in line.strip().split(delimiter)]
+                raw_labels[values[0]] = values[1:]
+                min_labels = min(len(values)-1, min_labels)
+                max_labels = max(len(values)-1, max_labels)
 
-        self.labels = np.zeros(self.vocab_size, dtype=np.int32)
-        for (index, label) in raw_labels:
-            self.labels[index + force_offset] = label
+        if min_labels < 1:
+            raise RuntimeError("Expected 1 or more labels in file {}"
+                               .format(label_filename))
+
+        # Single label
+        elif max_labels == 1:
+            self.labels = np.zeros(self.vocab_size, dtype=np.int32)
+            for (index, label) in six.iteritems(raw_labels):
+                self.labels[index + self.force_offset] = label[0]
+
+        # Multiple labels
+        else:
+            self.unique_labels = np.unique(
+                [l for labs in raw_labels.values() for l in labs])
+            n_labels = len(self.unique_labels)
+
+            label_encoder = preprocessing.MultiLabelBinarizer(self.unique_labels)
+            self.labels = np.zeros((self.vocab_size, n_labels), dtype=np.int8)
+            for (index, multi_label) in six.iteritems(raw_labels):
+                self.labels[index + self.force_offset] = \
+                    label_encoder.fit_transform([multi_label])
 
     def build_freeze_indices(self):
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
@@ -73,26 +105,33 @@ class PregeneratedDataset:
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
         return np.delete(all_ids, unfreeze_ids)
 
-    def build_dataset(self, data_filename, delimiter=" ", force_offset=0):
+    def build_dataset(self, data_filename, delimiter=" "):
         """Process raw inputs into a dataset."""
 
         # Load all data
         print("Loading target-context pairs from {}".format(data_filename))
-        self.data = pd.read_csv(data_filename, delimiter=delimiter,
-                                dtype='int32', header=None, engine='python').values
+        self.data = pd.read_csv(data_filename,
+                                delimiter=delimiter,
+                                dtype='int32',
+                                 header=None,
+                                  engine='python').values
 
         # Force an adjustment to the node indices
-        self.data += force_offset
+        self.data += self.force_offset
 
         n_total = len(self.data)
         self.split_sizes = [int(n_total * split) for split in self.splits]
         self.split_offset = [0] + self.split_sizes[:-1]
         self.data_index = [0] * self.n_splits
 
-        self.affected_nodes = pd.read_csv(FLAGS.input_dir + FLAGS.affected_vertices_file,
-                                          delimiter=FLAGS.delimiter,
-                                          dtype='int32', header=None, engine='python').values
-        self.affected_nodes += force_offset
+    def set_affected_nodes(affected_vertices_file, delimiter=" "):
+        """Set the affected vertices"""
+        self.affected_nodes = pd.read_csv(affected_vertices_file,
+                                          delimiter=delimiter,
+                                          dtype='int32',
+                                          header=None,
+                                          engine='python').values
+        self.affected_nodes += self.force_offset
 
     def generate_batch(self, batch_size, split=0):
         """
@@ -495,7 +534,7 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, train_size):
+    def eval_classification(self, session, labels, existing_vocab, train_size, use_ml_splitter=False):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
@@ -503,9 +542,43 @@ class W2V_Sampled:
         classifier = linear_model.LogisticRegression(C=10)
         # classifier = svm.SVC(C=1)
 
-        scoring = ['accuracy', 'f1_macro', 'f1_micro']
+        # Use multi-class/multi-label classifier
+        # Note: for two classes this gracefully falls
+        # back to binary classification.
+        classifier = multiclass.OneVsRestClassifier(classifier)
 
-        shuffle = model_selection.StratifiedShuffleSplit(n_splits=5, test_size=0.8)
+        # Choose multi-label or multi-class classification
+        # based on label size: we can't use StratifiedShuffleSplit
+        # for the mutli-label case
+        if len(labels.shape) > 1 and labels.shape[1] > 1:
+            print("Perforrming multi-label classification")
+            #shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
+            shuffle = model_selection.KFold(n_splits=5, shuffle=True)
+
+            class MLSplitter:
+                def __init__(self, splitter, labels):
+                    # Generate stratifications based on least frequent label
+                    n_data = labels.shape[0]
+                    label_freq = labels.sum(axis=0)
+                    shuffle_y = np.zeros(n_data, dtype='int16')
+                    for k in range(n_data):
+                        rowlabels = np.flatnonzero(labels[k])
+                        shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
+                    self.shuffle_y = shuffle_y
+                    self.s = splitter
+
+                def split(self, X, in_y=None, in_g=None):
+                    return self.s.split(X, self.shuffle_y)
+
+            if use_ml_splitter:
+                shuffle = MLSplitter(shuffle, labels)
+
+        else:
+            # shuffle = model_selection.StratifiedShuffleSplit(
+            #     n_splits=5, test_size=0.8)
+            shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True)
+
+        scoring = ['accuracy', 'f1_macro', 'f1_micro']
 
         cv_scores = model_selection.cross_validate(
             classifier, node_embeddings[existing_vocab], labels[existing_vocab],
@@ -642,6 +715,8 @@ class W2V_Sampled:
             # Save checkpoint
             saver.save(sess, os.path.join(self.save_path, "model_epoch_"), global_step=epoch)
 
+flags = tf.app.flags
+FLAGS = flags.FLAGS
 
 flags.DEFINE_float('train_split', 0.8, 'initial learning rate.')
 flags.DEFINE_float('learning_rate', 0.2, 'initial learning rate.')
@@ -658,11 +733,11 @@ flags.DEFINE_boolean('freeze_embeddings', True,
 
 flags.DEFINE_string('base_log_dir', '.', 'base directory for logging and saving embeddings')
 flags.DEFINE_string('input_dir', '.', 'Input data directory.')
-flags.DEFINE_string('train_file', 'blah.txt', 'Input train file name.')
+flags.DEFINE_string('train_file', None, 'Input train file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
-flags.DEFINE_string('degrees_file', 'blah.txt', 'Input node degrees file name.')
+flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
 flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
-flags.DEFINE_string('affected_vertices_file', 'blah.txt', 'Input affected vertices file name.')
+flags.DEFINE_string('affected_vertices_file', None, 'Input affected vertices file name.')
 # flags.DEFINE_string('existing_vocabs_file', '', 'Input existing vocab file name.')
 flags.DEFINE_string('delimiter', '\t', 'Delimiter.')
 flags.DEFINE_integer('print_every', 50, "How often to print training info.")
@@ -670,20 +745,33 @@ flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
 flags.DEFINE_integer('seed', 58125312, "Seed for random generator.")
 
 if __name__ == "__main__":
-    ds = PregeneratedDataset(FLAGS.input_dir + FLAGS.train_file,
+    if FLAGS.delimiter == r'\t':
+        print("TAB separated")
+        delimiter = "\t"
+    else:
+        delimiter = FLAGS.delimiter
+
+    ds = PregeneratedDataset(os.path.join(FLAGS.input_dir,FLAGS.train_file),
                              n_nodes=FLAGS.vocab_size,
-                             delimiter=FLAGS.delimiter,
+                             delimiter=delimiter,
                              force_offset=FLAGS.force_offset,
                              splits=[FLAGS.train_split, 1 - FLAGS.train_split])
 
     # We need to set the corresponding graph, in particular use the degree
     # to control the negative sampling, as in word2vec paper
-    ds.set_node_degrees(FLAGS.input_dir + FLAGS.degrees_file)
+    ds.set_node_degrees(os.path.join(FLAGS.input_dir, FLAGS.degrees_file),
+                        delimiter=delimiter)
+
+    # Set the affected vertices to freeze
+    if FLAGS.affected_vertices_file is not None:
+        ds.set_affected_nodes(
+            os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file),
+            delimiter=delimiter)
 
     # Set labels
     if FLAGS.label_file is not None:
-        ds.load_labels(FLAGS.input_dir + FLAGS.label_file, delimiter=FLAGS.delimiter,
-                       force_offset=FLAGS.force_offset)
+        ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file),
+                       delimiter=delimiter)
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
@@ -704,15 +792,15 @@ if __name__ == "__main__":
     freeze_indices = None
 
     if FLAGS.freeze_embeddings:
-        freeze_indices = ds.build_freeze_indices(FLAGS.input_dir + FLAGS.degrees_file)
+        freeze_indices = ds.build_freeze_indices()
     else:
-        freeze_context_indices = ds.build_freeze_indices(FLAGS.input_dir + FLAGS.degrees_file)
+        freeze_context_indices = ds.build_freeze_indices()
 
     with tf.Session() as session, tf.device('/cpu:0'):
         tf.set_random_seed(FLAGS.seed)
         checkpoint_file = None
         if FLAGS.checkpoint_file is not None:
-            checkpoint_file = FLAGS.input_dir + FLAGS.checkpoint_file
+            checkpoint_file = os.path.join(FLAGS.input_dir, FLAGS.checkpoint_file)
         word2vec.train(session, ds,
                        freeze_indices=freeze_indices,
                        freeze_context_indices=freeze_context_indices,
