@@ -68,13 +68,17 @@ case class StreamingExperiment(config: Params) {
             afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
               config
                 .walkLength
-            }-nw${config.numWalks}-0")
+            }-nw${config.numWalks}-0-$nr")
         }
         fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
           config.numWalks
-        }-0")
+        }-0-$nr")
+        fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+          config.rrType
+            .toString
+        }-wl${config.walkLength}-nw${config.numWalks}-0-$nr")
         println(s"Total random walk time: $totalTime")
-      } else{
+      } else {
         println("Initial graph is empty.")
       }
 
@@ -119,15 +123,15 @@ case class StreamingExperiment(config: Params) {
               afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
                 config
                   .walkLength
-              }-nw${config.numWalks}-$step")
+              }-nw${config.numWalks}-$step-$nr")
             //            }
             fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
               config.numWalks
-            }-$step")
+            }-$step-$nr")
             fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
               config.rrType
                 .toString
-            }-wl${config.walkLength}-nw${config.numWalks}-$step")
+            }-wl${config.walkLength}-nw${config.numWalks}-$step-$nr")
           }
         }
         if (config.rrType != RrType.m1) {
@@ -135,12 +139,12 @@ case class StreamingExperiment(config: Params) {
             afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
               config
                 .walkLength
-            }-nw${config.numWalks}-final")
+            }-nw${config.numWalks}-final-$nr")
         }
       }
       fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         config.numWalks
-      }-final")
+      }-final-$nr")
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
