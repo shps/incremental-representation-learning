@@ -24,6 +24,8 @@ import warnings
 warnings.simplefilter("ignore", exceptions.UndefinedMetricWarning)
 
 times = {}
+
+
 @contextmanager
 def timeit(name):
     startTime = time.time()
@@ -46,11 +48,12 @@ class PregeneratedDataset:
         self.unigrams = None
         self.affected_nodes = []
         self.force_offset = force_offset
+        self.delimiter = delimiter
 
-        self.build_dataset(data_filename, delimiter)
+        self.build_dataset(data_filename)
 
-    def set_node_degrees(self, degree_file, delimiter=" "):
-        degrees = pd.read_csv(degree_file, delimiter=delimiter,
+    def set_node_degrees(self, degree_file):
+        degrees = pd.read_csv(degree_file, delimiter=self.delimiter,
                               dtype='int32', header=None).values
 
         self.existing_vocab = degrees[:, 0] + self.force_offset
@@ -64,17 +67,17 @@ class PregeneratedDataset:
     def reset_index(self, split=0):
         self.data_index[split] = 0
 
-    def load_labels(self, label_filename, delimiter=" "):
+    def load_labels(self, label_filename):
         """Load labels file. Supports single or multiple labels"""
         raw_labels = {}
         min_labels = np.inf
         max_labels = 0
         with open(label_filename) as f:
             for line in f.readlines():
-                values = [int(x) for x in line.strip().split(delimiter)]
+                values = [int(x) for x in line.strip().split(self.delimiter)]
                 raw_labels[values[0]] = values[1:]
-                min_labels = min(len(values)-1, min_labels)
-                max_labels = max(len(values)-1, max_labels)
+                min_labels = min(len(values) - 1, min_labels)
+                max_labels = max(len(values) - 1, max_labels)
 
         if min_labels < 1:
             raise RuntimeError("Expected 1 or more labels in file {}"
@@ -105,16 +108,16 @@ class PregeneratedDataset:
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
         return np.delete(all_ids, unfreeze_ids)
 
-    def build_dataset(self, data_filename, delimiter=" "):
+    def build_dataset(self, data_filename):
         """Process raw inputs into a dataset."""
 
         # Load all data
         print("Loading target-context pairs from {}".format(data_filename))
         self.data = pd.read_csv(data_filename,
-                                delimiter=delimiter,
+                                delimiter=self.delimiter,
                                 dtype='int32',
-                                 header=None,
-                                  engine='python').values
+                                header=None,
+                                engine='python').values
 
         # Force an adjustment to the node indices
         self.data += self.force_offset
@@ -124,10 +127,10 @@ class PregeneratedDataset:
         self.split_offset = [0] + self.split_sizes[:-1]
         self.data_index = [0] * self.n_splits
 
-    def set_affected_nodes(affected_vertices_file, delimiter=" "):
+    def set_affected_nodes(self, affected_vertices_file):
         """Set the affected vertices"""
         self.affected_nodes = pd.read_csv(affected_vertices_file,
-                                          delimiter=delimiter,
+                                          delimiter=self.delimiter,
                                           dtype='int32',
                                           header=None,
                                           engine='python').values
@@ -534,7 +537,8 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, train_size, use_ml_splitter=False):
+    def eval_classification(self, session, labels, existing_vocab, train_size,
+                            use_ml_splitter=False):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
@@ -552,7 +556,7 @@ class W2V_Sampled:
         # for the mutli-label case
         if len(labels.shape) > 1 and labels.shape[1] > 1:
             print("Perforrming multi-label classification")
-            #shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
+            # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
             shuffle = model_selection.KFold(n_splits=5, shuffle=True)
 
             class MLSplitter:
@@ -715,6 +719,7 @@ class W2V_Sampled:
             # Save checkpoint
             saver.save(sess, os.path.join(self.save_path, "model_epoch_"), global_step=epoch)
 
+
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
@@ -745,13 +750,12 @@ flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
 flags.DEFINE_integer('seed', 58125312, "Seed for random generator.")
 
 if __name__ == "__main__":
+    delimiter = FLAGS.delimiter
     if FLAGS.delimiter == r'\t':
         print("TAB separated")
         delimiter = "\t"
-    else:
-        delimiter = FLAGS.delimiter
 
-    ds = PregeneratedDataset(os.path.join(FLAGS.input_dir,FLAGS.train_file),
+    ds = PregeneratedDataset(os.path.join(FLAGS.input_dir, FLAGS.train_file),
                              n_nodes=FLAGS.vocab_size,
                              delimiter=delimiter,
                              force_offset=FLAGS.force_offset,
@@ -759,19 +763,16 @@ if __name__ == "__main__":
 
     # We need to set the corresponding graph, in particular use the degree
     # to control the negative sampling, as in word2vec paper
-    ds.set_node_degrees(os.path.join(FLAGS.input_dir, FLAGS.degrees_file),
-                        delimiter=delimiter)
+    ds.set_node_degrees(os.path.join(FLAGS.input_dir, FLAGS.degrees_file))
 
     # Set the affected vertices to freeze
     if FLAGS.affected_vertices_file is not None:
         ds.set_affected_nodes(
-            os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file),
-            delimiter=delimiter)
+            os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file))
 
     # Set labels
     if FLAGS.label_file is not None:
-        ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file),
-                       delimiter=delimiter)
+        ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file))
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
