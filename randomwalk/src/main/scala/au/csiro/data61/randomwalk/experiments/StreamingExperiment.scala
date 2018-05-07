@@ -36,11 +36,13 @@ case class StreamingExperiment(config: Params) {
       }
 
       val logSize = Math.min(edges.length, config.maxSteps) + 1
-      numSteps = Array.ofDim[Int](config.numRuns, logSize)
-      numWalkers = Array.ofDim[Int](config.numRuns, logSize)
-      stepTimes = Array.ofDim[Long](config.numRuns, logSize)
-      meanErrors = Array.ofDim[Double](config.numRuns, logSize)
-      maxErrors = Array.ofDim[Double](config.numRuns, logSize)
+      if (numSteps.isEmpty) {
+        numSteps = Array.ofDim[Int](config.numRuns, logSize)
+        numWalkers = Array.ofDim[Int](config.numRuns, logSize)
+        stepTimes = Array.ofDim[Long](config.numRuns, logSize)
+        meanErrors = Array.ofDim[Double](config.numRuns, logSize)
+        maxErrors = Array.ofDim[Double](config.numRuns, logSize)
+      }
 
       // Construct initial graph
       println("******* Initialized Graph the graph ********")
