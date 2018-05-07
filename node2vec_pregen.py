@@ -537,11 +537,15 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, train_size,
-                            use_ml_splitter=False):
+    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False,):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
+        with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
+            pickle.dump(node_embeddings, f)
+
+        node_embeddings = node_embeddings[existing_vocab]
+        labels = labels[existing_vocab]
         # Classifier choice
         classifier = linear_model.LogisticRegression(C=10)
         # classifier = svm.SVC(C=1)
@@ -585,8 +589,8 @@ class W2V_Sampled:
         scoring = ['accuracy', 'f1_macro', 'f1_micro']
 
         cv_scores = model_selection.cross_validate(
-            classifier, node_embeddings[existing_vocab], labels[existing_vocab],
-            scoring=scoring, cv=shuffle, return_train_score=True
+            classifier, node_embeddings, labels, scoring=scoring, cv=shuffle,
+            return_train_score=True
         )
         train_acc = cv_scores['train_accuracy'].mean()
         train_f1 = cv_scores['train_f1_macro'].mean()
@@ -674,7 +678,7 @@ class W2V_Sampled:
 
             if dataset.labels is not None:
                 print("\nClassification evaluation:")
-                self.eval_classification(sess, dataset.labels, ds.existing_vocab, 0.2)
+                self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
 
             batch_index = 0
             batch_time = time.time()
@@ -717,7 +721,7 @@ class W2V_Sampled:
             print("\nEpoch done in {:4f}s".format(epoch_time))
 
             # Save checkpoint
-            saver.save(sess, os.path.join(self.save_path, "model_epoch_"), global_step=epoch)
+            saver.save(sess, os.path.join(self.save_path, "model-epoch"), global_step=epoch)
 
 
 flags = tf.app.flags
