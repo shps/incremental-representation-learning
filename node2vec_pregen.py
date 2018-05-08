@@ -541,7 +541,7 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False, ):
+    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
