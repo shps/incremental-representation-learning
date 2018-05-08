@@ -65,26 +65,26 @@ case class StreamingExperiment(config: Params) {
           println(s"Mean Error: ${meanE}")
           println(s"Max Error: ${maxE}")
         }
-        if (config.rrType != RrType.m1) {
-          fm.saveAffectedVertices(
-            afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-              config
-                .walkLength
-            }-nw${config.numWalks}-0-$nr")
-        }
-        fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-          config.numWalks
-        }-0-$nr")
-        fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
-          config.rrType
-            .toString
-        }-wl${config.walkLength}-nw${config.numWalks}-0-$nr")
         println(s"Total random walk time: $totalTime")
       } else {
         println("Initial graph is empty.")
       }
+      println("Writing outputs...")
+      fm.saveAffectedVertices(
+        afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
+          config
+            .walkLength
+        }-nw${config.numWalks}-0-$nr")
+      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        config.numWalks
+      }-0-$nr")
+      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+        config.rrType
+          .toString
+      }-wl${config.walkLength}-nw${config.numWalks}-0-$nr")
 
       breakable {
+        println("Start streaming...")
         for (ec <- 1 until edges.length + 1) {
           val (step, updates) = edges(ec - 1)
           if (ec > config.maxSteps)
@@ -136,14 +136,19 @@ case class StreamingExperiment(config: Params) {
             }-wl${config.walkLength}-nw${config.numWalks}-$step-$nr")
           }
         }
-        if (config.rrType != RrType.m1) {
-          fm.saveAffectedVertices(
-            afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-              config
-                .walkLength
-            }-nw${config.numWalks}-final-$nr")
-        }
       }
+      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        config.numWalks
+      }-final-$nr")
+      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+        config.rrType
+          .toString
+      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
+      fm.saveAffectedVertices(
+        afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
+          config
+            .walkLength
+        }-nw${config.numWalks}-final-$nr")
       fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         config.numWalks
       }-final-$nr")
