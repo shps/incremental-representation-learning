@@ -43,7 +43,7 @@ class PregeneratedDataset:
         self.split_data = []
         self.vocab_size = n_nodes
         self.existing_vocab = []
-        self.labels = None
+        # self.labels = None
         self.affected_nodes = None
         self.unigrams = None
         self.affected_nodes = []
@@ -67,40 +67,40 @@ class PregeneratedDataset:
     def reset_index(self, split=0):
         self.data_index[split] = 0
 
-    def load_labels(self, label_filename):
-        """Load labels file. Supports single or multiple labels"""
-        raw_labels = {}
-        min_labels = np.inf
-        max_labels = 0
-        with open(label_filename) as f:
-            for line in f.readlines():
-                values = [int(x) for x in line.strip().split(self.delimiter)]
-                raw_labels[values[0]] = values[1:]
-                min_labels = min(len(values) - 1, min_labels)
-                max_labels = max(len(values) - 1, max_labels)
-
-        if min_labels < 1:
-            raise RuntimeError("Expected 1 or more labels in file {}"
-                               .format(label_filename))
-
-        # Single label
-        elif max_labels == 1:
-            self.labels = np.zeros(self.vocab_size, dtype=np.int32)
-            for (index, label) in six.iteritems(raw_labels):
-                self.labels[index + self.force_offset] = label[0]
-
-        # Multiple labels
-        else:
-            print("Multi-label classification")
-            unique_labels = np.unique(
-                [l for labs in raw_labels.values() for l in labs])
-            n_labels = len(unique_labels)
-
-            label_encoder = preprocessing.MultiLabelBinarizer(unique_labels)
-            self.labels = np.zeros((self.vocab_size, n_labels), dtype=np.int8)
-            for (index, multi_label) in six.iteritems(raw_labels):
-                self.labels[index + self.force_offset] = \
-                    label_encoder.fit_transform([multi_label])
+    # def load_labels(self, label_filename):
+    #     """Load labels file. Supports single or multiple labels"""
+    #     raw_labels = {}
+    #     min_labels = np.inf
+    #     max_labels = 0
+    #     with open(label_filename) as f:
+    #         for line in f.readlines():
+    #             values = [int(x) for x in line.strip().split(self.delimiter)]
+    #             raw_labels[values[0]] = values[1:]
+    #             min_labels = min(len(values) - 1, min_labels)
+    #             max_labels = max(len(values) - 1, max_labels)
+    #
+    #     if min_labels < 1:
+    #         raise RuntimeError("Expected 1 or more labels in file {}"
+    #                            .format(label_filename))
+    #
+    #     # Single label
+    #     elif max_labels == 1:
+    #         self.labels = np.zeros(self.vocab_size, dtype=np.int32)
+    #         for (index, label) in six.iteritems(raw_labels):
+    #             self.labels[index + self.force_offset] = label[0]
+    #
+    #     # Multiple labels
+    #     else:
+    #         print("Multi-label classification")
+    #         unique_labels = np.unique(
+    #             [l for labs in raw_labels.values() for l in labs])
+    #         n_labels = len(unique_labels)
+    #
+    #         label_encoder = preprocessing.MultiLabelBinarizer(unique_labels)
+    #         self.labels = np.zeros((self.vocab_size, n_labels), dtype=np.int8)
+    #         for (index, multi_label) in six.iteritems(raw_labels):
+    #             self.labels[index + self.force_offset] = \
+    #                 label_encoder.fit_transform([multi_label])
 
     def build_freeze_indices(self):
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
@@ -215,11 +215,9 @@ class W2V_Sampled:
 
         self._model_variables = set()
 
-    def save_embeddings(self, epoch, scores):
-        with open(os.path.join(self.save_path, "scores.txt"), "a") as f:
-            f.write("{}, {:0.4f}, f1: {:0.4f}, {:0.4f}, f1: {:0.4f}\n"
-                    .format(epoch, scores["train_acc"], scores["train_f1"], scores["test_acc"],
-                            scores["test_f1"]))
+    def save_embeddings(self, epoch, embeddings):
+        with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
+            pickle.dump(embeddings, f)
 
     def load_embeddings(self):
         pass
@@ -541,73 +539,73 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False):
-        sk_graph = self._skipgram_graph
-        node_embeddings = session.run(sk_graph["normalized_embeddings"])
+                # def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False):
+                #     sk_graph = self._skipgram_graph
+                #     node_embeddings = session.run(sk_graph["normalized_embeddings"])
+                #
+                #     with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
+                #         pickle.dump(node_embeddings, f)
 
-        with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
-            pickle.dump(node_embeddings, f)
-
-        filtered_embs = node_embeddings[existing_vocab]
-        filtered_labels = labels[existing_vocab]
-        # Classifier choice
-        classifier = linear_model.LogisticRegression(C=10)
-        # classifier = svm.SVC(C=1)
-
-        # Use multi-class/multi-label classifier
-        # Note: for two classes this gracefully falls
-        # back to binary classification.
-        classifier = multiclass.OneVsRestClassifier(classifier)
-
-        # Choose multi-label or multi-class classification
-        # based on label size: we can't use StratifiedShuffleSplit
-        # for the mutli-label case
-        if len(filtered_labels.shape) > 1 and filtered_labels.shape[1] > 1:
-            print("Perforrming multi-label classification")
-            # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
-            shuffle = model_selection.KFold(n_splits=5, shuffle=True)
-
-            class MLSplitter:
-                def __init__(self, splitter, labels):
-                    # Generate stratifications based on least frequent label
-                    n_data = labels.shape[0]
-                    label_freq = labels.sum(axis=0)
-                    shuffle_y = np.zeros(n_data, dtype='int16')
-                    for k in range(n_data):
-                        rowlabels = np.flatnonzero(labels[k])
-                        shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
-                    self.shuffle_y = shuffle_y
-                    self.s = splitter
-
-                def split(self, X, in_y=None, in_g=None):
-                    return self.s.split(X, self.shuffle_y)
-
-            if use_ml_splitter:
-                shuffle = MLSplitter(shuffle, filtered_labels)
-
-        else:
-            # shuffle = model_selection.StratifiedShuffleSplit(
-            #     n_splits=5, test_size=0.8)
-            shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True)
-
-        scoring = ['accuracy', 'f1_macro', 'f1_micro']
-
-        cv_scores = model_selection.cross_validate(
-            classifier, filtered_embs, filtered_labels, scoring=scoring, cv=shuffle,
-            return_train_score=True
-        )
-        train_acc = cv_scores['train_accuracy'].mean()
-        train_f1 = cv_scores['train_f1_macro'].mean()
-        test_acc = cv_scores['test_accuracy'].mean()
-        test_f1 = cv_scores['test_f1_macro'].mean()
-
-        print("Train acc: {:0.4f}, f1: {:0.4f}"
-              .format(train_acc, train_f1))
-        print("Test acc: {:0.4f}, f1: {:0.4f}"
-              .format(test_acc, test_f1))
-
-        return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
-                'test_f1': test_f1}
+                # filtered_embs = node_embeddings[existing_vocab]
+                # filtered_labels = labels[existing_vocab]
+                # # Classifier choice
+                # classifier = linear_model.LogisticRegression(C=10)
+                # # classifier = svm.SVC(C=1)
+                #
+                # # Use multi-class/multi-label classifier
+                # # Note: for two classes this gracefully falls
+                # # back to binary classification.
+                # classifier = multiclass.OneVsRestClassifier(classifier)
+                #
+                # # Choose multi-label or multi-class classification
+                # # based on label size: we can't use StratifiedShuffleSplit
+                # # for the mutli-label case
+                # if len(filtered_labels.shape) > 1 and filtered_labels.shape[1] > 1:
+                #     print("Perforrming multi-label classification")
+                #     # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
+                #     shuffle = model_selection.KFold(n_splits=5, shuffle=True)
+                #
+                #     class MLSplitter:
+                #         def __init__(self, splitter, labels):
+                #             # Generate stratifications based on least frequent label
+                #             n_data = labels.shape[0]
+                #             label_freq = labels.sum(axis=0)
+                #             shuffle_y = np.zeros(n_data, dtype='int16')
+                #             for k in range(n_data):
+                #                 rowlabels = np.flatnonzero(labels[k])
+                #                 shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
+                #             self.shuffle_y = shuffle_y
+                #             self.s = splitter
+                #
+                #         def split(self, X, in_y=None, in_g=None):
+                #             return self.s.split(X, self.shuffle_y)
+                #
+                #     if use_ml_splitter:
+                #         shuffle = MLSplitter(shuffle, filtered_labels)
+                #
+                # else:
+                #     # shuffle = model_selection.StratifiedShuffleSplit(
+                #     #     n_splits=5, test_size=0.8)
+                #     shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True)
+                #
+                # scoring = ['accuracy', 'f1_macro', 'f1_micro']
+                #
+                # cv_scores = model_selection.cross_validate(
+                #     classifier, filtered_embs, filtered_labels, scoring=scoring, cv=shuffle,
+                #     return_train_score=True
+                # )
+                # train_acc = cv_scores['train_accuracy'].mean()
+                # train_f1 = cv_scores['train_f1_macro'].mean()
+                # test_acc = cv_scores['test_accuracy'].mean()
+                # test_f1 = cv_scores['test_f1_macro'].mean()
+                #
+                # print("Train acc: {:0.4f}, f1: {:0.4f}"
+                #       .format(train_acc, train_f1))
+                # print("Test acc: {:0.4f}, f1: {:0.4f}"
+                #       .format(test_acc, test_f1))
+                #
+                # return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
+                #         'test_f1': test_f1}
 
     def train(self, sess, dataset,
               analogy_dataset=None,
@@ -725,13 +723,11 @@ class W2V_Sampled:
             epoch_time = time.time() - epoch_start
             print("\nEpoch done in {:4f}s".format(epoch_time))
 
+            node_embeddings = session.run(sk_graph["normalized_embeddings"])
+            self.save_embeddings(epoch, node_embeddings)
+
             # Save checkpoint
             saver.save(sess, os.path.join(self.save_path, "model-epoch"), global_step=epoch)
-
-            if dataset.labels is not None:
-                print("\nClassification evaluation:")
-                scores = self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
-                self.save_embeddings(epoch, scores)
 
 
 flags = tf.app.flags
@@ -785,8 +781,8 @@ if __name__ == "__main__":
             os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file))
 
     # Set labels
-    if FLAGS.label_file is not None:
-        ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file))
+    # if FLAGS.label_file is not None:
+    #     ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file))
 
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
