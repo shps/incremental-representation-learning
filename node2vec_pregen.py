@@ -91,11 +91,12 @@ class PregeneratedDataset:
 
         # Multiple labels
         else:
-            self.unique_labels = np.unique(
+            print("Multi-label classification")
+            unique_labels = np.unique(
                 [l for labs in raw_labels.values() for l in labs])
-            n_labels = len(self.unique_labels)
+            n_labels = len(unique_labels)
 
-            label_encoder = preprocessing.MultiLabelBinarizer(self.unique_labels)
+            label_encoder = preprocessing.MultiLabelBinarizer(unique_labels)
             self.labels = np.zeros((self.vocab_size, n_labels), dtype=np.int8)
             for (index, multi_label) in six.iteritems(raw_labels):
                 self.labels[index + self.force_offset] = \
@@ -214,8 +215,11 @@ class W2V_Sampled:
 
         self._model_variables = set()
 
-    def save_embeddings(self):
-        pass
+    def save_embeddings(self, epoch, scores):
+        with open(os.path.join(self.save_path, "scores.txt"), "a") as f:
+            f.write("{}, {:0.4f}, f1: {:0.4f}, {:0.4f}, f1: {:0.4f}\n"
+                    .format(epoch, scores["train_acc"], scores["train_f1"], scores["test_acc"],
+                            scores["test_f1"]))
 
     def load_embeddings(self):
         pass
@@ -537,15 +541,15 @@ class W2V_Sampled:
             for neighbor, distance in zip(nidx[ii], nval[ii]):
                 print("%-20s %6.4f" % (neighbor, distance))
 
-    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False,):
+    def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False, ):
         sk_graph = self._skipgram_graph
         node_embeddings = session.run(sk_graph["normalized_embeddings"])
 
         with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
             pickle.dump(node_embeddings, f)
 
-        node_embeddings = node_embeddings[existing_vocab]
-        labels = labels[existing_vocab]
+        filtered_embs = node_embeddings[existing_vocab]
+        filtered_labels = labels[existing_vocab]
         # Classifier choice
         classifier = linear_model.LogisticRegression(C=10)
         # classifier = svm.SVC(C=1)
@@ -558,7 +562,7 @@ class W2V_Sampled:
         # Choose multi-label or multi-class classification
         # based on label size: we can't use StratifiedShuffleSplit
         # for the mutli-label case
-        if len(labels.shape) > 1 and labels.shape[1] > 1:
+        if len(filtered_labels.shape) > 1 and filtered_labels.shape[1] > 1:
             print("Perforrming multi-label classification")
             # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
             shuffle = model_selection.KFold(n_splits=5, shuffle=True)
@@ -579,7 +583,7 @@ class W2V_Sampled:
                     return self.s.split(X, self.shuffle_y)
 
             if use_ml_splitter:
-                shuffle = MLSplitter(shuffle, labels)
+                shuffle = MLSplitter(shuffle, filtered_labels)
 
         else:
             # shuffle = model_selection.StratifiedShuffleSplit(
@@ -589,7 +593,7 @@ class W2V_Sampled:
         scoring = ['accuracy', 'f1_macro', 'f1_micro']
 
         cv_scores = model_selection.cross_validate(
-            classifier, node_embeddings, labels, scoring=scoring, cv=shuffle,
+            classifier, filtered_embs, filtered_labels, scoring=scoring, cv=shuffle,
             return_train_score=True
         )
         train_acc = cv_scores['train_accuracy'].mean()
@@ -597,9 +601,9 @@ class W2V_Sampled:
         test_acc = cv_scores['test_accuracy'].mean()
         test_f1 = cv_scores['test_f1_macro'].mean()
 
-        print("Train acc: {:0.3f}, f1: {:0.3f}"
+        print("Train acc: {:0.4f}, f1: {:0.4f}"
               .format(train_acc, train_f1))
-        print("Test acc: {:0.3f}, f1: {:0.3f}"
+        print("Test acc: {:0.4f}, f1: {:0.4f}"
               .format(test_acc, test_f1))
 
         return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
@@ -676,9 +680,10 @@ class W2V_Sampled:
             # Start new epoch
             ds.reset_index(split=0)
 
-            if dataset.labels is not None:
-                print("\nClassification evaluation:")
-                self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
+            # if dataset.labels is not None:
+            #     print("\nClassification evaluation:")
+            #     scores = self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
+            #     self.save_embeddings(epoch, scores)
 
             batch_index = 0
             batch_time = time.time()
@@ -722,6 +727,11 @@ class W2V_Sampled:
 
             # Save checkpoint
             saver.save(sess, os.path.join(self.save_path, "model-epoch"), global_step=epoch)
+
+            if dataset.labels is not None:
+                print("\nClassification evaluation:")
+                scores = self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
+                self.save_embeddings(epoch, scores)
 
 
 flags = tf.app.flags
