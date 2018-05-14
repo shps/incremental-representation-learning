@@ -83,7 +83,7 @@ case class FileManager(config: Params) {
       val parts = triplet.split(config.delimiter)
 
       Seq((parts.head.toInt, parts(1).toInt))
-    }
+    }.distinct
 
   }
 

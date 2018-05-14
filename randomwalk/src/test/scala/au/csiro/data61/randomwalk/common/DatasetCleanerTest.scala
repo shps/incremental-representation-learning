@@ -8,12 +8,12 @@ import org.scalatest.FunSuite
   */
 class DatasetCleanerTest extends FunSuite {
 
-  private val dataset = "/Users/Ganymedian/Desktop/dynamic-rw/affected-experiments/"
+  private val dataset = "/Users/Ganymedian/Desktop/Projects/stellar-random-walk-research/data/cora/"
 
   test("testCheckDataSet") {
-    val fName = dataset + "blogcatalog-edges.txt"
-    val initId = 1
-    val config = Params(input = fName, delimiter = ",")
+    val fName = dataset + "cora_edgelist.txt"
+    val initId = 0
+    val config = Params(input = fName, delimiter = "\\s+", directed = true)
     DatasetCleaner.checkDataSet(config, initId)
 
   }

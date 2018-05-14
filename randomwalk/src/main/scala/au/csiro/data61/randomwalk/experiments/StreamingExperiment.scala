@@ -171,12 +171,15 @@ case class StreamingExperiment(config: Params) {
       var sNeighbors = GraphMap.getNeighbors(src)
       var dNeighbors = GraphMap.getNeighbors(dst)
       sNeighbors ++= Seq((dst, w))
-      dNeighbors ++= Seq((src, w))
-      GraphMap.putVertex(src, sNeighbors)
-      GraphMap.putVertex(dst, dNeighbors)
 
+      GraphMap.putVertex(src, sNeighbors)
       afs.add(src)
-      afs.add(dst)
+
+      if (!config.directed) {
+        dNeighbors ++= Seq((src, w))
+        afs.add(dst)
+      }
+      GraphMap.putVertex(dst, dNeighbors)
     }
 
     return afs

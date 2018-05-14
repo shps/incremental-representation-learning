@@ -10,15 +10,16 @@ import scala.collection.parallel.ParSeq
   */
 object DatasetCleaner {
 
-  def checkRedundantEdges(edges: ParSeq[(Int, Int)]) = {
+  def checkRedundantEdges(edges: ParSeq[(Int, Int)], config: Params) = {
     val selfEdges = edges.count { case (a, b) => a == b }
     if (selfEdges > 0)
       throw new Exception(s"Number of self edges: $selfEdges")
     val rEdges = edges.flatMap { case (a, b) => Seq((a, b), (b, a)) }.distinct
-    if (edges.size * 2 != rEdges.size) {
-      throw new Exception(s"There are reversed edges. Expected: ${edges.size * 2}, Actual: " +
-        s"${rEdges.size}")
-    }
+    if (!config.directed)
+      if (edges.size * 2 != rEdges.size) {
+        throw new Exception(s"There are reversed edges. Expected: ${edges.size * 2}, Actual: " +
+          s"${rEdges.size}")
+      }
   }
 
   def checkDataSet(config: Params, initId: Int): Unit = {
@@ -28,7 +29,12 @@ object DatasetCleaner {
     println(s"Number of edges: ${edges.size}")
     val deduplicated = edges.distinct
     println(s"Number of edges after deduplication: ${deduplicated.size}")
-    checkRedundantEdges(edges)
+    if (deduplicated.size != edges.size) {
+      val duplicates = edges.groupBy(identity).filter(_._2.length > 1).map(_._1)
+      println(s"Number of duplicates: ${duplicates.size}")
+      println(s"${duplicates.map{case (s, d) => s"$s\t$d"}.mkString("\n")}")
+    }
+    checkRedundantEdges(edges, config)
     val vertices = edges.flatMap { case e => Seq(e._1, e._2) }.distinct.seq.sortWith(_ < _)
     println(s"Number of vertices: ${vertices.size}")
     for (i <- 0 until vertices.size) {
@@ -101,8 +107,7 @@ object DatasetCleaner {
 
   }
 
-  def convertDelimiter(config: Params): Unit =
-  {
+  def convertDelimiter(config: Params): Unit = {
 
   }
 
