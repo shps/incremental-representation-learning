@@ -93,7 +93,7 @@ def load_labels(label_filename, vocab_size):
     max_labels = 0
     with open(label_filename) as f:
         for line in f.readlines():
-            values = [int(x) for x in line.strip().split(FLAGS.delimiter)]
+            values = [int(x) for x in line.strip().split()]
             raw_labels[values[0]] = values[1:]
             min_labels = min(len(values) - 1, min_labels)
             max_labels = max(len(values) - 1, max_labels)
@@ -106,7 +106,7 @@ def load_labels(label_filename, vocab_size):
         labels = np.zeros(vocab_size, dtype=np.int32)
         for (index, label) in six.iteritems(raw_labels):
             labels[index + FLAGS.force_offset] = label[0]
-        return labels
+        return raw_labels, labels
 
     # Multiple labels
     else:
@@ -132,7 +132,7 @@ def read_existing_vocab(degree_file):
 
 def save_scores(scores):
     with open(os.path.join(FLAGS.base_log_dir, "scores.txt"), "a") as f:
-        f.write("{:0.4f}, f1: {:0.4f}, {:0.4f}, f1: {:0.4f}\n"
+        f.write("{:0.4f}, {:0.4f}, {:0.4f}, {:0.4f}\n"
                 .format(scores["train_acc"], scores["train_f1"], scores["test_acc"],
                         scores["test_f1"]))
 
