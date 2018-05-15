@@ -7,7 +7,7 @@ PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
 VOCAB_FILE="gPairs-vocabs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
 # random walk configurations for naming conventions
-METHODS=(m3)
+METHODS=(m1)
 INIT_EDGE_SIZE=0.5
 STREAM_SIZE=0.001
 NUM_WALKS_ARR=(1)
@@ -44,12 +44,6 @@ trap "exit" INT
 
 for METHOD_TYPE in ${METHODS[*]}
 do
-    if [ "$METHOD_TYPE" != "m1" ]; then
-            AFV_PREFIX="sca-afs"
-    else
-            AFV_PREFIX="gPairs-vocabs"
-    fi
-
     for NUM_WALKS in ${NUM_WALKS_ARR[*]}
     do
         for WALK_LENGTH in ${WALK_LENGTH_ARR[*]}
@@ -72,7 +66,14 @@ do
                     INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/"                  # input data directory
                     TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                     DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
-                    AFFECTED_VERTICES_FILE="$AFV_PREFIX-$SUFFIX.txt"     # affected vertices file name
+
+                    if [ "$METHOD_TYPE" != "m1" ]; then
+                        AFV_PREFIX="sca-afs-$SUFFIX"
+                    else
+                        AFV_PREFIX="gPairs-vocabs-$FILE_SUFFIX"
+                    fi
+
+                    AFFECTED_VERTICES_FILE="$AFV_PREFIX.txt"     # affected vertices file name
 
                     COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
                     if [ $STEP -gt 0 ]; then
