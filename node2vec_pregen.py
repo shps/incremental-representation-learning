@@ -607,6 +607,10 @@ class W2V_Sampled:
                 # return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
                 #         'test_f1': test_f1}
 
+    def save_epoch_time(self, epoch, time):
+        with open(os.path.join(FLAGS.base_log_dir, "epoch_time.txt"), "a") as f:
+            f.write("{0}, {1}\n".format(epoch, time))
+
     def train(self, sess, dataset,
               analogy_dataset=None,
               freeze_indices=None,
@@ -722,6 +726,7 @@ class W2V_Sampled:
 
             epoch_time = time.time() - epoch_start
             print("\nEpoch done in {:4f}s".format(epoch_time))
+            self.save_epoch_time(epoch, epoch_time)
 
             node_embeddings = session.run(sk_graph["normalized_embeddings"])
             self.save_embeddings(epoch, node_embeddings)
@@ -752,6 +757,7 @@ flags.DEFINE_string('train_file', None, 'Input train file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
 flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
+flags.DEFINE_string('checkpoint_dir', None, 'Input tf checkpoint file directory.')
 flags.DEFINE_string('affected_vertices_file', None, 'Input affected vertices file name.')
 # flags.DEFINE_string('existing_vocabs_file', '', 'Input existing vocab file name.')
 flags.DEFINE_string('delimiter', '\t', 'Delimiter.')
@@ -811,7 +817,7 @@ if __name__ == "__main__":
         tf.set_random_seed(FLAGS.seed)
         checkpoint_file = None
         if FLAGS.checkpoint_file is not None:
-            checkpoint_file = os.path.join(FLAGS.input_dir, FLAGS.checkpoint_file)
+            checkpoint_file = os.path.join(FLAGS.checkpoint_dir, FLAGS.checkpoint_file)
         word2vec.train(session, ds,
                        freeze_indices=freeze_indices,
                        freeze_context_indices=freeze_context_indices,
