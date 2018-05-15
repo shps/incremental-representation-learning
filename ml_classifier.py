@@ -1,15 +1,12 @@
-import datetime
-import six
 import os
-import time
-import pandas as pd
-import numpy as np
-from contextlib import contextmanager
 import pickle
-import tensorflow as tf
 
+import numpy as np
+import pandas as pd
+import six
+import tensorflow as tf
 from sklearn import (model_selection, linear_model, multiclass,
-                     metrics, svm, preprocessing, exceptions)
+                     preprocessing)
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -23,6 +20,9 @@ flags.DEFINE_string('input_dir', '.', 'Input data directory.')
 flags.DEFINE_string('emb_file', None, 'Input label file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
+flags.DEFINE_string('label_dir', None, 'Input label file directory.')
+flags.DEFINE_string('degrees_dir', None, 'Input node degrees file directory.')
+flags.DEFINE_integer('output_index', 0, 'Output file suffix.')
 flags.DEFINE_string('delimiter', '\t', 'Delimiter.')
 flags.DEFINE_integer('seed', 58125312, "Seed for random generator.")
 flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
@@ -131,7 +131,7 @@ def read_existing_vocab(degree_file):
 
 
 def save_scores(scores):
-    with open(os.path.join(FLAGS.base_log_dir, "scores.txt"), "a") as f:
+    with open(os.path.join(FLAGS.base_log_dir, "scores{}.txt".format(FLAGS.output_index)), "a") as f:
         f.write("{:0.4f}, {:0.4f}, {:0.4f}, {:0.4f}\n"
                 .format(scores["train_acc"], scores["train_f1"], scores["test_acc"],
                         scores["test_f1"]))
@@ -148,11 +148,11 @@ if __name__ == "__main__":
         all_embeddings = pickle.load(pfile)
     v_size = len(all_embeddings)
     print("Vocab size: {}".format(v_size))
-    r_labels, all_labels = load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file), v_size)
+    r_labels, all_labels = load_labels(os.path.join(FLAGS.label_dir, FLAGS.label_file), v_size)
     un, counts = np.unique(all_labels, return_counts=True)
     print(dict(zip(un, counts)))
     print("Labeled vocab size: {}".format(len(all_labels)))
-    existing_vocab = read_existing_vocab(os.path.join(FLAGS.input_dir, FLAGS.degrees_file))
+    existing_vocab = read_existing_vocab(os.path.join(FLAGS.degrees_dir, FLAGS.degrees_file))
     correct = True
     for x in existing_vocab:
         x = x + 1
