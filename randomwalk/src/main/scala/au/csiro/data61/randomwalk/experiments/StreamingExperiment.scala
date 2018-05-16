@@ -178,8 +178,8 @@ case class StreamingExperiment(config: Params) {
       if (!config.directed) {
         dNeighbors ++= Seq((src, w))
         afs.add(dst)
+        GraphMap.putVertex(dst, dNeighbors)
       }
-      GraphMap.putVertex(dst, dNeighbors)
     }
 
     return afs
