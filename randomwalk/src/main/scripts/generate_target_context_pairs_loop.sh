@@ -27,6 +27,7 @@ NUM_RUNS=4   # counting from zero
 PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
 VOCAB_FILE="gPairs-vocabs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
+trap "exit" INT
 
 for METHOD_TYPE in ${METHODS[*]}
 do
@@ -48,8 +49,8 @@ do
                     EXPERIMENT_TYPE="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                     RW_FILE="sca-$EXPERIMENT_TYPE.txt"
                     DIR_NAME="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                    INPUT_EDGE_LIST="/home/ubuntu/hooman/output/$DATASET/$DIR_NAME/$RW_FILE"
-                    OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_NAME/"
+                    INPUT_EDGE_LIST="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_NAME/$RW_FILE"
+                    OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_NAME/"
 
                     java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                         --d "$DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \

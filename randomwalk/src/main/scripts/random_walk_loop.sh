@@ -24,6 +24,8 @@ LOG_ERRORS=false  # Should it compute and log transition probability errors (com
 MAX_STEPS=10        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
+trap "exit" INT
+
 for METHOD_TYPE in ${METHODS[*]}
 do
     for NUM_WALKS in ${NUM_WALKS_ARR[*]}
@@ -34,7 +36,7 @@ do
             printf "    Num Walks: %s\n" $NUM_WALKS
             printf "    Walk Length: %s\n" $WALK_LENGTH
 
-            OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/$METHOD_TYPE-is$INIT_EDGE_SIZE-wl$WALK_LENGTH-nw$NUM_WALKS-p$P-q$Q-ss$STREAM_SIZE/"
+            OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$METHOD_TYPE-is$INIT_EDGE_SIZE-wl$WALK_LENGTH-nw$NUM_WALKS-p$P-q$Q-ss$STREAM_SIZE/"
 
             # You can customize the JVM memory size by modifying -Xms.
             # To run the script on the background: nohup sh random_walk.sh > log.txt &
