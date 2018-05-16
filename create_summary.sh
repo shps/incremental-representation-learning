@@ -21,15 +21,17 @@ N_EPOCHS=4                  # starts from zero
 
 SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary"
 mkdir $SUMMARY_DIR
-SUMMARY_SCORE_FILE="score-summary.csv"
+SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
 SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
 SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
 SUMMARY_RW_WALK="$SUMMARY_DIR/rw-walk-summary.csv"
 SUMMARY_RW_STEP="$SUMMARY_DIR/rw-step-summary.csv"
 
+echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_SCORE_FILE
+
 echo "method,nw,wl,run,step,epoch,time" >> $SUMMARY_EPOCH_TIME
 
-HEADER="method\tnw\twl\trun\tstep\tepoch"
+HEADER="method\tnw\twl\trun\tstep"
 
 for STEP in $(seq 0 $MAX_STEPS)
 do
@@ -78,24 +80,24 @@ do
                         while IFS='' read -r line || [[ -n "$line" ]]; do
                             echo "$EPOCH_PREFIX,$line" >> $SUMMARY_EPOCH_TIME
                         done < "$EPOCH_FILE"
-
-                        SUMMARY_PREFIX="$METHOD_TYPE\t$NUM_WALKS\t$WALK_LENGTH\t$RUN\t$STEP"
-                        STEPS_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
-                        WALK_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
-                        TIME_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
-
-                        while IFS='' read -r line || [[ -n "$line" ]]; do
-                            echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_STEP
-                        done < "$STEPS_FILE"
-
-                        while IFS='' read -r line || [[ -n "$line" ]]; do
-                            echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_WALK
-                        done < "$WALK_FILE"
-
-                        while IFS='' read -r line || [[ -n "$line" ]]; do
-                            echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_TIME
-                        done < "$TIME_FILE"
                     done
+
+                    SUMMARY_PREFIX="$METHOD_TYPE\t$NUM_WALKS\t$WALK_LENGTH\t$RUN\t$STEP"
+                    STEPS_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    WALK_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    TIME_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_STEP
+                    done < "$STEPS_FILE"
+
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_WALK
+                    done < "$WALK_FILE"
+
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_TIME
+                    done < "$TIME_FILE"
                 done
             done
         done

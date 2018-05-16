@@ -104,7 +104,7 @@ class PregeneratedDataset:
 
     def build_freeze_indices(self):
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
-        all_ids = np.zeros((self.vocab_size,), dtype=np.int32)
+        all_ids = np.arange(self.vocab_size)
         unfreeze_ids = np.delete(all_ids, self.existing_vocab)
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
         return np.delete(all_ids, unfreeze_ids)
@@ -156,41 +156,6 @@ class PregeneratedDataset:
         self.data_index[split] += batch_size
 
         return batch, labels
-
-
-class AnalogyDataset:
-    def __init__(self, filename, word_to_index):
-        self.analogy_file = filename
-        self.word_to_index = word_to_index
-        self.build_dataset()
-
-    def build_dataset(self):
-        """Reads through the analogy question file.
-
-          questions: a [n, 4] numpy array containing the analogy question's
-                     word ids.
-          questions_skipped: questions skipped due to unknown words.
-        """
-        questions = []
-        questions_skipped = 0
-        with open(self.analogy_file, "rb") as analogy_f:
-            for line in analogy_f:
-                if line.startswith(b":"):  # Skip comments.
-                    continue
-                words = line.strip().lower().split(b" ")
-
-                ids = [self.word_to_index.get(w.strip().decode()) for w in words]
-
-                if None in ids or len(ids) != 4:
-                    questions_skipped += 1
-                else:
-                    questions.append(ids)
-
-        print("Eval analogy file: ", self.analogy_file)
-        print("Questions: ", len(questions))
-        print("Skipped: ", questions_skipped)
-
-        self.analogy_questions = np.array(questions, dtype=np.int32)
 
 
 class W2V_Sampled:
@@ -327,19 +292,6 @@ class W2V_Sampled:
             [embeddings, context_weights, context_biases]
         )
 
-        # Freeze some Weights - Note this slows things down 100x!
-        # freeze_indices = list(freeze_indices)
-        # train_indices = [x for x in range(self.vocabulary_size)
-        #                  if x not in freeze_indices]
-        #
-        # freeze_emb = tf.nn.embedding_lookup(embeddings, freeze_indices)
-        # train_emb = tf.nn.embedding_lookup(embeddings, train_indices)
-        # freeze_emb_s = tf.scatter_nd(tf.reshape(freeze_indices, [-1,1]),
-        #                              freeze_emb, tf.shape(embeddings))
-        # train_emb_s = tf.scatter_nd(tf.reshape(train_indices, [-1,1]),
-        #                             train_emb, tf.shape(embeddings))
-        # embeddings = tf.stop_gradient(freeze_emb_s) + train_emb_s
-
         # Negative sampling.
         # Note true_classes needs to be tf.int64
         negative_sample_id, _, _ = tf.nn.fixed_unigram_candidate_sampler(
@@ -404,102 +356,102 @@ class W2V_Sampled:
         }
         return self._skipgram_graph
 
-    def build_nearest_graph(self):
-        sk_graph = self._skipgram_graph
+    # def build_nearest_graph(self):
+    #     sk_graph = self._skipgram_graph
+    #
+    #     with tf.name_scope("find_nearest"):
+    #         nemb = tf.nn.l2_normalize(sk_graph["embeddings"], 1)
+    #
+    #         nearby_word = tf.placeholder(dtype=tf.int32, name='nearby_in')
+    #         nearby_emb = tf.gather(nemb, nearby_word)
+    #         nearby_dist = tf.matmul(nearby_emb, nemb, transpose_b=True)
+    #         nearby_val, nearby_idx = tf.nn.top_k(nearby_dist, 5)
+    #
+    #     self._nearby_graph = {
+    #         'input_word': nearby_word,
+    #         'nearby_index': nearby_idx,
+    #         'nearby_val': nearby_val,
+    #     }
+    #     return self._nearby_graph
+    #
+    # def build_analogy_graph(self):
+    #     """Graph for analogy prediction:
+    #
+    #     Each analogy task is to predict the 4th word (d) given three
+    #     words: a, b, c.  E.g., a=italy, b=rome, c=france, we should
+    #     predict d=paris.
+    #     """
+    #     sk_graph = self._skipgram_graph
+    #     with tf.name_scope("analogy"):
+    #         # Predict d from (a,b,c)
+    #         # using the embedding algebra d = c + (b - a)
+    #         analogy_a = tf.placeholder(dtype=tf.int32, name="ana_a")  # [N]
+    #         analogy_b = tf.placeholder(dtype=tf.int32, name="ana_b")  # [N]
+    #         analogy_c = tf.placeholder(dtype=tf.int32, name="ana_c")  # [N]
+    #
+    #         # Normalized word embeddings of shape [vocab_size, emb_dim]
+    #         nemb = sk_graph["normalized_embeddings"]
+    #
+    #         # Each row of a_emb, b_emb, c_emb is a word's embedding vector.
+    #         # They all have the shape [N, emb_dim]
+    #         a_emb = tf.gather(nemb, analogy_a)
+    #         b_emb = tf.gather(nemb, analogy_b)
+    #         c_emb = tf.gather(nemb, analogy_c)
+    #
+    #         # We expect that d's embedding vectors on the unit hyper-sphere is
+    #         # near: c_emb + (b_emb - a_emb), shape: [N, emb_dim]
+    #         target = c_emb + (b_emb - a_emb)
+    #
+    #         # Compute cosine distance between each pair of target and vocab.
+    #         # shape [N, vocab_size]
+    #         dist = tf.matmul(target, nemb, transpose_b=True)
+    #
+    #         # For each question (row in dist), find the top k words.
+    #         _, pred_idx = tf.nn.top_k(dist, self.analogy_k)
+    #
+    #     # Nodes in the construct graph which are used by training and
+    #     # evaluation to run/feed/fetch.
+    #     self._analogy_graph = {
+    #         "a": analogy_a,
+    #         "b": analogy_b,
+    #         "c": analogy_c,
+    #         "predict": pred_idx,
+    #     }
 
-        with tf.name_scope("find_nearest"):
-            nemb = tf.nn.l2_normalize(sk_graph["embeddings"], 1)
-
-            nearby_word = tf.placeholder(dtype=tf.int32, name='nearby_in')
-            nearby_emb = tf.gather(nemb, nearby_word)
-            nearby_dist = tf.matmul(nearby_emb, nemb, transpose_b=True)
-            nearby_val, nearby_idx = tf.nn.top_k(nearby_dist, 5)
-
-        self._nearby_graph = {
-            'input_word': nearby_word,
-            'nearby_index': nearby_idx,
-            'nearby_val': nearby_val,
-        }
-        return self._nearby_graph
-
-    def build_analogy_graph(self):
-        """Graph for analogy prediction:
-
-        Each analogy task is to predict the 4th word (d) given three
-        words: a, b, c.  E.g., a=italy, b=rome, c=france, we should
-        predict d=paris.
-        """
-        sk_graph = self._skipgram_graph
-        with tf.name_scope("analogy"):
-            # Predict d from (a,b,c)
-            # using the embedding algebra d = c + (b - a)
-            analogy_a = tf.placeholder(dtype=tf.int32, name="ana_a")  # [N]
-            analogy_b = tf.placeholder(dtype=tf.int32, name="ana_b")  # [N]
-            analogy_c = tf.placeholder(dtype=tf.int32, name="ana_c")  # [N]
-
-            # Normalized word embeddings of shape [vocab_size, emb_dim]
-            nemb = sk_graph["normalized_embeddings"]
-
-            # Each row of a_emb, b_emb, c_emb is a word's embedding vector.
-            # They all have the shape [N, emb_dim]
-            a_emb = tf.gather(nemb, analogy_a)
-            b_emb = tf.gather(nemb, analogy_b)
-            c_emb = tf.gather(nemb, analogy_c)
-
-            # We expect that d's embedding vectors on the unit hyper-sphere is
-            # near: c_emb + (b_emb - a_emb), shape: [N, emb_dim]
-            target = c_emb + (b_emb - a_emb)
-
-            # Compute cosine distance between each pair of target and vocab.
-            # shape [N, vocab_size]
-            dist = tf.matmul(target, nemb, transpose_b=True)
-
-            # For each question (row in dist), find the top k words.
-            _, pred_idx = tf.nn.top_k(dist, self.analogy_k)
-
-        # Nodes in the construct graph which are used by training and
-        # evaluation to run/feed/fetch.
-        self._analogy_graph = {
-            "a": analogy_a,
-            "b": analogy_b,
-            "c": analogy_c,
-            "predict": pred_idx,
-        }
-
-    def eval_analogy(self, sess, ad):
-        # The TF variables for the analogy graph
-        tfvar = self._analogy_graph
-        total = ad.analogy_questions.shape[0]
-
-        start = 0
-        correct = 0
-        while start < total:
-            limit = start + 2500
-            analogy = ad.analogy_questions[start:limit, :]
-
-            feed_dict = {
-                tfvar["a"]: analogy[:, 0],
-                tfvar["b"]: analogy[:, 1],
-                tfvar["c"]: analogy[:, 2],
-            }
-            pred_idx = sess.run(tfvar["predict"], feed_dict)
-
-            start = limit
-            for ii in range(analogy.shape[0]):
-                for jj in range(self.analogy_k):
-                    if pred_idx[ii, jj] == analogy[ii, 3]:
-                        correct += 1
-                        break
-                    elif pred_idx[ii, jj] in analogy[ii, :3]:
-                        # We need to skip words already in the question.
-                        continue
-                    else:
-                        # The correct label is not the precision@1
-                        break
-
-        # print("Eval %4d/%d accuracy = %4.1f%%"%(correct, total,
-        #                                         correct*100.0/total))
-        return correct / total
+    # def eval_analogy(self, sess, ad):
+    #     # The TF variables for the analogy graph
+    #     tfvar = self._analogy_graph
+    #     total = ad.analogy_questions.shape[0]
+    #
+    #     start = 0
+    #     correct = 0
+    #     while start < total:
+    #         limit = start + 2500
+    #         analogy = ad.analogy_questions[start:limit, :]
+    #
+    #         feed_dict = {
+    #             tfvar["a"]: analogy[:, 0],
+    #             tfvar["b"]: analogy[:, 1],
+    #             tfvar["c"]: analogy[:, 2],
+    #         }
+    #         pred_idx = sess.run(tfvar["predict"], feed_dict)
+    #
+    #         start = limit
+    #         for ii in range(analogy.shape[0]):
+    #             for jj in range(self.analogy_k):
+    #                 if pred_idx[ii, jj] == analogy[ii, 3]:
+    #                     correct += 1
+    #                     break
+    #                 elif pred_idx[ii, jj] in analogy[ii, :3]:
+    #                     # We need to skip words already in the question.
+    #                     continue
+    #                 else:
+    #                     # The correct label is not the precision@1
+    #                     break
+    #
+    #     # print("Eval %4d/%d accuracy = %4.1f%%"%(correct, total,
+    #     #                                         correct*100.0/total))
+    #     return correct / total
 
     def eval(self, sess, dataset, summary=None):
         sk_graph = self._skipgram_graph
@@ -524,88 +476,6 @@ class W2V_Sampled:
 
         return out
 
-    def eval_nearby(self, sess, dataset, ids, num=20):
-        """Prints out nearby IDs given a list of IDs."""
-        nb_graph = self._nearby_graph
-
-        nidx, nval = sess.run(
-            [nb_graph['nearby_index'], nb_graph['nearby_val']],
-            {nb_graph['input_word']: ids}
-        )
-
-        for ii, word_id in enumerate(ids):
-            print("\n=====================================")
-            print(word_id)
-            for neighbor, distance in zip(nidx[ii], nval[ii]):
-                print("%-20s %6.4f" % (neighbor, distance))
-
-                # def eval_classification(self, session, labels, existing_vocab, epoch, use_ml_splitter=False):
-                #     sk_graph = self._skipgram_graph
-                #     node_embeddings = session.run(sk_graph["normalized_embeddings"])
-                #
-                #     with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
-                #         pickle.dump(node_embeddings, f)
-
-                # filtered_embs = node_embeddings[existing_vocab]
-                # filtered_labels = labels[existing_vocab]
-                # # Classifier choice
-                # classifier = linear_model.LogisticRegression(C=10)
-                # # classifier = svm.SVC(C=1)
-                #
-                # # Use multi-class/multi-label classifier
-                # # Note: for two classes this gracefully falls
-                # # back to binary classification.
-                # classifier = multiclass.OneVsRestClassifier(classifier)
-                #
-                # # Choose multi-label or multi-class classification
-                # # based on label size: we can't use StratifiedShuffleSplit
-                # # for the mutli-label case
-                # if len(filtered_labels.shape) > 1 and filtered_labels.shape[1] > 1:
-                #     print("Perforrming multi-label classification")
-                #     # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
-                #     shuffle = model_selection.KFold(n_splits=5, shuffle=True)
-                #
-                #     class MLSplitter:
-                #         def __init__(self, splitter, labels):
-                #             # Generate stratifications based on least frequent label
-                #             n_data = labels.shape[0]
-                #             label_freq = labels.sum(axis=0)
-                #             shuffle_y = np.zeros(n_data, dtype='int16')
-                #             for k in range(n_data):
-                #                 rowlabels = np.flatnonzero(labels[k])
-                #                 shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
-                #             self.shuffle_y = shuffle_y
-                #             self.s = splitter
-                #
-                #         def split(self, X, in_y=None, in_g=None):
-                #             return self.s.split(X, self.shuffle_y)
-                #
-                #     if use_ml_splitter:
-                #         shuffle = MLSplitter(shuffle, filtered_labels)
-                #
-                # else:
-                #     # shuffle = model_selection.StratifiedShuffleSplit(
-                #     #     n_splits=5, test_size=0.8)
-                #     shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True)
-                #
-                # scoring = ['accuracy', 'f1_macro', 'f1_micro']
-                #
-                # cv_scores = model_selection.cross_validate(
-                #     classifier, filtered_embs, filtered_labels, scoring=scoring, cv=shuffle,
-                #     return_train_score=True
-                # )
-                # train_acc = cv_scores['train_accuracy'].mean()
-                # train_f1 = cv_scores['train_f1_macro'].mean()
-                # test_acc = cv_scores['test_accuracy'].mean()
-                # test_f1 = cv_scores['test_f1_macro'].mean()
-                #
-                # print("Train acc: {:0.4f}, f1: {:0.4f}"
-                #       .format(train_acc, train_f1))
-                # print("Test acc: {:0.4f}, f1: {:0.4f}"
-                #       .format(test_acc, test_f1))
-                #
-                # return {'train_acc': train_acc, 'test_acc': test_acc, 'train_f1': train_f1,
-                #         'test_f1': test_f1}
 
     def save_epoch_time(self, epoch, time):
         with open(os.path.join(FLAGS.base_log_dir, "epoch_time.txt"), "a") as f:
@@ -634,25 +504,19 @@ class W2V_Sampled:
         freeze_vars = None
         if freeze_indices is not None:
             freeze_vars = {
-                sk_graph['embeddings']: list(freeze_indices)
+                sk_graph['embeddings']: list(set(freeze_indices))
             }
 
         if freeze_context_indices is not None:
             freeze_vars = {
-                sk_graph['context_weights']: list(freeze_context_indices),
-                sk_graph['context_biases']: list(freeze_context_indices)
+                sk_graph['context_weights']: list(set(freeze_context_indices)),
+                sk_graph['context_biases']: list(set(freeze_context_indices))
             }
 
         with tf.name_scope("train"):
             optimize_fn = self.optimize_graph(sk_graph['loss'], freeze_vars)
         sk_graph['train'] = optimize_fn
 
-        # Build graph for analogy evaluation
-        if analogy_dataset:
-            self.build_analogy_graph()
-
-        # Graph to find closest words by embedding
-        self.build_nearest_graph()
 
         summary_op = tf.summary.merge_all()
         summary_writer = tf.summary.FileWriter(self.save_path,
@@ -681,11 +545,6 @@ class W2V_Sampled:
         for epoch in range(n_epochs):
             # Start new epoch
             ds.reset_index(split=0)
-
-            # if dataset.labels is not None:
-            #     print("\nClassification evaluation:")
-            #     scores = self.eval_classification(sess, dataset.labels, ds.existing_vocab, epoch)
-            #     self.save_embeddings(epoch, scores)
 
             batch_index = 0
             batch_time = time.time()
@@ -732,6 +591,7 @@ class W2V_Sampled:
             self.save_embeddings(epoch, node_embeddings)
 
             # Save checkpoint
+            # Increase the number of checkpoints to hold
             saver.save(sess, os.path.join(self.save_path, "model-epoch"), global_step=epoch)
 
 
