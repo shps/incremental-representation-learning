@@ -4,7 +4,6 @@
 WINDOW_SIZE=8
 SKIP_SIZE=16
 PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
-VOCAB_FILE="gPairs-vocabs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
 # random walk configurations for naming conventions
 METHODS=(m1)
@@ -35,7 +34,6 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=1234
 
-AFV_PREFIX="gPairs-vocabs"
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
@@ -67,15 +65,13 @@ do
                     TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                     DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
-                    if [ "$METHOD_TYPE" != "m1" ]; then
-                        AFV_PREFIX="sca-afs-$SUFFIX"
-                    else
-                        AFV_PREFIX="gPairs-vocabs-$FILE_SUFFIX"
+                    COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
+
+                    if [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
+                        AFFECTED_VERTICES_FILE="$sca-afs-$SUFFIX.txt"     # affected vertices file name
+                        COMMAND="$COMMAND --affected_vertices_file $AFFECTED_VERTICES_FILE"
                     fi
 
-                    AFFECTED_VERTICES_FILE="$AFV_PREFIX.txt"     # affected vertices file name
-
-                    COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
                     if [ $STEP -gt 0 ]; then
                         COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$(($STEP-1))-$RUN"
                     fi

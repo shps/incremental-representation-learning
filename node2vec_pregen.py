@@ -645,6 +645,8 @@ if __name__ == "__main__":
     if FLAGS.affected_vertices_file is not None:
         ds.set_affected_nodes(
             os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file))
+    else:
+        ds.affected_nodes = ds.existing_vocab
 
     # Set labels
     # if FLAGS.label_file is not None:
