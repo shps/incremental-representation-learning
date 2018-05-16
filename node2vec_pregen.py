@@ -107,6 +107,10 @@ class PregeneratedDataset:
         all_ids = np.arange(self.vocab_size)
         unfreeze_ids = np.delete(all_ids, self.existing_vocab)
         unfreeze_ids = np.append(unfreeze_ids, self.affected_nodes)
+        print(
+            "all_ids: {}\texisting_vocabs: {}\tafs: {}".format(len(all_ids),
+                                                               len(self.existing_vocab),
+                                                               len(self.affected_nodes)))
         return np.delete(all_ids, unfreeze_ids)
 
     def build_dataset(self, data_filename):
@@ -476,7 +480,6 @@ class W2V_Sampled:
 
         return out
 
-
     def save_epoch_time(self, epoch, time):
         with open(os.path.join(FLAGS.base_log_dir, "epoch_time.txt"), "a") as f:
             f.write("{0}, {1}\n".format(epoch, time))
@@ -516,7 +519,6 @@ class W2V_Sampled:
         with tf.name_scope("train"):
             optimize_fn = self.optimize_graph(sk_graph['loss'], freeze_vars)
         sk_graph['train'] = optimize_fn
-
 
         summary_op = tf.summary.merge_all()
         summary_writer = tf.summary.FileWriter(self.save_path,

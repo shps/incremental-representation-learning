@@ -6,16 +6,16 @@ SKIP_SIZE=16
 PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
 # random walk configurations for naming conventions
-METHODS=(m1)
+METHODS=(m3)
 INIT_EDGE_SIZE=0.5
 STREAM_SIZE=0.001
-NUM_WALKS_ARR=(1)
+NUM_WALKS_ARR=(5)
 WALK_LENGTH_ARR=(5)
 P=0.25
 Q=0.25
 DATASET=cora
 MAX_STEPS=5
-NUM_RUNS=4   # counting from zero
+NUM_RUNS=1   # counting from zero
 
 # Tensorflow configurations
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
@@ -68,7 +68,7 @@ do
                     COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
 
                     if [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
-                        AFFECTED_VERTICES_FILE="$sca-afs-$SUFFIX.txt"     # affected vertices file name
+                        AFFECTED_VERTICES_FILE="sca-afs-$SUFFIX.txt"     # affected vertices file name
                         COMMAND="$COMMAND --affected_vertices_file $AFFECTED_VERTICES_FILE"
                     fi
 
