@@ -60,7 +60,7 @@ do
                     SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                     FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                     DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$STEP-$RUN"
+                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
                     INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                     TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                     DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name

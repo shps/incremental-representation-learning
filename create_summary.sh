@@ -8,13 +8,14 @@ SKIP_SIZE=16
 METHODS=(m1 m3)
 INIT_EDGE_SIZE=0.5
 STREAM_SIZE=0.001
-NUM_WALKS_ARR=(1)
+NUM_WALKS_ARR=(5)
 WALK_LENGTH_ARR=(5)
 P=0.25
 Q=0.25
 DATASET=cora
 MAX_STEPS=5
-NUM_RUNS=4   # counting from zero
+NUM_RUNS=1   # counting from zero
+FREEZE_EMBEDDINGS=True
 
 # N2V parameters
 N_EPOCHS=4                  # starts from zero
@@ -67,12 +68,13 @@ do
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
                         DIR_PREFIX="/home/ubuntu/hooman/output"
-                        INPUT_DIR="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/emb-$RUN-$STEP"
-                        SCORE_FILE="$INPUT_DIR/scores$EPOCH.txt"
+                        SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/emb-feFREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                        SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                         SCORE=$(<$SCORE_FILE)
                         SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                        EPOCH_FILE="$INPUT_DIR/epoch_time.txt"
+                        EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/emb-feFREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                        EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
 
                         echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
 
@@ -83,9 +85,9 @@ do
                     done
 
                     SUMMARY_PREFIX="$METHOD_TYPE\t$NUM_WALKS\t$WALK_LENGTH\t$RUN\t$STEP"
-                    STEPS_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
-                    WALK_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
-                    TIME_FILE="$DIR_PREFIX/$DATASET/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    STEPS_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    WALK_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    TIME_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
 
                     while IFS='' read -r line || [[ -n "$line" ]]; do
                         echo -e "$SUMMARY_PREFIX\t$line" >> $SUMMARY_RW_STEP

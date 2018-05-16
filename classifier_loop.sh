@@ -15,6 +15,7 @@ Q=0.25
 DATASET=cora
 MAX_STEPS=5
 NUM_RUNS=4   # counting from zero
+FREEZE_EMBEDDINGS=True
 
 # Tensorflow configurations
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
@@ -59,7 +60,7 @@ do
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
                         BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/emb-$STEP-$RUN"
-                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$STEP-$RUN"
+                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
                         DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
