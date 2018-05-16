@@ -523,7 +523,7 @@ class W2V_Sampled:
                                                sess.graph)
 
         # Saver for variables
-        saver = tf.train.Saver(list(self._model_variables))
+        saver = tf.train.Saver(list(self._model_variables), max_to_keep=None)
 
         # Initialize other variables
         init_vars = [v for v in tf.global_variables()
