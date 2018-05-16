@@ -58,9 +58,9 @@ do
                         CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/emb-$RUN-$STEP"
-                        INPUT_DIR=$BASE_LOG_DIR
-                        DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/"                  # input data directory
+                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/emb-$STEP-$RUN"
+                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$STEP-$RUN"
+                        DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
                         EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name

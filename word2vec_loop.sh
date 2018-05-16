@@ -62,8 +62,8 @@ do
                     SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                     FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                     DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/emb-$RUN-$STEP"
-                    INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/"                  # input data directory
+                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$STEP-$RUN"
+                    INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                     TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                     DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
@@ -77,7 +77,7 @@ do
 
                     COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --affected_vertices_file $AFFECTED_VERTICES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
                     if [ $STEP -gt 0 ]; then
-                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/$DIR_SUFFIX/emb-$RUN-$(($STEP-1))"
+                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$(($STEP-1))-$RUN"
                     fi
 
                     echo $COMMAND
