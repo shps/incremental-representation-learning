@@ -1,5 +1,6 @@
 import os
 import pickle
+import errno
 
 import numpy as np
 import pandas as pd
@@ -131,7 +132,15 @@ def read_existing_vocab(degree_file):
 
 
 def save_scores(scores):
-    with open(os.path.join(FLAGS.base_log_dir, "scores{}.txt".format(FLAGS.output_index)), "a") as f:
+    if not os.path.exists(os.path.dirname(FLAGS.base_log_dir + "/")):
+        try:
+            os.makedirs(os.path.dirname(FLAGS.base_log_dir + "/"))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+
+    with open(os.path.join(FLAGS.base_log_dir, "scores{}.txt".format(FLAGS.output_index)),
+              "a") as f:
         f.write("{:0.4f}, {:0.4f}, {:0.4f}, {:0.4f}\n"
                 .format(scores["train_acc"], scores["train_f1"], scores["test_acc"],
                         scores["test_f1"]))
@@ -153,14 +162,14 @@ if __name__ == "__main__":
     print(dict(zip(un, counts)))
     print("Labeled vocab size: {}".format(len(all_labels)))
     existing_vocab = read_existing_vocab(os.path.join(FLAGS.degrees_dir, FLAGS.degrees_file))
-    correct = True
-    for x in existing_vocab:
-        x = x + 1
-        if x not in r_labels:
-            print("******* Key {} does not exist in labels list.******".format(x))
-            correct = False
-    if correct:
-        print("All keys exist in the labels file.")
+    # correct = True
+    # for x in existing_vocab:
+    #     x = x + 1
+    #     if x not in r_labels:
+    #         print("******* Key {} does not exist in labels list.******".format(x))
+    #         correct = False
+    # if correct:
+    #     print("All keys exist in the labels file.")
     print("Existing vocab size: {}".format(len(existing_vocab)))
     evals = eval_classification(all_labels[existing_vocab], all_embeddings[existing_vocab])
     save_scores(evals)
