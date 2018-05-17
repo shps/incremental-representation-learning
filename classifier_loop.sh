@@ -5,7 +5,7 @@ WINDOW_SIZE=8
 SKIP_SIZE=16
 
 # random walk configurations for naming conventions
-METHODS=(m1 m3)
+METHODS=(m3)
 INIT_EDGE_SIZE=0.5
 STREAM_SIZE=0.001
 NUM_WALKS_ARR=(5)
@@ -13,9 +13,9 @@ WALK_LENGTH_ARR=(5)
 P=0.25
 Q=0.25
 DATASET=cora
-MAX_STEPS=5
-NUM_RUNS=4   # counting from zero
-FREEZE_EMBEDDINGS=True
+MAX_STEPS=2
+NUM_RUNS=2   # counting from zero
+FREEZE_EMBEDDINGS=False
 
 # Tensorflow configurations
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
@@ -24,7 +24,7 @@ N2V_SCRIPT_DIR=/home/ubuntu/hooman/n2v/
 # N2V parameters
 TRAIN_SPLIT=1.0             # train validation split
 EMBEDDING_SIZE=128
-N_EPOCHS=4                  # starts from zero
+N_EPOCHS=1                  # starts from zero
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=1234
@@ -59,7 +59,7 @@ do
                         CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/emb-$STEP-$RUN"
+                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
                         INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
                         DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name

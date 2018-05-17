@@ -14,8 +14,8 @@ WALK_LENGTH_ARR=(5)
 P=0.25
 Q=0.25
 DATASET=cora
-MAX_STEPS=5
-NUM_RUNS=1   # counting from zero
+MAX_STEPS=2
+NUM_RUNS=2   # counting from zero
 
 # Tensorflow configurations
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
@@ -27,9 +27,9 @@ LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
 VOCAB_SIZE=2708            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=5
+N_EPOCHS=2
 BATCH_SIZE=200               # minibatch size
-FREEZE_EMBEDDINGS=True     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
+FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=1234
@@ -73,7 +73,7 @@ do
                     fi
 
                     if [ $STEP -gt 0 ]; then
-                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-$(($STEP-1))-$RUN"
+                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$(($STEP-1))-r$RUN"
                     fi
 
                     echo $COMMAND
