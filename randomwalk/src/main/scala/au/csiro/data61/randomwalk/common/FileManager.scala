@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import better.files._
 
 import scala.collection.mutable
-import scala.collection.parallel.{ParSeq, immutable}
+import scala.collection.parallel.ParSeq
 import scala.io.Source
 import scala.util.{Random, Try}
 
