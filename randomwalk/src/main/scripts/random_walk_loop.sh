@@ -48,7 +48,7 @@ do
                 --maxSteps $MAX_STEPS --grouped $GROUPED
 
             cp ~/hooman/output/log.txt $OUTPUT_DIR
-            cp ~/hooman/rw/random_walk.sh $OUTPUT_DIR
+            cp ~/hooman/rw/random_walk_loop.sh $OUTPUT_DIR
         done
     done
 done

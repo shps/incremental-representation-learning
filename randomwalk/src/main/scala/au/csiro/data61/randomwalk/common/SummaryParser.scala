@@ -24,8 +24,8 @@ object SummaryParser {
   val COMMA = ","
 
   val lastEpoch = 4
-  val nWalks = 5
-  val wLength = 5
+  val nWalks = 10
+  val wLength = 10
 
 
   def computeScoresStats(scores: ParSeq[((String, Int, Int, Int, Int), (Int, Float, Float, Float,
@@ -163,12 +163,12 @@ object SummaryParser {
     OUTPUT_DIR.toFile.createIfNotExists(true)
     val file = new File(s"${OUTPUT_DIR}/scores.csv")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write("method\tnw\twl\tstep\tepoch\ttrain_acc\ttrain_acc_std\ttrain_f1\ttrain_f1_std" +
+    bw.write("method\tnw\twl\tstep\tepoch\tx_axis\ttrain_acc\ttrain_acc_std\ttrain_f1\ttrain_f1_std" +
       "\ttest_acc\ttest_acc_std\ttest_f1\ttest_f1_std\n")
     bw.write(scoresStats.map { case (p1, p2) => s"${p1._1}\t${p1._2}\t${p1._3}\t${p1._4}\t${
       p1
         ._5
-    }\t${p2._1}\t${p2._2}\t${p2._3}\t${p2._4}\t${p2._5}\t${p2._6}\t${p2._7}\t${p2._8}"
+    }\t${p1._4}-${p1._5+1}\t${p2._1}\t${p2._2}\t${p2._3}\t${p2._4}\t${p2._5}\t${p2._6}\t${p2._7}\t${p2._8}"
     }
       .mkString("\n"))
     bw.flush()
@@ -195,11 +195,11 @@ object SummaryParser {
     OUTPUT_DIR.toFile.createIfNotExists(true)
     val file = new File(s"${OUTPUT_DIR}/epoch-times.csv")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write("method\tnw\twl\tstep\tepoch\tmean_time\tstd_time\n")
+    bw.write("method\tnw\twl\tstep\tepoch\tx_axis\tmean_time\tstd_time\n")
     bw.write(epochStats.map { case (p1, p2) => s"${p1._1}\t${p1._2}\t${p1._3}\t${p1._4}\t${
       p1
         ._5
-    }\t${p2._1}\t${p2._2}"
+    }\t${p1._4}-${p1._5+1}\t${p2._1}\t${p2._2}"
     }
       .mkString("\n"))
     bw.flush()
@@ -212,13 +212,13 @@ object SummaryParser {
     val walks = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_WALK_FILE")
     val steps = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_STEP")
     val times = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_TIME_FILE")
-    val scoresStats = computeScoresStats(scores)
-    val epochStats = computeEpochStats(epochs)
+    val scoresStats = computeScoresStats(scores).sortBy(r => (r._1._1, r._1._4,r._1._5))
+    val epochStats = computeEpochStats(epochs).sortBy(r => (r._1._1, r._1._4,r._1._5))
     val nSteps = walks(0)._2._2.length
 
-    val walksStats = computeRwStats(walks, nSteps)
-    val stepsStats = computeRwStats(steps, nSteps)
-    val timesStats = computeRwStats(times, nSteps)
+    val walksStats = computeRwStats(walks, nSteps).sortBy(r => r._1._1)
+    val stepsStats = computeRwStats(steps, nSteps).sortBy(r => r._1._1)
+    val timesStats = computeRwStats(times, nSteps).sortBy(r => r._1._1)
 
     saveScores(scoresStats)
     saveEpochs(epochStats)
