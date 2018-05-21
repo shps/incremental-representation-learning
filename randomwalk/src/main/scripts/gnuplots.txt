@@ -1,0 +1,23 @@
+# F1-test-score
+set terminal pdf
+set output "./f1_test.pdf"
+set ylabel "F1-score"
+set xlabel "step-epoch"
+f1="./scores.csv"
+set datafile separator "\t"
+#set yrange [:1]
+set xtics ("0" 0, "1" 5, "2" 10, "3" 15, "4" 20, "5" 25) font ",10"  # 5 epochs
+#set xtics ("0" 0, "1" 20) font ",10"   #20 epochs
+set mxtics 1
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" outside top horizontal
+set bmargin 4
+set size ratio 0.3 # y/x
+set style line 1 lt 2 lw 2 pt 1 ps 0.5 linecolor rgb "red"
+set style line 2 lt 2 lw 2 pt 4 ps 0.5 linecolor rgb "green"
+#:xtic(6)
+
+plot f1 every ::1::30 using 13 with linespoints ls 1 t "M1", f1 every ::1::30 using 13:14 with errorbars ls 1 not, f1 every ::31::61 using 13 with linespoints ls 2 t "M3", f1 every ::31::61 using 13:14 with errorbars ls 2 not
+set output

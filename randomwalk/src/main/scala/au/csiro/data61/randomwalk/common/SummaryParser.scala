@@ -23,7 +23,7 @@ object SummaryParser {
   val SPACE = "\\s+"
   val COMMA = ","
 
-  val lastEpoch = 4
+  val lastEpoch = 19
   val nWalks = 10
   val wLength = 10
 
