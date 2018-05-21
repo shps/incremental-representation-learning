@@ -12,8 +12,9 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val SUMMARY_DIR = "/Users/Ganymedian/Desktop/summary1526894426"
-  val OUTPUT_DIR = "/Users/Ganymedian/Desktop/summary1526894426/final"
+  val DIR = "summary1526902827"
+  val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
+  val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"
   val RW_TIME_FILE = "rw-time-summary.csv"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-run_rw=false
-run_tc_gen=false
+run_rw=true
+run_tc_gen=true
 run_w2v=true
 run_nc=true
 run_cs=true
@@ -15,9 +15,9 @@ METHODS=(m1 m3 m4)
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(5)
-WALK_LENGTH_ARR=(5)
+INIT_EDGE_SIZE=0.05
+NUM_WALKS_ARR=(20)
+WALK_LENGTH_ARR=(10)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
@@ -29,7 +29,7 @@ WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=5        # max number of steps to run the experiment
+MAX_STEPS=10        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -50,6 +50,7 @@ FREEZE_AFV=false              # Freeze affected vertices or not?
 FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
+TRAIN_WITH_DELTA=true              # train only with the samples generated from new walks
 
 # Classifier configs
 LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
@@ -100,6 +101,7 @@ fi
 # target-context pair generator config
 
 PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
+DELTA_PAIR_FILE="gPairs-delta-w$WINDOW_SIZE-s$SKIP_SIZE"
 VOCAB_FILE="gPairs-vocabs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
 if [ "$run_tc_gen" = true ] ; then
@@ -135,6 +137,7 @@ if [ "$run_tc_gen" = true ] ; then
                             --selfContext $SELF_CONTEXT
 
                         mv "$OUTPUT_DIR$PAIR_FILE.txt" "$OUTPUT_DIR$PAIR_FILE-$EXPERIMENT_TYPE.txt"
+                        mv "$OUTPUT_DIR$DELTA_PAIR_FILE.txt" "$OUTPUT_DIR$DELTA_PAIR_FILE-$EXPERIMENT_TYPE.txt"
                         mv "$OUTPUT_DIR$VOCAB_FILE.txt" "$OUTPUT_DIR$VOCAB_FILE-$EXPERIMENT_TYPE.txt"
                     done
                 done
@@ -150,7 +153,7 @@ fi
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
 N2V_SCRIPT_DIR=/home/ubuntu/hooman/n2v/
 
-CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED"
+CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA"
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
@@ -182,7 +185,12 @@ if [ "$run_w2v" = true ] ; then
                         BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
                         INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                         TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
+                        DELTA_TRAIN_FILE="gPairs-delta-$FILE_SUFFIX.txt"
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
+
+                        if [ "$TRAIN_WITH_DELTA" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
+                            TRAIN_FILE=$DELTA_TRAIN_FILE
+                        fi
 
                         COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
 

@@ -232,6 +232,15 @@ case class FileManager(config: Params) {
     bw2.close()
   }
 
+  def saveDeltaTargetContextPairs(pairs: ParSeq[(Int, Int)], suffix: String) {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
   def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
     ] = {
     config.output.toFile.createIfNotExists(true)
