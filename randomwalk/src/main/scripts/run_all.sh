@@ -1,7 +1,7 @@
 #!/bin/bash
 
-run_rw=true
-run_tc_gen=true
+run_rw=false
+run_tc_gen=false
 run_w2v=true
 run_nc=true
 run_cs=true
@@ -10,26 +10,26 @@ run_cs=true
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
 
-METHODS=(m1)
+METHODS=(m1 m3 m4)
 
 
 # Random walk configs
 
 INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(1)
+NUM_WALKS_ARR=(5)
 WALK_LENGTH_ARR=(5)
 P=0.25
 Q=0.25
-STREAM_SIZE=0.001
+STREAM_SIZE=0.01
 DATASET=cora
-NUM_RUNS=2
+NUM_RUNS=3
 DIRECTED=true    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=1        # max number of steps to run the experiment
+MAX_STEPS=5        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -46,6 +46,7 @@ VOCAB_SIZE=2708            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
 N_EPOCHS=2
 BATCH_SIZE=200               # minibatch size
+FREEZE_AFV=false              # Freeze affected vertices or not?
 FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
@@ -61,8 +62,8 @@ RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED
 SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all.sh
 DATE_SUFFIX=`date +%s`
 
-SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary$DATE_SUFFIX"
-mkdir $SUMMARY_DIR
+SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary/summary$DATE_SUFFIX"
+mkdir -p $SUMMARY_DIR
 cp $SCRIPT_FILE "$SUMMARY_DIR/"
 
 if [ "$run_rw" = true ] ; then
@@ -149,7 +150,7 @@ fi
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
 N2V_SCRIPT_DIR=/home/ubuntu/hooman/n2v/
 
-CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fe$FREEZE_EMBEDDINGS-s$SEED"
+CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED"
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
@@ -185,7 +186,7 @@ if [ "$run_w2v" = true ] ; then
 
                         COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
 
-                        if [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
+                        if [ "$FREEZE_AFV" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
                             AFFECTED_VERTICES_FILE="sca-afs-$SUFFIX.txt"     # affected vertices file name
                             COMMAND="$COMMAND --affected_vertices_file $AFFECTED_VERTICES_FILE"
                         fi
@@ -348,3 +349,5 @@ fi
 
 mv ~/hooman/output/log.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
+
+echo "Summary dir: $SUMMARY_DIR"

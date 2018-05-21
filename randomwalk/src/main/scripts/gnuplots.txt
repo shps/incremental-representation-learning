@@ -6,7 +6,8 @@ set xlabel "step-epoch"
 f1="./scores.csv"
 set datafile separator "\t"
 #set yrange [:1]
-set xtics ("0" 0, "1" 5, "2" 10, "3" 15, "4" 20, "5" 25) font ",10"  # 5 epochs
+#set xtics ("0" 0, "1" 5, "2" 10, "3" 15, "4" 20, "5" 25) font ",10"  # 5 epochs
+set xtics ("0" 0, "1" 2, "2" 4, "3" 6, "4" 8, "5" 10) font ",10"  # 2 epochs 5 steps
 #set xtics ("0" 0, "1" 20) font ",10"   #20 epochs
 set mxtics 1
 set ytics font ",14"
@@ -17,7 +18,9 @@ set bmargin 4
 set size ratio 0.3 # y/x
 set style line 1 lt 2 lw 2 pt 1 ps 0.5 linecolor rgb "red"
 set style line 2 lt 2 lw 2 pt 4 ps 0.5 linecolor rgb "green"
+set style line 4 lt 2 lw 2 pt 5 ps 0.5 linecolor rgb "blue"
 #:xtic(6)
 
-plot f1 every ::1::30 using 13 with linespoints ls 1 t "M1", f1 every ::1::30 using 13:14 with errorbars ls 1 not, f1 every ::31::61 using 13 with linespoints ls 2 t "M3", f1 every ::31::61 using 13:14 with errorbars ls 2 not
+#plot f1 every ::1::10 using 13 with linespoints ls 1 t "M1", f1 every ::1::10 using 13:14 with errorbars ls 1 not, f1 every ::11::21 using 13 with linespoints ls 2 t "M3", f1 every ::11::21 using 13:14 with errorbars ls 2 not
+plot f1 every ::1::12 using 13 with linespoints ls 1 t "M1", f1 every ::1::12 using 13:14 with errorbars ls 1 not, f1 every ::13::24 using 13 with linespoints ls 2 t "M3", f1 every ::13::24 using 13:14 with errorbars ls 2 not, f1 every ::25::36 using 13 with linespoints ls 3 t "M4", f1 every ::25::36 using 13:14 with errorbars ls 3 not
 set output

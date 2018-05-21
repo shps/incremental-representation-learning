@@ -12,8 +12,8 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val SUMMARY_DIR = "/Users/Ganymedian/Desktop/summary"
-  val OUTPUT_DIR = "/Users/Ganymedian/Desktop/summary/final"
+  val SUMMARY_DIR = "/Users/Ganymedian/Desktop/summary1526894426"
+  val OUTPUT_DIR = "/Users/Ganymedian/Desktop/summary1526894426/final"
   val SCORE_FILE = "score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"
   val RW_TIME_FILE = "rw-time-summary.csv"
@@ -22,10 +22,6 @@ object SummaryParser {
 
   val SPACE = "\\s+"
   val COMMA = ","
-
-  val lastEpoch = 19
-  val nWalks = 10
-  val wLength = 10
 
 
   def computeScoresStats(scores: ParSeq[((String, Int, Int, Int, Int), (Int, Float, Float, Float,
