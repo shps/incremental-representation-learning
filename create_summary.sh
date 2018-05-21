@@ -18,7 +18,19 @@ NUM_RUNS=2   # counting from zero
 FREEZE_EMBEDDINGS=False
 
 # N2V parameters
-N_EPOCHS=1                  # starts from zero
+TRAIN_SPLIT=1.0             # train validation split
+LEARNING_RATE=0.2
+EMBEDDING_SIZE=128
+VOCAB_SIZE=2708            # Size of vocabulary
+NEG_SAMPLE_SIZE=5
+N_EPOCHS=2                      #Starts from zero
+BATCH_SIZE=200               # minibatch size
+FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
+DELIMITER="\\t"
+FORCE_OFFSET=0                      # Offset to adjust node IDs
+SEED=1234
+
+CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fe$FREEZE_EMBEDDINGS-s$SEED"
 
 SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary"
 mkdir $SUMMARY_DIR
@@ -68,12 +80,12 @@ do
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
                         DIR_PREFIX="/home/ubuntu/hooman/output"
-                        SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                        SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
                         SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                         SCORE=$(<$SCORE_FILE)
                         SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                        EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                        EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
                         EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
 
                         echo "$SUMMARY" >> $SUMMARY_SCORE_FILE

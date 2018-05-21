@@ -23,11 +23,19 @@ N2V_SCRIPT_DIR=/home/ubuntu/hooman/n2v/
 
 # N2V parameters
 TRAIN_SPLIT=1.0             # train validation split
+LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
-N_EPOCHS=1                  # starts from zero
+VOCAB_SIZE=2708            # Size of vocabulary
+NEG_SAMPLE_SIZE=5
+N_EPOCHS=2
+BATCH_SIZE=200               # minibatch size
+FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=1234
+
+CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fe$FREEZE_EMBEDDINGS-s$SEED"
+
 
 LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
 LABEL_FILE=cora_labels.txt           # label file
@@ -59,8 +67,8 @@ do
                         CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
-                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
+                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
                         DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 

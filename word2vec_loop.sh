@@ -34,6 +34,7 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 SEED=1234
 
+CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fe$FREEZE_EMBEDDINGS-s$SEED"
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
@@ -60,7 +61,7 @@ do
                     SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                     FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                     DIR_SUFFIX="$METHOD_TYPE-is$INIT_EDGE_SIZE-$CONFIG-p$P-q$Q-ss$STREAM_SIZE"
-                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$STEP-r$RUN"
+                    BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
                     INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                     TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                     DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
@@ -73,7 +74,7 @@ do
                     fi
 
                     if [ $STEP -gt 0 ]; then
-                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/emb-fe$FREEZE_EMBEDDINGS-s$(($STEP-1))-r$RUN"
+                        COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$(($STEP-1))-r$RUN"
                     fi
 
                     echo $COMMAND
