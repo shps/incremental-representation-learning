@@ -10,26 +10,26 @@ run_cs=true
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
 
-METHODS=(m1 m3 m4)
+METHODS=(m1)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.05
-NUM_WALKS_ARR=(20)
-WALK_LENGTH_ARR=(10)
+INIT_EDGE_SIZE=0.1
+NUM_WALKS_ARR=(10)
+WALK_LENGTH_ARR=(10 40 80)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
 DATASET=cora
 NUM_RUNS=3
-DIRECTED=true    # tested on undirected graphs only.
+DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=10        # max number of steps to run the experiment
+MAX_STEPS=0        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -37,6 +37,10 @@ TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
 WINDOW_SIZE=8
 SKIP_SIZE=16
 SELF_CONTEXT=false  # whether allows target == context pairs.
+TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
+
+TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA"
+
 
 # N2V parameters
 TRAIN_SPLIT=1.0             # train validation split
@@ -44,13 +48,12 @@ LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
 VOCAB_SIZE=2708            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=2
+N_EPOCHS=10
 BATCH_SIZE=200               # minibatch size
 FREEZE_AFV=false              # Freeze affected vertices or not?
 FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
-TRAIN_WITH_DELTA=true              # train only with the samples generated from new walks
 
 # Classifier configs
 LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
@@ -101,7 +104,6 @@ fi
 # target-context pair generator config
 
 PAIR_FILE="gPairs-w$WINDOW_SIZE-s$SKIP_SIZE"
-DELTA_PAIR_FILE="gPairs-delta-w$WINDOW_SIZE-s$SKIP_SIZE"
 VOCAB_FILE="gPairs-vocabs-w$WINDOW_SIZE-s$SKIP_SIZE"
 
 if [ "$run_tc_gen" = true ] ; then
@@ -127,17 +129,22 @@ if [ "$run_tc_gen" = true ] ; then
 
                         CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                         EXPERIMENT_TYPE="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
+
                         RW_FILE="sca-$EXPERIMENT_TYPE.txt"
+
+                        if [ "$TRAIN_WITH_DELTA" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
+                            RW_FILE="sca-$METHOD_TYPE-delta-$CONFIG-$STEP-$RUN.txt"
+                        fi
+
                         DIR_NAME="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
                         INPUT_EDGE_LIST="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_NAME/$RW_FILE"
-                        OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_NAME/"
+                        OUTPUT_DIR="/home/ubuntu/hooman/output/$DATASET/pairs/$DIR_NAME/$TC_CONFIG_SIG/"
 
                         java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                             --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
                             --selfContext $SELF_CONTEXT
 
                         mv "$OUTPUT_DIR$PAIR_FILE.txt" "$OUTPUT_DIR$PAIR_FILE-$EXPERIMENT_TYPE.txt"
-                        mv "$OUTPUT_DIR$DELTA_PAIR_FILE.txt" "$OUTPUT_DIR$DELTA_PAIR_FILE-$EXPERIMENT_TYPE.txt"
                         mv "$OUTPUT_DIR$VOCAB_FILE.txt" "$OUTPUT_DIR$VOCAB_FILE-$EXPERIMENT_TYPE.txt"
                     done
                 done
@@ -182,17 +189,14 @@ if [ "$run_w2v" = true ] ; then
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                         DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
-                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
+                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                        INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/pairs/$DIR_SUFFIX/$TC_CONFIG_SIG/"                  # input data directory
                         TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                         DELTA_TRAIN_FILE="gPairs-delta-$FILE_SUFFIX.txt"
+                        DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
-                        if [ "$TRAIN_WITH_DELTA" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
-                            TRAIN_FILE=$DELTA_TRAIN_FILE
-                        fi
-
-                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
+                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
 
                         if [ "$FREEZE_AFV" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
                             AFFECTED_VERTICES_FILE="sca-afs-$SUFFIX.txt"     # affected vertices file name
@@ -200,7 +204,7 @@ if [ "$run_w2v" = true ] ; then
                         fi
 
                         if [ $STEP -gt 0 ]; then
-                            COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$(($STEP-1))-r$RUN"
+                            COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$(($STEP-1))-r$RUN"
                         fi
 
                         echo $COMMAND
@@ -242,8 +246,8 @@ if [ "$run_nc" = true ] ; then
                             CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                             DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                            BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
-                            INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
+                            BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                            INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
                             DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                             DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
@@ -312,12 +316,12 @@ if [ "$run_cs" = true ] ; then
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                             DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
                             DIR_PREFIX="/home/ubuntu/hooman/output"
-                            SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
+                            SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
                             SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                             SCORE=$(<$SCORE_FILE)
                             SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                            EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$CONFIG_SIG/s$STEP-r$RUN"
+                            EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
                             EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
 
                             echo "$SUMMARY" >> $SUMMARY_SCORE_FILE

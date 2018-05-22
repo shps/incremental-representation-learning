@@ -28,6 +28,7 @@ case class StreamingExperiment(config: Params) {
       GraphMap.reset
       WalkStorage.reset
       var prevWalks = ParSeq.empty[(Int, Int, Seq[Int])]
+      var deltaWalks = ParSeq.empty[(Int, Int, Seq[Int])]
 
       println("******* Building the graph ********")
       val (initEdges, edges) = config.grouped match {
@@ -52,14 +53,15 @@ case class StreamingExperiment(config: Params) {
         println(s"Number of edges: ${GraphMap.getNumEdges}")
         println(s"Number of vertices: ${GraphMap.getNumVertices}")
         val result = streamingAddAndRunWithId(afs, prevWalks)
-        prevWalks = result._1
+        prevWalks = result._1._1
+        deltaWalks = result._1._2
         totalTime = result._4
         numSteps(nr)(0) = result._2
         numWalkers(nr)(0) = result._3
         stepTimes(nr)(0) = result._4
         if (config.logErrors) {
           val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result
-            ._1, config)
+            ._1._1, config)
           meanErrors(nr)(0) = meanE
           maxErrors(nr)(0) = maxE
           println(s"Mean Error: ${meanE}")
@@ -91,7 +93,8 @@ case class StreamingExperiment(config: Params) {
             break
           afs = updateGraph(updates)
           val result = streamingAddAndRunWithId(afs, prevWalks)
-          prevWalks = result._1
+          prevWalks = result._1._1
+          deltaWalks = result._1._2
           val ns = result._2
           val nw = result._3
           val stepTime = result._4
@@ -109,7 +112,7 @@ case class StreamingExperiment(config: Params) {
           println(s"Number of vertices: ${GraphMap.getNumVertices}")
           println(s"Number of walks: ${prevWalks.size}")
           if (config.logErrors) {
-            val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1,
+            val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1._1,
               config)
             meanErrors(nr)(ec) = meanE
             maxErrors(nr)(ec) = maxE
@@ -130,6 +133,9 @@ case class StreamingExperiment(config: Params) {
             fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
               config.numWalks
             }-$step-$nr")
+            fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config.walkLength}-nw${
+              config.numWalks
+            }-$step-$nr")
             fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
               config.rrType
                 .toString
@@ -138,6 +144,9 @@ case class StreamingExperiment(config: Params) {
         }
       }
       fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
+        config.numWalks
+      }-final-$nr")
+      fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config.walkLength}-nw${
         config.numWalks
       }-final-$nr")
       fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
@@ -149,9 +158,6 @@ case class StreamingExperiment(config: Params) {
           config
             .walkLength
         }-nw${config.numWalks}-final-$nr")
-      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-        config.numWalks
-      }-final-$nr")
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
@@ -186,7 +192,7 @@ case class StreamingExperiment(config: Params) {
   }
 
   def streamingAddAndRunWithId(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Int, Seq[Int])]):
-  (ParSeq[(Int, Int, Seq[Int])], Int, Int, Long) = {
+  ((ParSeq[(Int, Int, Seq[Int])], ParSeq[(Int, Int, Seq[Int])]), Int, Int, Long) = {
 
     val result = config.rrType match {
       case RrType.m1 => {
@@ -200,7 +206,7 @@ case class StreamingExperiment(config: Params) {
         val ns = computeNumSteps(init)
         val nw = init.length
 
-        (p, ns, nw, tTime)
+        ((p, ParSeq.empty[(Int, Int, Seq[Int])]), ns, nw, tTime)
       }
       case RrType.m2 => {
         val sTime = System.currentTimeMillis()
@@ -225,7 +231,7 @@ case class StreamingExperiment(config: Params) {
 
         val ns = computeNumSteps(walkers)
         val nw = walkers.length
-        (np, ns, nw, tTime)
+        ((np, pp), ns, nw, tTime)
       }
       case RrType.m3 => {
         val sTime = System.currentTimeMillis()
@@ -239,7 +245,7 @@ case class StreamingExperiment(config: Params) {
 
         val ns = computeNumStepsWithIds(walkers)
         val nw = walkers.length
-        (newPaths, ns, nw, tTime)
+        ((newPaths, partialPaths.map(a => a._2)), ns, nw, tTime)
       }
       case RrType.m4 => {
         val sTime = System.currentTimeMillis()
@@ -252,7 +258,7 @@ case class StreamingExperiment(config: Params) {
 
         val ns = computeNumSteps(walkers)
         val nw = walkers.length
-        (newPaths, ns, nw, tTime)
+        ((newPaths, partialPaths.map(a => a._2)), ns, nw, tTime)
       }
     }
 

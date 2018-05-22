@@ -64,22 +64,14 @@ object Main {
         null
       case TaskName.gPairs =>
         println("Reading the walks...")
-        var walks = fm.readWalks()
-        val latestVersion = walks.map(a => a.head).max
-        println(s"Latest walk version is $latestVersion")
-        // remove the version number and the index number
-        val deltaWalks = walks.filter(a => a.head == latestVersion).map { w => w.splitAt(2)._2 }
-        walks = walks.map { w => w.splitAt(2)._2 }
+        val walks = fm.readWalks().map { w => w.splitAt(2)._2 }
         println("Generating the pairs...")
         val pairs = Word2VecUtils.createPairs(walks, numSkips = params.w2vSkipSize, window =
-          params.w2vWindow, params.selfContext)
-        val deltaPairs = Word2VecUtils.createPairs(deltaWalks, numSkips = params.w2vSkipSize, window =
           params.w2vWindow, params.selfContext)
         println("Extracting the vocabulary...")
         val vocab = Word2VecUtils.createVocabulary(walks)
         println("Writing to the file...")
         fm.saveTargetContextPairs(pairs, vocab, s"w${params.w2vWindow}-s${params.w2vSkipSize}")
-        fm.saveDeltaTargetContextPairs(deltaPairs, s"delta-w${params.w2vWindow}-s${params.w2vSkipSize}")
         println("Completed!")
       case TaskName.cd =>
         println("Started converting...")
