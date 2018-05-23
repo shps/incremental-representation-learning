@@ -18,14 +18,15 @@ set bmargin 4
 set size ratio 0.3 # y/x
 set style line 1 lt 2 lw 2 pt 1 ps 0.5 linecolor rgb "red"
 set style line 2 lt 2 lw 2 pt 4 ps 0.5 linecolor rgb "green"
+set style line 3 lt 2 lw 2 pt 3 ps 0.5 linecolor rgb "black"
 set style line 4 lt 2 lw 2 pt 5 ps 0.5 linecolor rgb "blue"
 #:xtic(6)
 
 #plot f1 every ::1::10 using 13 with linespoints ls 1 t "M1", f1 every ::1::10 using 13:14 with errorbars ls 1 not, f1 every ::11::21 using 13 with linespoints ls 2 t "M3", f1 every ::11::21 using 13:14 with errorbars ls 2 not
 
-#plot f1 every ::1::55 using 13 with linespoints ls 1 t "M1", f1 every ::1::55 using 13:14 with errorbars ls 1 not, f1 every ::56::110 using 13 with linespoints ls 2 t "M3", f1 every ::56::110 using 13:14 with errorbars ls 2 not, f1 every ::111::165 using 13 with linespoints ls 3 t "M4", f1 every ::111::165 using 13:14 with errorbars ls 3 not
+#plot f1 every ::1::5 using 13 with linespoints ls 1 t "NW=10, WL=10", f1 every ::1::5 using 13:14 with errorbars ls 1 not, f1 every ::11::15 using 13 with linespoints ls 2 t "NW=10, WL=40", f1 every ::11::15 using 13:14 with errorbars ls 2 not, f1 every ::21::25 using 13 with linespoints ls 4 t "NW=20, WL=10", f1 every ::21::25 using 13:14 with errorbars ls 4 not
 
 
-plot f1 every ::21::30 using 13 with linespoints ls 1 t "M1", f1 every ::21::30 using 13:14 with errorbars ls 1 not
+plot f1 every ::1::22 using 13 with linespoints ls 1 t "No Checkpoint", f1 every ::1::22 using 13:14 with errorbars ls 1 not, f1 every ::23::44 using 13 with linespoints ls 2 t "With Checkpoint", f1 every ::23::44 using 13:14 with errorbars ls 2 not, f1 every ::45::66 using 13 with linespoints ls 3 t "Freeze Emb", f1 every ::45::66 using 13:14 with errorbars ls 3 not, f1 every ::67::88 using 13 with linespoints ls 4 t "Freeze Con", f1 every ::67::88 using 13:14 with errorbars ls 4 not
 
 set output

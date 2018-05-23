@@ -1,7 +1,7 @@
 #!/bin/bash
 
-run_rw=true
-run_tc_gen=true
+run_rw=false
+run_tc_gen=false
 run_w2v=true
 run_nc=true
 run_cs=true
@@ -17,7 +17,7 @@ METHODS=(m1)
 
 INIT_EDGE_SIZE=0.1
 NUM_WALKS_ARR=(10)
-WALK_LENGTH_ARR=(10 40 80)
+WALK_LENGTH_ARR=(10)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
@@ -29,7 +29,7 @@ WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=0        # max number of steps to run the experiment
+MAX_STEPS=10        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -43,15 +43,17 @@ TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA"
 
 
 # N2V parameters
+FREEZE_AFV=true              # Freeze affected vertices or not?
+FREEZE_AFV_FOR_M1=true
+USE_CHECKPOINT=true       # whether to use checkpoints or to restart training.
 TRAIN_SPLIT=1.0             # train validation split
 LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
 VOCAB_SIZE=2708            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=10
+N_EPOCHS=2
 BATCH_SIZE=200               # minibatch size
-FREEZE_AFV=false              # Freeze affected vertices or not?
-FREEZE_EMBEDDINGS=False     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
+FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 
@@ -62,6 +64,7 @@ LABEL_FILE=cora_labels.txt           # label file
 
 
 RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS"
+W2V_CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA-uc$USE_CHECKPOINT-ffm1$FREEZE_AFV_FOR_M1"
 
 SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all.sh
 DATE_SUFFIX=`date +%s`
@@ -160,8 +163,6 @@ fi
 TENSORFLOW_BIN_DIR=/home/ubuntu/hooman/tf/bin/
 N2V_SCRIPT_DIR=/home/ubuntu/hooman/n2v/
 
-CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA"
-
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
 
@@ -189,22 +190,27 @@ if [ "$run_w2v" = true ] ; then
                         SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                         FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                         DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                        BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                         INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/pairs/$DIR_SUFFIX/$TC_CONFIG_SIG/"                  # input data directory
                         TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                         DELTA_TRAIN_FILE="gPairs-delta-$FILE_SUFFIX.txt"
                         DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
-                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE --freeze_embeddings $FREEZE_EMBEDDINGS"
-
-                        if [ "$FREEZE_AFV" == true ] && [ "$METHOD_TYPE" != "m1" ] && [ $STEP -gt 0 ]; then
-                            AFFECTED_VERTICES_FILE="sca-afs-$SUFFIX.txt"     # affected vertices file name
-                            COMMAND="$COMMAND --affected_vertices_file $AFFECTED_VERTICES_FILE"
+                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE"
+                        if [ "$FREEZE_EMBEDDINGS" == true ]; then
+                            COMMAND="$COMMAND  --freeze_embeddings"
                         fi
 
-                        if [ $STEP -gt 0 ]; then
-                            COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$(($STEP-1))-r$RUN"
+                        if [ "$FREEZE_AFV" == true ] && [ $STEP -gt 0 ]; then
+                            if [ "$METHOD_TYPE" != "m1" ] || [ "$FREEZE_AFV_FOR_M1" == "true" ]; then
+                                AFFECTED_VERTICES_FILE="sca-afs-$SUFFIX.txt"     # affected vertices file name
+                                COMMAND="$COMMAND --affected_vertices_file $AFFECTED_VERTICES_FILE"
+                            fi
+                        fi
+
+                        if [ "$USE_CHECKPOINT" == true ] && [ $STEP -gt 0 ]; then
+                            COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$(($STEP-1))-r$RUN"
                         fi
 
                         echo $COMMAND
@@ -246,8 +252,8 @@ if [ "$run_nc" = true ] ; then
                             CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                             DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                            BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
-                            INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                            BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
+                            INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                             DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                             DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
@@ -316,12 +322,12 @@ if [ "$run_cs" = true ] ; then
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                             DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
                             DIR_PREFIX="/home/ubuntu/hooman/output"
-                            SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                            SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                             SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                             SCORE=$(<$SCORE_FILE)
                             SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                            EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$CONFIG_SIG/s$STEP-r$RUN"
+                            EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                             EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
 
                             echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
