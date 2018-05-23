@@ -506,11 +506,13 @@ class W2V_Sampled:
 
         freeze_vars = None
         if freeze_indices is not None:
+            print("Setting freeze vars to embeddings...")
             freeze_vars = {
                 sk_graph['embeddings']: list(set(freeze_indices))
             }
 
         if freeze_context_indices is not None:
+            print("Setting freeze vars to context weights and biases...")
             freeze_vars = {
                 sk_graph['context_weights']: list(set(freeze_context_indices)),
                 sk_graph['context_biases']: list(set(freeze_context_indices))
@@ -610,7 +612,7 @@ flags.DEFINE_integer('vocab_size', 10400, 'Size of vocabulary.')
 flags.DEFINE_integer('n_epochs', 10, 'Number of epochs.')
 flags.DEFINE_integer('neg_sample_size', 2, 'number of negative samples')
 flags.DEFINE_integer('batch_size', 20, 'minibatch size.')
-flags.DEFINE_boolean('freeze_embeddings', True,
+flags.DEFINE_boolean('freeze_embeddings', False,
                      'If true, the embeddings will be frozen otherwise the contexts will be frozen.')
 
 flags.DEFINE_string('base_log_dir', '.', 'base directory for logging and saving embeddings')
@@ -618,6 +620,7 @@ flags.DEFINE_string('input_dir', '.', 'Input data directory.')
 flags.DEFINE_string('train_file', None, 'Input train file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
+flags.DEFINE_string('degrees_dir', None, 'Input node degrees directory.')
 flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
 flags.DEFINE_string('checkpoint_dir', None, 'Input tf checkpoint file directory.')
 flags.DEFINE_string('affected_vertices_file', None, 'Input affected vertices file name.')
@@ -641,12 +644,12 @@ if __name__ == "__main__":
 
     # We need to set the corresponding graph, in particular use the degree
     # to control the negative sampling, as in word2vec paper
-    ds.set_node_degrees(os.path.join(FLAGS.input_dir, FLAGS.degrees_file))
+    ds.set_node_degrees(os.path.join(FLAGS.degrees_dir, FLAGS.degrees_file))
 
     # Set the affected vertices to freeze
     if FLAGS.affected_vertices_file is not None:
         ds.set_affected_nodes(
-            os.path.join(FLAGS.input_dir, FLAGS.affected_vertices_file))
+            os.path.join(FLAGS.degrees_dir, FLAGS.affected_vertices_file))
     else:
         ds.affected_nodes = ds.existing_vocab
 
