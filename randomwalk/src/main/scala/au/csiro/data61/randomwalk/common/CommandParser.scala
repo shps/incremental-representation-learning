@@ -18,7 +18,7 @@ object CommandParser {
 
   object RrType extends Enumeration {
     type RrType = Value
-    val m1, m2, m3, m4 = Value
+    val m1, m2, m3, m4, m5 = Value
   }
 
   val WALK_LENGTH = "walkLength"

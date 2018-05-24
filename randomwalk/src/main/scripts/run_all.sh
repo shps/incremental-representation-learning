@@ -22,14 +22,14 @@ P=0.25
 Q=0.25
 STREAM_SIZE=0.01
 DATASET=cora
-NUM_RUNS=3
+NUM_RUNS=2
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=10        # max number of steps to run the experiment
+MAX_STEPS=5        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -51,9 +51,9 @@ LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
 VOCAB_SIZE=2708            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=2
+N_EPOCHS=5
 BATCH_SIZE=200               # minibatch size
-FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
+FREEZE_EMBEDDINGS=true     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
 FORCE_OFFSET=0                      # Offset to adjust node IDs
 

@@ -260,6 +260,33 @@ case class StreamingExperiment(config: Params) {
         val nw = walkers.length
         ((newPaths, partialPaths.map(a => a._2)), ns, nw, tTime)
       }
+      case RrType.m5 => {
+        val sTime = System.currentTimeMillis()
+
+        var fWalkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = paths.filter(a => afs.contains(a._3
+          .head)).map(_._3.head).distinct.map(a => (a, (1, 0, Seq(a))))
+
+        for (a <- afs) {
+          if (fWalkers.count(_._1 == a) == 0) {
+            fWalkers ++= ParSeq((a, (1, 0, Seq(a))))
+          }
+        }
+        val walkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = ParSeq.fill(config.numWalks)(fWalkers)
+          .flatten
+        val pp = rwalk.secondOrderWalk(walkers)
+
+        val aws = fWalkers.map(tuple => tuple._1).seq
+        val up = paths.filter { case p =>
+          !aws.contains(p._3.head)
+        }
+        val np = up.union(pp)
+
+        val tTime = System.currentTimeMillis() - sTime
+
+        val ns = computeNumSteps(walkers)
+        val nw = walkers.length
+        ((np, pp), ns, nw, tTime)
+      }
     }
 
     result

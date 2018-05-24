@@ -12,7 +12,7 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1527075952"
+  val DIR = "summary" + "1527145451"
   val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
   val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
