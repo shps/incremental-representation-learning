@@ -1,16 +1,17 @@
 #!/bin/bash
 
-run_rw=false
+run_rw=true
 run_tc_gen=false
-run_w2v=true
-run_nc=true
-run_cs=true
+run_w2v=false
+run_nc=false
+#run_cs=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m1)
+METHODS=(m1 m3 m4 m5)
 
 
 # Random walk configs
@@ -22,14 +23,15 @@ P=0.25
 Q=0.25
 STREAM_SIZE=0.01
 DATASET=cora
-NUM_RUNS=2
+NUM_RUNS=5
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
+#RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
-LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=5        # max number of steps to run the experiment
+LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
+MAX_STEPS=10        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -49,18 +51,19 @@ USE_CHECKPOINT=true       # whether to use checkpoints or to restart training.
 TRAIN_SPLIT=1.0             # train validation split
 LEARNING_RATE=0.2
 EMBEDDING_SIZE=128
-VOCAB_SIZE=2708            # Size of vocabulary
+VOCAB_SIZE=10313            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
 N_EPOCHS=5
 BATCH_SIZE=200               # minibatch size
 FREEZE_EMBEDDINGS=true     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
-FORCE_OFFSET=0                      # Offset to adjust node IDs
+FORCE_OFFSET=-1                      # Offset to adjust node IDs
 
 # Classifier configs
 LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
 LABEL_FILE=cora_labels.txt           # label file
-
+#LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
+#LABEL_FILE=blog-labels.txt
 
 
 RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS"
@@ -274,18 +277,24 @@ fi
 deactivate
 
 # collect results
-if [ "$run_cs" = true ] ; then
-    echo "************ Collecting results ************"
-    SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
-    SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
-    SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
-    SUMMARY_RW_WALK="$SUMMARY_DIR/rw-walk-summary.csv"
-    SUMMARY_RW_STEP="$SUMMARY_DIR/rw-step-summary.csv"
+echo "************ Collecting results ************"
+SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
+SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
+SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
+SUMMARY_RW_WALK="$SUMMARY_DIR/rw-walk-summary.csv"
+SUMMARY_RW_STEP="$SUMMARY_DIR/rw-step-summary.csv"
+SUMMARY_MAX_ERROR="$SUMMARY_DIR/rw-max-error-summary.csv"
+SUMMARY_MEAN_ERROR="$SUMMARY_DIR/rw-mean-error-summary.csv"
 
+if [ "$run_nc" = true ] ; then
     echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_SCORE_FILE
+fi
 
+if [ "$run_w2v" = true ] ; then
     echo "method,nw,wl,run,step,epoch,time" >> $SUMMARY_EPOCH_TIME
+fi
 
+if [ "$run_rw" = true ] ; then
     HEADER="method\tnw\twl\trun"
 
     for STEP in $(seq 0 $MAX_STEPS)
@@ -296,15 +305,24 @@ if [ "$run_cs" = true ] ; then
     echo -e "$HEADER" >> $SUMMARY_RW_TIME
     echo -e "$HEADER" >> $SUMMARY_RW_WALK
     echo -e "$HEADER" >> $SUMMARY_RW_STEP
+    echo -e "$HEADER" >> $SUMMARY_MAX_ERROR
+    echo -e "$HEADER" >> $SUMMARY_MEAN_ERROR
 
-    trap "exit" INT
+fi
 
-    for METHOD_TYPE in ${METHODS[*]}
+trap "exit" INT
+
+DIR_PREFIX="/home/ubuntu/hooman/output"
+
+for METHOD_TYPE in ${METHODS[*]}
+do
+    for NUM_WALKS in ${NUM_WALKS_ARR[*]}
     do
-        for NUM_WALKS in ${NUM_WALKS_ARR[*]}
+        for WALK_LENGTH in ${WALK_LENGTH_ARR[*]}
         do
-            for WALK_LENGTH in ${WALK_LENGTH_ARR[*]}
-            do
+            CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
+            DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
+            if [ "$run_nc" = true ] || [ "$run_w2v" = true ]; then
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
                     for STEP in $(seq 0 $MAX_STEPS)
@@ -318,31 +336,52 @@ if [ "$run_cs" = true ] ; then
                             printf "    Step number: %s\n" $STEP
                             printf "    Epoch number: %s\n" $EPOCH
 
-                            CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
+
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
-                            DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                            DIR_PREFIX="/home/ubuntu/hooman/output"
-                            SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
-                            SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
-                            SCORE=$(<$SCORE_FILE)
-                            SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                            EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
-                            EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
+                            if [ "$run_nc" = true ]; then
+                                SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
+                                SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
+                                SCORE=$(<$SCORE_FILE)
+                                SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
 
-                            echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
+                                echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
+                            fi
 
-                            EPOCH_PREFIX="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP"
-                            while IFS='' read -r line || [[ -n "$line" ]]; do
-                                echo "$EPOCH_PREFIX,$line" >> $SUMMARY_EPOCH_TIME
-                            done < "$EPOCH_FILE"
+                            if [ "$run_w2v" = true ]; then
+                                EPOCH_INPUT_DIR="$DIR_PREFIX/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
+                                EPOCH_FILE="$EPOCH_INPUT_DIR/epoch_time.txt"
+
+                                EPOCH_PREFIX="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP"
+                                while IFS='' read -r line || [[ -n "$line" ]]; do
+                                    echo "$EPOCH_PREFIX,$line" >> $SUMMARY_EPOCH_TIME
+                                done < "$EPOCH_FILE"
+                            fi
                         done
                     done
                 done
+            fi
+
+            if [ "$run_rw" = true ]; then
                 SUMMARY_PREFIX="$METHOD_TYPE\t$NUM_WALKS\t$WALK_LENGTH"
                 STEPS_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
                 WALK_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
                 TIME_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+
+                if [ "$LOG_ERRORS" = true ] ; then
+                    MAX_ERROR_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-max-errors-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    MEAN_ERROR_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-mean-errors-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                    counter=0
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$SUMMARY_PREFIX\t$counter\t$line" >> $SUMMARY_MAX_ERROR
+                        counter=$((counter+1))
+                    done < "$MAX_ERROR_FILE"
+                    counter=0
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$SUMMARY_PREFIX\t$counter\t$line" >> $SUMMARY_MEAN_ERROR
+                        counter=$((counter+1))
+                    done < "$MEAN_ERROR_FILE"
+                fi
 
                 counter=0
                 while IFS='' read -r line || [[ -n "$line" ]]; do
@@ -359,10 +398,10 @@ if [ "$run_cs" = true ] ; then
                     echo -e "$SUMMARY_PREFIX\t$counter\t$line" >> $SUMMARY_RW_TIME
                     counter=$((counter+1))
                 done < "$TIME_FILE"
-            done
+            fi
         done
     done
-fi
+done
 
 
 mv ~/hooman/output/log.txt "$SUMMARY_DIR/"

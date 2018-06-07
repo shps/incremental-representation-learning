@@ -87,6 +87,17 @@ case class FileManager(config: Params) {
 
   }
 
+  def readTimestampedEdgeList(): ParSeq[(Int, Int, Long)] = {
+    val lines = Source.fromFile(config.input).getLines.toArray.par
+
+    lines.flatMap { triplet =>
+      val parts = triplet.split(config.delimiter)
+
+      Seq((parts.head.toInt, parts(1).toInt, parts(3).toLong))
+    }
+
+  }
+
   def convertDelimiter() = {
     println(s"Convert from del ${config.delimiter} to del ${config.delimiter2}")
 //    var d2 = config.delimiter2

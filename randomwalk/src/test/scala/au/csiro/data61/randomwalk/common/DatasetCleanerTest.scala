@@ -1,5 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
+import java.time.Instant
+
 import org.scalatest.FunSuite
 
 
@@ -8,7 +10,7 @@ import org.scalatest.FunSuite
   */
 class DatasetCleanerTest extends FunSuite {
 
-  private val dataset = "/Users/Ganymedian/Desktop/Projects/stellar-random-walk-research/data/cora/"
+  private val dataset = "/Users/Ganymedian/Desktop/ia-enron-employees/"
 
   test("testCheckDataSet") {
     val fName = dataset + "cora_edgelist.txt"
@@ -26,6 +28,14 @@ class DatasetCleanerTest extends FunSuite {
     val config = Params(input = fName, output = output)
     DatasetCleaner.convertJsonFile(config)
 
+  }
+
+  test("test") {
+    val fName = dataset + "ia-enron-employees.txt"
+    val config = Params(input = fName, delimiter = "\\s+", directed = false)
+    val timedEdges = FileManager(config).readTimestampedEdgeList().seq.sortWith(_._3 > _._3).par
+    val times = timedEdges.map(a => (a._1, a._2, Instant.ofEpochMilli(a._3)))
+    System.out
   }
 
 }

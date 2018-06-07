@@ -1,6 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
 import java.io.{BufferedWriter, File, FileWriter}
+import java.nio.file.{Files, Paths}
 
 import better.files._
 
@@ -12,13 +13,15 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1527145451"
+  val DIR = "summary" + "1528361738"
   val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
   val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"
   val RW_TIME_FILE = "rw-time-summary.csv"
   val RW_STEP = "rw-step-summary.csv"
+  val RW_MAX_ERROR = "rw-max-error-summary.csv"
+  val RW_MEAN_ERROR = "rw-mean-error-summary.csv"
   val EPOCH_TIME = "epoch-summary.csv"
 
   val SPACE = "\\s+"
@@ -73,12 +76,12 @@ object SummaryParser {
     }.toSeq
   }
 
-  def computeRwStats(rws: ParSeq[((String, Int, Int), (Int, Array[Int]))], nSteps: Int): Seq[(
+  def computeRwStats(rws: ParSeq[((String, Int, Int), (Int, Array[Float]))], nSteps: Int): Seq[(
     (String, Int, Int), (Array[Float], Array[Float]))] = {
     return rws.groupBy(_._1).seq.map { case (key, values) =>
       val cleaned = values.map(_._2)
 
-      val sums = cleaned.foldLeft((0, new Array[Int](nSteps))) { case ((_, arr), (run, steps)) =>
+      val sums = cleaned.foldLeft((0, new Array[Float](nSteps))) { case ((_, arr), (run, steps)) =>
         for (i <- 0 until steps.length) {
           arr(i) += steps(i)
         }
@@ -139,7 +142,7 @@ object SummaryParser {
     }
   }
 
-  def readRandomWalkSummary(file: String): ParSeq[((String, Int, Int), (Int, Array[Int]))] = {
+  def readRandomWalkSummary(file: String): ParSeq[((String, Int, Int), (Int, Array[Float]))] = {
     val lines = Source.fromFile(file).getLines.drop(1).toArray.par // drops the header
 
     lines.flatMap { triplet =>
@@ -148,7 +151,7 @@ object SummaryParser {
       val numWalk = parts(1).toInt
       val walkLength = parts(2).toInt
       val run = parts(3).toInt
-      val steps = parts.slice(4, parts.length).map(_.toInt)
+      val steps = parts.slice(4, parts.length).map(_.toFloat)
 
       Seq(((method, numWalk, walkLength), (run, steps)))
     }
@@ -183,10 +186,11 @@ object SummaryParser {
     val bw = new BufferedWriter(new FileWriter(file))
     val nSteps = walksStats.head._2._1.length
     val stepNumbers = (0 to nSteps - 1).map(i => s"mean_step_$i\tstd_step_$i").mkString("\t")
-    bw.write(s"method\tnw\twl\t$stepNumbers\n")
+    bw.write(s"method\tnw\twl\tstep\tmean\tstd\n")
     bw.write(walksStats.map { case (p1, p2) =>
-      val meanStd = (p2._1 zip p2._2).map { case (mean, std) => s"$mean\t$std" }.mkString("\t")
-      s"${p1._1}\t${p1._2}\t${p1._3}\t$meanStd"
+      (p2._1 zip p2._2).map { case (mean, std) => s"$mean\t$std" }.zipWithIndex.map { case (r, i) =>
+        s"${p1._1}\t${p1._2}\t${p1._3}\t$i\t$r"
+      }.mkString("\n")
     }.mkString("\n"))
     bw.flush()
     bw.close()
@@ -208,26 +212,52 @@ object SummaryParser {
   }
 
   def main(args: Array[String]) {
-    val scores = readScoresSummary(s"$SUMMARY_DIR/$SCORE_FILE")
-    val epochs = readEpochSummary(s"$SUMMARY_DIR/$EPOCH_TIME")
-    val walks = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_WALK_FILE")
-    val steps = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_STEP")
-    val times = readRandomWalkSummary(s"$SUMMARY_DIR/$RW_TIME_FILE")
-    val scoresStats = computeScoresStats(scores).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4,
-      r._1._5))
-    val epochStats = computeEpochStats(epochs).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4, r
-      ._1._5))
-    val nSteps = walks(0)._2._2.length
+    val scoreFile = s"$SUMMARY_DIR/$SCORE_FILE"
+    if (Files.exists(Paths.get(scoreFile))) {
+      val scores = readScoresSummary(scoreFile)
+      val scoresStats = computeScoresStats(scores).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4,
+        r._1._5))
+      saveScores(scoresStats)
+    }
 
-    val walksStats = computeRwStats(walks, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
-    val stepsStats = computeRwStats(steps, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
-    val timesStats = computeRwStats(times, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
+    val epochFile = s"$SUMMARY_DIR/$EPOCH_TIME"
+    if (Files.exists(Paths.get(epochFile))) {
+      val epochs = readEpochSummary(epochFile)
+      val epochStats = computeEpochStats(epochs).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4, r
+        ._1._5))
+      saveEpochs(epochStats)
+    }
 
-    saveScores(scoresStats)
-    saveEpochs(epochStats)
-    saveRw(walksStats, "rw-walks")
-    saveRw(stepsStats, "rw-steps")
-    saveRw(timesStats, "rw-times")
+
+    val walksFile = s"$SUMMARY_DIR/$RW_WALK_FILE"
+    if (Files.exists(Paths.get(walksFile))) {
+      val walks = readRandomWalkSummary(walksFile)
+      val nSteps = walks(0)._2._2.length
+      val stepsFile = s"$SUMMARY_DIR/$RW_STEP"
+      val steps = readRandomWalkSummary(stepsFile)
+      val timesFile = s"$SUMMARY_DIR/$RW_TIME_FILE"
+      val times = readRandomWalkSummary(timesFile)
+      val walksStats = computeRwStats(walks, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
+      val stepsStats = computeRwStats(steps, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
+      val timesStats = computeRwStats(times, nSteps).sortBy(r => (r._1._1, r._1._2, r._1._3))
+
+      saveRw(walksStats, "rw-walks")
+      saveRw(stepsStats, "rw-steps")
+      saveRw(timesStats, "rw-times")
+
+      val meanErrFile = s"$SUMMARY_DIR/$RW_MEAN_ERROR"
+      if (Files.exists(Paths.get(meanErrFile))) {
+        val meanErrors = readRandomWalkSummary(meanErrFile)
+        val maxErrFile = s"$SUMMARY_DIR/$RW_MAX_ERROR"
+        val maxErrors = readRandomWalkSummary(maxErrFile)
+        val meanErrorsStats = computeRwStats(meanErrors, nSteps).sortBy(r => (r._1._1, r._1._2, r._1
+          ._3))
+        val maxErrorsStats = computeRwStats(maxErrors, nSteps).sortBy(r => (r._1._1, r._1._2, r._1
+          ._3))
+        saveRw(meanErrorsStats, "rw-mean-errors")
+        saveRw(maxErrorsStats, "rw-max-errors")
+      }
+    }
   }
 
 
