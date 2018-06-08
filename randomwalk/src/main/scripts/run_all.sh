@@ -1,9 +1,9 @@
 #!/bin/bash
 
-run_rw=true
-run_tc_gen=false
-run_w2v=false
-run_nc=false
+run_rw=false
+run_tc_gen=true
+run_w2v=true
+run_nc=true
 #run_cs=false
 
 
@@ -11,13 +11,13 @@ RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m1 m3 m4 m5)
+METHODS=(m1)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(10)
+INIT_EDGE_SIZE=1.0
+NUM_WALKS_ARR=(80)
 WALK_LENGTH_ARR=(10)
 P=0.25
 Q=0.25
@@ -31,33 +31,36 @@ RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=10        # max number of steps to run the experiment
+MAX_STEPS=0        # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
 TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
 WINDOW_SIZE=8
-SKIP_SIZE=16
+SKIP_SIZE=8
 SELF_CONTEXT=false  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
+FORCE_SKIP_SIZE=true                # Force to generate skipSize number of pairs
 
-TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA"
+TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE"
 
 
 # N2V parameters
-FREEZE_AFV=true              # Freeze affected vertices or not?
-FREEZE_AFV_FOR_M1=true
-USE_CHECKPOINT=true       # whether to use checkpoints or to restart training.
+FREEZE_AFV=false              # Freeze affected vertices or not?
+FREEZE_AFV_FOR_M1=false
+USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
+NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
-LEARNING_RATE=0.2
+LEARNING_RATE=0.025
 EMBEDDING_SIZE=128
 VOCAB_SIZE=10313            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=5
+N_EPOCHS=10
 BATCH_SIZE=200               # minibatch size
-FREEZE_EMBEDDINGS=true     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
+FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
-FORCE_OFFSET=-1                      # Offset to adjust node IDs
+#FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
+FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
 LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
@@ -148,7 +151,7 @@ if [ "$run_tc_gen" = true ] ; then
 
                         java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                             --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
-                            --selfContext $SELF_CONTEXT
+                            --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE
 
                         mv "$OUTPUT_DIR$PAIR_FILE.txt" "$OUTPUT_DIR$PAIR_FILE-$EXPERIMENT_TYPE.txt"
                         mv "$OUTPUT_DIR$VOCAB_FILE.txt" "$OUTPUT_DIR$VOCAB_FILE-$EXPERIMENT_TYPE.txt"
@@ -203,6 +206,10 @@ if [ "$run_w2v" = true ] ; then
                         COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE"
                         if [ "$FREEZE_EMBEDDINGS" == true ]; then
                             COMMAND="$COMMAND  --freeze_embeddings"
+                        fi
+
+                        if [ "$NUM_CHECKPOINTS" != -1 ]; then
+                            COMMAND="$COMMAND  --num_checkpoints $NUM_CHECKPOINTS"
                         fi
 
                         if [ "$FREEZE_AFV" == true ] && [ $STEP -gt 0 ]; then
@@ -404,7 +411,7 @@ do
 done
 
 
-mv ~/hooman/output/log.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log4.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

@@ -16,10 +16,11 @@ object Word2VecUtils {
     * @param window
     * @return
     */
-  def createPairs(walks: ParSeq[Seq[Int]], numSkips: Int, window: Int, selfContext: Boolean):
+  def createPairs(walks: ParSeq[Seq[Int]], numSkips: Int, window: Int, selfContext: Boolean,
+                  forceSkipSize: Boolean):
   ParSeq[(Int, Int)] = {
     walks.flatMap { case walk =>
-      var pairs = Seq.empty[(Int, Int)]
+      var allPairs = Seq.empty[(Int, Int)]
       for (index <- 0 until walk.length) {
         val target = walk(index)
         var currentPairs = Seq.empty[(Int, Int)]
@@ -41,9 +42,22 @@ object Word2VecUtils {
             currentPairs ++= Seq((target, walk(i)))
           }
         }
+        var pairs = Seq.empty[(Int, Int)]
         pairs ++= Random.shuffle(currentPairs).take(numSkips)
+
+        if (forceSkipSize) {
+          var size = pairs.size
+          while (size < numSkips) {
+            val numSamples = numSkips - size
+            pairs ++= Random.shuffle(currentPairs).take(numSamples)
+            size = pairs.size
+          }
+        }
+
+        allPairs ++= pairs
+
       }
-      pairs
+      allPairs
     }
   }
 

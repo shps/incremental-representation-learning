@@ -48,6 +48,7 @@ object CommandParser {
   val MAX_STEPS = "maxSteps"
   val GROUPED = "grouped"
   val SELF_CONTEXT = "selfContext"
+  val FORCE_SKIP_SIZE = "forceSkipSize"
   val DELIMITER2 = "d2"
 
   private lazy val defaultParams = Params()
@@ -110,6 +111,9 @@ object CommandParser {
     opt[Boolean](SELF_CONTEXT)
       .text(s"Accept target-context pairs where target=context: ${defaultParams.selfContext}")
       .action((x, c) => c.copy(selfContext = x))
+    opt[Boolean](FORCE_SKIP_SIZE)
+      .text(s"Force to generate pairs equal to skipSize: ${defaultParams.forceSkipSize}")
+      .action((x, c) => c.copy(forceSkipSize = x))
     opt[String](INPUT)
       .required()
       .text("Input edge file path: empty")

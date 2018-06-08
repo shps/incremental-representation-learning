@@ -131,7 +131,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       val firstIndex = steps._2
       val rSample = RandomSample(nextFloat)
       breakable {
-        while (path.length < walkLength + 1) {
+        while (path.length < walkLength) {
           val neighbors = GraphMap.getNeighbors(path.last)
           if (neighbors.size > 0) {
             val (nextStep, _) = rSample.sample(neighbors)
@@ -173,7 +173,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       if (path.length > 1) {
         val rSample = RandomSample(nextFloat)
         breakable {
-          while (path.length < walkLength + 2) {
+          while (path.length < walkLength) {
             val curr = path.last
             val prev = path(path.length - 2)
             val currNeighbors = GraphMap.getNeighbors(curr)
@@ -223,7 +223,7 @@ case class UniformRandomWalk(config: Params) extends Serializable {
       if (path.length > 1) {
         val rSample = RandomSample(nextFloat)
         breakable {
-          while (path.length < walkLength + 2) {
+          while (path.length < walkLength) {
             val curr = path.last
             val prev = path(path.length - 2)
             val currNeighbors = GraphMap.getNeighbors(curr)
