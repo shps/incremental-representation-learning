@@ -44,8 +44,8 @@ def eval_classification(labels, embeddings, use_ml_splitter=False):
     # for the mutli-label case
     if len(labels.shape) > 1 and labels.shape[1] > 1:
         print("Perforrming multi-label classification")
-        # shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.8)
-        shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+        shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.6)
+        # shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
         class MLSplitter:
             def __init__(self, splitter, node_labels):
@@ -66,9 +66,9 @@ def eval_classification(labels, embeddings, use_ml_splitter=False):
             shuffle = MLSplitter(shuffle, labels)
 
     else:
-        # shuffle = model_selection.StratifiedShuffleSplit(
-        #     n_splits=5, test_size=0.8)
-        shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+        shuffle = model_selection.StratifiedShuffleSplit(
+            n_splits=5, test_size=0.6)
+        # shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
     scoring = ['accuracy', 'f1_macro', 'f1_micro']
 

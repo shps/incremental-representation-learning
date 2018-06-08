@@ -67,41 +67,6 @@ class PregeneratedDataset:
     def reset_index(self, split=0):
         self.data_index[split] = 0
 
-    # def load_labels(self, label_filename):
-    #     """Load labels file. Supports single or multiple labels"""
-    #     raw_labels = {}
-    #     min_labels = np.inf
-    #     max_labels = 0
-    #     with open(label_filename) as f:
-    #         for line in f.readlines():
-    #             values = [int(x) for x in line.strip().split(self.delimiter)]
-    #             raw_labels[values[0]] = values[1:]
-    #             min_labels = min(len(values) - 1, min_labels)
-    #             max_labels = max(len(values) - 1, max_labels)
-    #
-    #     if min_labels < 1:
-    #         raise RuntimeError("Expected 1 or more labels in file {}"
-    #                            .format(label_filename))
-    #
-    #     # Single label
-    #     elif max_labels == 1:
-    #         self.labels = np.zeros(self.vocab_size, dtype=np.int32)
-    #         for (index, label) in six.iteritems(raw_labels):
-    #             self.labels[index + self.force_offset] = label[0]
-    #
-    #     # Multiple labels
-    #     else:
-    #         print("Multi-label classification")
-    #         unique_labels = np.unique(
-    #             [l for labs in raw_labels.values() for l in labs])
-    #         n_labels = len(unique_labels)
-    #
-    #         label_encoder = preprocessing.MultiLabelBinarizer(unique_labels)
-    #         self.labels = np.zeros((self.vocab_size, n_labels), dtype=np.int8)
-    #         for (index, multi_label) in six.iteritems(raw_labels):
-    #             self.labels[index + self.force_offset] = \
-    #                 label_encoder.fit_transform([multi_label])
-
     def build_freeze_indices(self):
         # Freeze existing vertex-ids excluding (affected vertices + non-existing vertex-ids)
         all_ids = np.arange(self.vocab_size)
@@ -527,7 +492,7 @@ class W2V_Sampled:
                                                sess.graph)
 
         # Saver for variables
-        saver = tf.train.Saver(list(self._model_variables), max_to_keep=None)
+        saver = tf.train.Saver(list(self._model_variables), max_to_keep=FLAGS.num_checkpoints)
 
         # Initialize other variables
         init_vars = [v for v in tf.global_variables()
@@ -535,12 +500,13 @@ class W2V_Sampled:
 
         # Restore variables from checkpoint
         if restore_from_file:
-            print("Restoring variables from {}".format(restore_from_file))
+            print("Restoring variables from {}...".format(restore_from_file))
             saver.restore(sess, restore_from_file)
             sess.run(tf.variables_initializer(init_vars))
 
         else:
             # Properly initialize all variables.
+            print("No checkpoint file is given. Initializing variables...")
             sess.run(tf.global_variables_initializer())
 
         ev_ii = -1
@@ -623,8 +589,8 @@ flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
 flags.DEFINE_string('degrees_dir', None, 'Input node degrees directory.')
 flags.DEFINE_string('checkpoint_file', None, 'Input tf checkpoint file name.')
 flags.DEFINE_string('checkpoint_dir', None, 'Input tf checkpoint file directory.')
+flags.DEFINE_integer('num_checkpoints', None, "Number of checkpoints to keep.")
 flags.DEFINE_string('affected_vertices_file', None, 'Input affected vertices file name.')
-# flags.DEFINE_string('existing_vocabs_file', '', 'Input existing vocab file name.')
 flags.DEFINE_string('delimiter', '\t', 'Delimiter.')
 flags.DEFINE_integer('print_every', 50, "How often to print training info.")
 flags.DEFINE_integer('force_offset', 0, "Offset to adjust node IDs.")
@@ -653,24 +619,15 @@ if __name__ == "__main__":
     else:
         ds.affected_nodes = ds.existing_vocab
 
-    # Set labels
-    # if FLAGS.label_file is not None:
-    #     ds.load_labels(os.path.join(FLAGS.input_dir, FLAGS.label_file))
-
     word2vec = W2V_Sampled(
         embedding_size=FLAGS.embedding_size,
         vocabulary_size=FLAGS.vocab_size,
         batch_size=FLAGS.batch_size,
         val_batch_size=None,
         neg_samples=FLAGS.neg_sample_size,
-        # save_path="n2v_{}".format(datetime.date.today()),
         save_path=FLAGS.base_log_dir,
         learning_rate=FLAGS.learning_rate
     )
-
-    # freeze_context_indices = [199, 200, 399, 400]
-    # freeze_indices = None
-    # checkpoint_file = "n2v_2018-04-18/checkpoint-170"
 
     freeze_context_indices = None
     freeze_indices = None
