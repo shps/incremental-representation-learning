@@ -292,7 +292,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
   = {
     var path = Array(src)
 
-    for (_ <- 0 until walkLength) {
+    for (_ <- 1 until walkLength) {
 
       val curr = path.last
       val currNeighbors = gMap.get(curr) match {
@@ -325,7 +325,7 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
       return path
     }
 
-    for (_ <- 0 until walkLength) {
+    for (_ <- 2 until walkLength) {
 
       val curr = path.last
       val prev = path(path.length - 2)
