@@ -42,6 +42,9 @@ object Word2VecUtils {
             currentPairs ++= Seq((target, walk(i)))
           }
         }
+        if (currentPairs.isEmpty){
+          println(s"CurrentPairs is empty for target $target. Make it self-context.")
+        }
         var pairs = Seq.empty[(Int, Int)]
         pairs ++= Random.shuffle(currentPairs).take(numSkips)
 

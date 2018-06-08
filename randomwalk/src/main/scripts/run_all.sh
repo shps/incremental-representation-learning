@@ -1,6 +1,6 @@
 #!/bin/bash
 
-run_rw=false
+run_rw=true
 run_tc_gen=true
 run_w2v=true
 run_nc=true
@@ -8,7 +8,8 @@ run_nc=true
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
 METHODS=(m1)
@@ -22,7 +23,7 @@ WALK_LENGTH_ARR=(10)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
-DATASET=cora
+DATASET=wiki
 NUM_RUNS=5
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
@@ -63,8 +64,10 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
-LABEL_FILE=cora_labels.txt           # label file
+#LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
+#LABEL_FILE=cora_labels.txt           # label file
+LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
+LABEL_FILE=Wiki_category.txt           # label file
 #LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
 #LABEL_FILE=blog-labels.txt
 
@@ -411,7 +414,7 @@ do
 done
 
 
-mv ~/hooman/output/log4.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log2.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

@@ -82,7 +82,12 @@ case class FileManager(config: Params) {
     lines.flatMap { triplet =>
       val parts = triplet.split(config.delimiter)
 
-      Seq((parts.head.toInt, parts(1).toInt))
+      val src = parts.head.toInt
+      val dst = parts(1).toInt
+      if (src == dst) // remove self edges
+        Seq.empty[(Int, Int)]
+      else
+        Seq((src, dst))
     }.distinct
 
   }
@@ -100,9 +105,9 @@ case class FileManager(config: Params) {
 
   def convertDelimiter() = {
     println(s"Convert from del ${config.delimiter} to del ${config.delimiter2}")
-//    var d2 = config.delimiter2
-//    if (d2.contains("\\s+"))
-//      d2 = "\t"
+    //    var d2 = config.delimiter2
+    //    if (d2.contains("\\s+"))
+    //      d2 = "\t"
     val lines = Source.fromFile(config.input).getLines.toArray.par.map { triplet =>
       triplet.split(config.delimiter).mkString("\t")
     }
@@ -153,8 +158,12 @@ case class FileManager(config: Params) {
     val lines = Source.fromFile(config.input).getLines.toSeq.par
     val partitions = lines.flatMap { triplet =>
       val parts = triplet.split(config.delimiter)
-
-      Seq((parts.head.toInt, parts(1).toInt, parts(2).toInt))
+      val src = parts.head.toInt
+      val dst = parts(1).toInt
+      if (src == dst)
+        Seq.empty[(Int, Int, Int)]
+      else
+        Seq((src, dst, parts(2).toInt))
     }.groupBy(_._3).toSeq.map { case (year, tuple) =>
       (year, tuple.map(a => (a._1, a._2)).seq)
     }.seq.sortWith(_._1 < _._1)
