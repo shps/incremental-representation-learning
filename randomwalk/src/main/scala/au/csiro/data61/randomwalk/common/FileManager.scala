@@ -275,6 +275,36 @@ case class FileManager(config: Params) {
     paths
   }
 
+  def savePaths(paths: ParSeq[(Int, Int, Int, Seq[Int])], suffix: String) {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(paths.map { case (wVersion, firstIndex, isNew, path) =>
+      val pathString = s"$wVersion\t$firstIndex\t$isNew\t" + path.mkString("\t")
+      s"$pathString"
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  //  def savePaths(oldPaths: ParSeq[(Int, Int, Seq[Int])], deltaPaths: ParSeq[(Int, Int,
+  // Seq[Int])],
+  //                suffix: String) = {
+  //    config.output.toFile.createIfNotExists(true)
+  //    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+  //    val bw = new BufferedWriter(new FileWriter(file))
+  //    bw.write(oldPaths.map { case (wVersion, firstIndex, path) =>
+  //      val pathString = s"\t$wVersion\t$firstIndex\t0\t" + path.mkString("\t")
+  //      s"$pathString"
+  //    }.mkString("\n"))
+  //    bw.write(deltaPaths.map { case (wVersion, firstIndex, path) =>
+  //      val pathString = s"\t$wVersion\t$firstIndex\t1\t" + path.mkString("\t")
+  //      s"$pathString"
+  //    }.mkString("\n"))
+  //    bw.flush()
+  //    bw.close()
+  //  }
+
   def saveEdgeList(edges: Seq[(Int, (Int, Float))], suffix: String) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.rrType}-$suffix.txt")

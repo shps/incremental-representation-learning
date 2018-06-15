@@ -2,29 +2,29 @@
 
 run_rw=true
 run_tc_gen=true
-run_w2v=true
-run_nc=true
+run_w2v=false
+run_nc=false
 #run_cs=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
-#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m1)
+METHODS=(m1 m3 m4 m5)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=1.0
-NUM_WALKS_ARR=(80)
+INIT_EDGE_SIZE=0.15
+NUM_WALKS_ARR=(10)
 WALK_LENGTH_ARR=(10)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
-DATASET=wiki
-NUM_RUNS=5
+DATASET=cora
+NUM_RUNS=1
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
@@ -32,16 +32,16 @@ RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=0        # max number of steps to run the experiment
+MAX_STEPS=3       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
 TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
 WINDOW_SIZE=8
 SKIP_SIZE=8
-SELF_CONTEXT=false  # whether allows target == context pairs.
+SELF_CONTEXT=true  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
-FORCE_SKIP_SIZE=true                # Force to generate skipSize number of pairs
+FORCE_SKIP_SIZE=false                # Force to generate skipSize number of pairs
 
 TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE"
 
@@ -64,10 +64,10 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-#LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
-#LABEL_FILE=cora_labels.txt           # label file
-LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
-LABEL_FILE=Wiki_category.txt           # label file
+LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
+LABEL_FILE=cora_labels.txt           # label file
+#LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
+#LABEL_FILE=Wiki_category.txt           # label file
 #LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
 #LABEL_FILE=blog-labels.txt
 
@@ -414,7 +414,7 @@ do
 done
 
 
-mv ~/hooman/output/log2.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

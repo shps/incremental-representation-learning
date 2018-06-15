@@ -64,7 +64,8 @@ object Main {
         null
       case TaskName.gPairs =>
         println("Reading the walks...")
-        val walks = fm.readWalks().map { w => w.splitAt(2)._2 }
+        val WALK_INDEX = 3
+        val walks = fm.readWalks().map { w => w.splitAt(WALK_INDEX)._2 }
         println("Generating the pairs...")
         val pairs = Word2VecUtils.createPairs(walks, numSkips = params.w2vSkipSize, window =
           params.w2vWindow, params.selfContext, params.forceSkipSize)

@@ -1,5 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
+import java.util
+import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -37,6 +39,10 @@ object WalkStorage {
   def getPaths(): ParSeq[(Int, Int, Seq[Int])] = {
     //    walkMap.toMap.par.values.toSeq
     walkMap.values.toSeq.par
+  }
+
+  def getPathsWithIds(): ConcurrentHashMap[Int, (Int, Int, Seq[Int])] = {
+    return walkMap
   }
 
   def walkSize(): Int = {

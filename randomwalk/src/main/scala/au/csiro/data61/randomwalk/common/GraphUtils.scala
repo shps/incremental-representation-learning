@@ -77,13 +77,13 @@ object GraphUtils {
     }.toMap
   }
 
-  def computeEmpiricalTransitionProbabilities(walks: ParSeq[(Int, Int, Seq[Int])], possibleSteps: ParSet[
+  def computeEmpiricalTransitionProbabilities(walks: ParSeq[(Int, Int, Int, Seq[Int])], possibleSteps: ParSet[
     (Int, Int, Int)]): ParSeq[((Int, Int, Int), Double)] = {
     println("******* Starting Empirical Errors ********")
     val countMap = new ConcurrentHashMap[(Int, Int, Int), LongAdder]()
     val sumMap = new ConcurrentHashMap[(Int, Int), LongAdder]()
 
-    walks.foreach { case (_, _, w) =>
+    walks.foreach { case (_, _, _, w) =>
       for (i <- 0 until w.length - 2) {
         countMap.computeIfAbsent((w(i), w(i + 1), w(i + 2)), _ => new LongAdder()).increment()
         sumMap.computeIfAbsent((w(i), w(i + 1)), _ => new LongAdder()).increment()
@@ -102,7 +102,7 @@ object GraphUtils {
     return mProbs
   }
 
-  def computeErrorsMeanAndMax(walks: ParSeq[(Int, Int, Seq[Int])], config: Params): (Double, Double) = {
+  def computeErrorsMeanAndMax(walks: ParSeq[(Int, Int, Int, Seq[Int])], config: Params): (Double, Double) = {
 
     println("******* Starting Computing Errors ********")
     val errors = computeErrors(walks, config)
@@ -114,7 +114,7 @@ object GraphUtils {
     (mean, max)
   }
 
-  def computeErrors(walks: ParSeq[(Int, Int, Seq[Int])], config: Params): ParSeq[Double] = {
+  def computeErrors(walks: ParSeq[(Int, Int, Int, Seq[Int])], config: Params): ParSeq[Double] = {
     val tProbs = computeSecondOrderProbsWithNoId(config)
 
     val mProbs = computeEmpiricalTransitionProbabilities(walks, tProbs.keySet)
