@@ -211,7 +211,7 @@ case class StreamingExperiment(config: Params) {
         val ns = computeNumSteps(init)
         val nw = init.length
 
-        (p.map { case (_, w) => (w._1, w._2, 0, w._3) }, ns, nw, tTime)
+        (p.map { case (_, w) => (w._1, w._2, 1, w._3) }, ns, nw, tTime)
       }
       //      case RrType.m2 => {
       //        val sTime = System.currentTimeMillis()

@@ -13,10 +13,11 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1528789427"
+  val DIR = "summary" + "1529068336"
   val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
   val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
+  val G0_SCORE_FILE = "g0-score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"
   val RW_TIME_FILE = "rw-time-summary.csv"
   val RW_STEP = "rw-step-summary.csv"
@@ -158,10 +159,10 @@ object SummaryParser {
   }
 
   def saveScores(scoresStats: Seq[((String, Int, Int, Int, Int), (Float, Float, Float, Float, Float,
-    Float, Float, Float))]): Unit = {
+    Float, Float, Float))], fname:String): Unit = {
 
     OUTPUT_DIR.toFile.createIfNotExists(true)
-    val file = new File(s"${OUTPUT_DIR}/scores.csv")
+    val file = new File(s"${OUTPUT_DIR}/$fname.csv")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write("method\tnw\twl\tstep\tepoch\tx_axis\ttrain_acc\ttrain_acc_std\ttrain_f1" +
       "\ttrain_f1_std" +
@@ -217,7 +218,13 @@ object SummaryParser {
       val scores = readScoresSummary(scoreFile)
       val scoresStats = computeScoresStats(scores).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4,
         r._1._5))
-      saveScores(scoresStats)
+      saveScores(scoresStats, "scores")
+
+      val g0ScoreFile = s"$SUMMARY_DIR/$G0_SCORE_FILE"
+      val g0Scores = readScoresSummary(g0ScoreFile)
+      val g0ScoresStats = computeScoresStats(g0Scores).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4,
+        r._1._5))
+      saveScores(g0ScoresStats, "g0-scores")
     }
 
     val epochFile = s"$SUMMARY_DIR/$EPOCH_TIME"

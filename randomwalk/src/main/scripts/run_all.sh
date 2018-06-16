@@ -1,38 +1,39 @@
 #!/bin/bash
 
-run_rw=true
+run_rw=false
 run_tc_gen=true
-run_w2v=false
-run_nc=false
+run_w2v=true
+run_nc=true
 #run_cs=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
-#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m1 m3 m4 m5)
+METHODS=(m5)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.15
-NUM_WALKS_ARR=(10)
+INIT_EDGE_SIZE=0.1
+NUM_WALKS_ARR=(80)
 WALK_LENGTH_ARR=(10)
-P=0.25
-Q=0.25
+P=1.0
+Q=1.0
 STREAM_SIZE=0.01
-DATASET=cora
-NUM_RUNS=1
+#DATASET=cora
+DATASET=wiki
+NUM_RUNS=3
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
-LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=3       # max number of steps to run the experiment
+LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
+MAX_STEPS=10       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 
 # target-context generator configs
@@ -42,14 +43,16 @@ SKIP_SIZE=8
 SELF_CONTEXT=true  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
 FORCE_SKIP_SIZE=false                # Force to generate skipSize number of pairs
+ALL_WALKS=false                      # Whether to consider all old walks and new walks of walks to generate sample from. If false it considers only a percentage of the old walks.
+O=0.2                               # Percentage of new walks to draw from old walks.
 
-TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE"
+TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE-aw$ALL_WALKS-o$O"
 
 
 # N2V parameters
-FREEZE_AFV=false              # Freeze affected vertices or not?
+FREEZE_AFV=false              # Freeze non-affected vertices or not?
 FREEZE_AFV_FOR_M1=false
-USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
+USE_CHECKPOINT=true       # whether to use checkpoints or to restart training.
 NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
 LEARNING_RATE=0.025
@@ -64,10 +67,10 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
-LABEL_FILE=cora_labels.txt           # label file
-#LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
-#LABEL_FILE=Wiki_category.txt           # label file
+#LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
+#LABEL_FILE=cora_labels.txt           # label file
+LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
+LABEL_FILE=Wiki_category.txt           # label file
 #LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
 #LABEL_FILE=blog-labels.txt
 
@@ -154,7 +157,8 @@ if [ "$run_tc_gen" = true ] ; then
 
                         java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                             --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
-                            --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE
+                            --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE \
+                            --allWalks $ALL_WALKS --o $O
 
                         mv "$OUTPUT_DIR$PAIR_FILE.txt" "$OUTPUT_DIR$PAIR_FILE-$EXPERIMENT_TYPE.txt"
                         mv "$OUTPUT_DIR$VOCAB_FILE.txt" "$OUTPUT_DIR$VOCAB_FILE-$EXPERIMENT_TYPE.txt"
@@ -264,14 +268,15 @@ if [ "$run_nc" = true ] ; then
 
                             CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                             SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
+                            G0_SUFFIX="$METHOD_TYPE-$CONFIG-0-0"
                             DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
                             BASE_LOG_DIR="/home/ubuntu/hooman/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                             INPUT_DIR="/home/ubuntu/hooman/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
                             DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
                             DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
-
+                            G0_DEGREES_FILE="degrees-$G0_SUFFIX.txt"
                             EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name
-                            COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
+                            COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --init_degrees_file $G0_DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
 
                             echo $COMMAND
 
@@ -289,6 +294,7 @@ deactivate
 # collect results
 echo "************ Collecting results ************"
 SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
+SUMMARY_G0_SCORE_FILE="$SUMMARY_DIR/g0-score-summary.csv"
 SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
 SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
 SUMMARY_RW_WALK="$SUMMARY_DIR/rw-walk-summary.csv"
@@ -298,6 +304,7 @@ SUMMARY_MEAN_ERROR="$SUMMARY_DIR/rw-mean-error-summary.csv"
 
 if [ "$run_nc" = true ] ; then
     echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_SCORE_FILE
+    echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_G0_SCORE_FILE
 fi
 
 if [ "$run_w2v" = true ] ; then
@@ -315,8 +322,10 @@ if [ "$run_rw" = true ] ; then
     echo -e "$HEADER" >> $SUMMARY_RW_TIME
     echo -e "$HEADER" >> $SUMMARY_RW_WALK
     echo -e "$HEADER" >> $SUMMARY_RW_STEP
-    echo -e "$HEADER" >> $SUMMARY_MAX_ERROR
-    echo -e "$HEADER" >> $SUMMARY_MEAN_ERROR
+    if [ "$LOG_ERRORS" = true ] ; then
+        echo -e "$HEADER" >> $SUMMARY_MAX_ERROR
+        echo -e "$HEADER" >> $SUMMARY_MEAN_ERROR
+    fi
 
 fi
 
@@ -354,8 +363,12 @@ do
                                 SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                                 SCORE=$(<$SCORE_FILE)
                                 SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
-
                                 echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
+
+                                G0_SCORE_FILE="$SCORE_INPUT_DIR/g0-scores$EPOCH.txt"
+                                G0_SCORE=$(<$G0_SCORE_FILE)
+                                G0_SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$G0_SCORE"
+                                echo "$G0_SUMMARY" >> $SUMMARY_G0_SCORE_FILE
                             fi
 
                             if [ "$run_w2v" = true ]; then
@@ -414,7 +427,7 @@ do
 done
 
 
-mv ~/hooman/output/log.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log5.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

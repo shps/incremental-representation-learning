@@ -49,6 +49,8 @@ object CommandParser {
   val GROUPED = "grouped"
   val SELF_CONTEXT = "selfContext"
   val FORCE_SKIP_SIZE = "forceSkipSize"
+  val ALL_WALKS = "allWalks"
+  val O= "o"
   val DELIMITER2 = "d2"
 
   private lazy val defaultParams = Params()
@@ -114,6 +116,12 @@ object CommandParser {
     opt[Boolean](FORCE_SKIP_SIZE)
       .text(s"Force to generate pairs equal to skipSize: ${defaultParams.forceSkipSize}")
       .action((x, c) => c.copy(forceSkipSize = x))
+    opt[Boolean](ALL_WALKS)
+      .text(s"Include all walks to generate sample pairs: ${defaultParams.allWalks}")
+      .action((x, c) => c.copy(allWalks = x))
+    opt[Double](O)
+      .text(s"Percentage of new walks to draw from old walks: ${defaultParams.O}")
+      .action((x, c) => c.copy(O = x.toFloat))
     opt[String](INPUT)
       .required()
       .text("Input edge file path: empty")

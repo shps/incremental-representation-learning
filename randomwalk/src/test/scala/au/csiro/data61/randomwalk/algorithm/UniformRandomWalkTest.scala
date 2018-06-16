@@ -41,92 +41,92 @@ class UniformRandomWalkTest extends org.scalatest.FunSuite with BeforeAndAfter {
     assert(GraphMap.getNumVertices == 34)
   }
 
-  test("remove vertex") {
-    val config = Params(input = karate, directed = false)
-    val rw = UniformRandomWalk(config)
-    val before = FileManager(config).readFromFile(config.directed)
-    for (target <- 1 until 34) {
-      rw.buildGraphMap(before.seq)
-      val neighbors = GraphMap.getNeighbors(target)
-      val nDegrees = new mutable.HashMap[Int, Int]()
-      for (n <- neighbors) {
-        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
-      }
+//  test("remove vertex") {
+//    val config = Params(input = karate, directed = false)
+//    val rw = UniformRandomWalk(config)
+//    val before = FileManager(config).readFromFile(config.directed)
+//    for (target <- 1 until 34) {
+//      rw.buildGraphMap(before.seq)
+//      val neighbors = GraphMap.getNeighbors(target)
+//      val nDegrees = new mutable.HashMap[Int, Int]()
+//      for (n <- neighbors) {
+//        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
+//      }
+//
+//      val after = Experiments(config).removeVertex(before, target)
+//      assert(after.length == 33)
+//      assert(after.filter(_._1 == target).length == 0)
+//      rw.buildGraphMap(after.seq)
+//      for (n <- neighbors) {
+//        val dstNeighbors = GraphMap.getNeighbors(n._1)
+//        assert(!dstNeighbors.map(_._1).contains(target))
+//        val newDegree = dstNeighbors.size
+//        nDegrees.get(n._1) match {
+//          case Some(d) => assert(d - 1 == newDegree)
+//          case None => assert(false)
+//        }
+//
+//      }
+//    }
+//  }
 
-      val after = Experiments(config).removeVertex(before, target)
-      assert(after.length == 33)
-      assert(after.filter(_._1 == target).length == 0)
-      rw.buildGraphMap(after.seq)
-      for (n <- neighbors) {
-        val dstNeighbors = GraphMap.getNeighbors(n._1)
-        assert(!dstNeighbors.map(_._1).contains(target))
-        val newDegree = dstNeighbors.size
-        nDegrees.get(n._1) match {
-          case Some(d) => assert(d - 1 == newDegree)
-          case None => assert(false)
-        }
+//  test("graph map load after removal") {
+//    val config = Params(input = karate, directed = false)
+//    val rw = UniformRandomWalk(config)
+//    val exp = Experiments(config)
+//    val before = FileManager(config).readFromFile(config.directed)
+//    for (target <- 1 until 34) {
+//      rw.buildGraphMap(before.seq)
+//      val neighbors = GraphMap.getNeighbors(target)
+//      val nDegrees = new mutable.HashMap[Int, Int]()
+//      for (n <- neighbors) {
+//        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
+//      }
+//
+//      val after = exp.removeVertex(before, target)
+//      rw.buildGraphMap(before.seq)
+//      val neighbors2 = GraphMap.getNeighbors(target)
+//      val nDegrees2 = new mutable.HashMap[Int, Int]()
+//      for (n <- neighbors2) {
+//        nDegrees2.put(n._1, GraphMap.getNeighbors(n._1).size)
+//      }
+//      assert(neighbors2 sameElements neighbors)
+//      assert(nDegrees2 sameElements nDegrees)
+//    }
+//  }
 
-      }
-    }
-  }
+//  test("filter affected paths") {
+//    val p1 = Seq(1, 2, 1, 2)
+//    val p2 = Seq(3, 4, 3, 4)
+//    val p3 = Seq(5, 6, 5, 6)
+//    val afs = mutable.Set(1, 5, 6)
+//    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3))
+//    val config = Params()
+//    val rw = Experiments(config)
+//    val result = rw.filterAffectedPaths(pRdd, afs)
+//    assert(result.size == 2)
+//    assert(result(0)._3 sameElements p1)
+//    assert(result(1)._3 sameElements p3)
+//  }
 
-  test("graph map load after removal") {
-    val config = Params(input = karate, directed = false)
-    val rw = UniformRandomWalk(config)
-    val exp = Experiments(config)
-    val before = FileManager(config).readFromFile(config.directed)
-    for (target <- 1 until 34) {
-      rw.buildGraphMap(before.seq)
-      val neighbors = GraphMap.getNeighbors(target)
-      val nDegrees = new mutable.HashMap[Int, Int]()
-      for (n <- neighbors) {
-        nDegrees.put(n._1, GraphMap.getNeighbors(n._1).size)
-      }
-
-      val after = exp.removeVertex(before, target)
-      rw.buildGraphMap(before.seq)
-      val neighbors2 = GraphMap.getNeighbors(target)
-      val nDegrees2 = new mutable.HashMap[Int, Int]()
-      for (n <- neighbors2) {
-        nDegrees2.put(n._1, GraphMap.getNeighbors(n._1).size)
-      }
-      assert(neighbors2 sameElements neighbors)
-      assert(nDegrees2 sameElements nDegrees)
-    }
-  }
-
-  test("filter affected paths") {
-    val p1 = Seq(1, 2, 1, 2)
-    val p2 = Seq(3, 4, 3, 4)
-    val p3 = Seq(5, 6, 5, 6)
-    val afs = mutable.Set(1, 5, 6)
-    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3))
-    val config = Params()
-    val rw = Experiments(config)
-    val result = rw.filterAffectedPaths(pRdd, afs)
-    assert(result.size == 2)
-    assert(result(0)._3 sameElements p1)
-    assert(result(1)._3 sameElements p3)
-  }
-
-  test("filter split paths") {
-    val p1 = Seq(1, 2, 3, 4)
-    val p2 = Seq(3, 4, 3, 4)
-    val p3 = Seq(4, 6, 5, 6)
-    val p4 = Seq(4, 3, 5, 6)
-    val afs = mutable.Set(1, 5, 6)
-    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3), (1, 1, p4))
-    val config = Params()
-    val rw = Experiments(config)
-    val result = rw.filterSplitPaths(pRdd, afs)
-    assert(result.size == 3)
-    val vertices = result.map(_._1)
-    assert(vertices sameElements Array(1, 4, 4))
-    val paths = result.map(_._2)
-    assert(paths(0)._3 sameElements Array(1))
-    assert(paths(1)._3 sameElements Array(4, 6))
-    assert(paths(2)._3 sameElements Array(4, 3, 5))
-  }
+//  test("filter split paths") {
+//    val p1 = Seq(1, 2, 3, 4)
+//    val p2 = Seq(3, 4, 3, 4)
+//    val p3 = Seq(4, 6, 5, 6)
+//    val p4 = Seq(4, 3, 5, 6)
+//    val afs = mutable.Set(1, 5, 6)
+//    val pRdd = ParSeq((1, 1, p1), (1, 1, p2), (1, 1, p3), (1, 1, p4))
+//    val config = Params()
+//    val rw = Experiments(config)
+//    val result = rw.filterSplitPaths(pRdd, afs)
+//    assert(result.size == 3)
+//    val vertices = result.map(_._1)
+//    assert(vertices sameElements Array(1, 4, 4))
+//    val paths = result.map(_._2)
+//    assert(paths(0)._3 sameElements Array(1))
+//    assert(paths(1)._3 sameElements Array(4, 6))
+//    assert(paths(2)._3 sameElements Array(4, 3, 5))
+//  }
 
   test("init walker") {
     val config = Params(numWalks = 5)
