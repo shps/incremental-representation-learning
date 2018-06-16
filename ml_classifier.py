@@ -21,6 +21,8 @@ flags.DEFINE_string('input_dir', '.', 'Input data directory.')
 flags.DEFINE_string('emb_file', None, 'Input label file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
+flags.DEFINE_string('init_degrees_file', None,
+                    'Input node degrees file name of the initial graph (G0)')
 flags.DEFINE_string('label_dir', None, 'Input label file directory.')
 flags.DEFINE_string('degrees_dir', None, 'Input node degrees file directory.')
 flags.DEFINE_integer('output_index', 0, 'Output file suffix.')
@@ -45,6 +47,7 @@ def eval_classification(labels, embeddings, use_ml_splitter=False):
     if len(labels.shape) > 1 and labels.shape[1] > 1:
         print("Perforrming multi-label classification")
         shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.6)
+
         # shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
         class MLSplitter:
@@ -104,7 +107,7 @@ def load_labels(label_filename, vocab_size):
                            .format(label_filename))
     # Single label
     elif max_labels == 1:
-        labels = np.zeros(vocab_size, dtype=np.int32)
+        labels = np.full(vocab_size, np.nan, dtype=np.int32)
         for (index, label) in six.iteritems(raw_labels):
             labels[index + FLAGS.force_offset] = label[0]
         return raw_labels, labels
@@ -131,7 +134,7 @@ def read_existing_vocab(degree_file):
     return vocabs
 
 
-def save_scores(scores):
+def save_scores(scores, prefix):
     if not os.path.exists(os.path.dirname(FLAGS.base_log_dir + "/")):
         try:
             os.makedirs(os.path.dirname(FLAGS.base_log_dir + "/"))
@@ -139,7 +142,7 @@ def save_scores(scores):
             if exc.errno != errno.EEXIST:
                 raise
 
-    with open(os.path.join(FLAGS.base_log_dir, "scores{}.txt".format(FLAGS.output_index)),
+    with open(os.path.join(FLAGS.base_log_dir, prefix + "{}.txt".format(FLAGS.output_index)),
               "a") as f:
         f.write("{:0.4f}, {:0.4f}, {:0.4f}, {:0.4f}\n"
                 .format(scores["train_acc"], scores["train_f1"], scores["test_acc"],
@@ -172,4 +175,12 @@ if __name__ == "__main__":
     #     print("All keys exist in the labels file.")
     print("Existing vocab size: {}".format(len(existing_vocab)))
     evals = eval_classification(all_labels[existing_vocab], all_embeddings[existing_vocab])
-    save_scores(evals)
+    save_scores(evals, "scores")
+
+    if FLAGS.init_degrees_file is not None:
+        init_graph_vocabs = read_existing_vocab(
+            os.path.join(FLAGS.degrees_dir, FLAGS.init_degrees_file))
+        print("Init graph vocab size: {}".format(len(init_graph_vocabs)))
+        init_evals = eval_classification(all_labels[init_graph_vocabs],
+                                         all_embeddings[init_graph_vocabs])
+        save_scores(init_evals, "g0-scores")
