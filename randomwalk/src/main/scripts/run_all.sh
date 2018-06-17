@@ -1,6 +1,6 @@
 #!/bin/bash
 
-run_rw=false
+run_rw=true
 run_tc_gen=true
 run_w2v=true
 run_nc=true
@@ -12,7 +12,7 @@ RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m5)
+METHODS=(m3)
 
 
 # Random walk configs
@@ -20,8 +20,8 @@ METHODS=(m5)
 INIT_EDGE_SIZE=0.1
 NUM_WALKS_ARR=(80)
 WALK_LENGTH_ARR=(10)
-P=1.0
-Q=1.0
+P=0.25
+Q=0.25
 STREAM_SIZE=0.01
 #DATASET=cora
 DATASET=wiki
@@ -43,7 +43,7 @@ SKIP_SIZE=8
 SELF_CONTEXT=true  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
 FORCE_SKIP_SIZE=false                # Force to generate skipSize number of pairs
-ALL_WALKS=false                      # Whether to consider all old walks and new walks of walks to generate sample from. If false it considers only a percentage of the old walks.
+ALL_WALKS=true                      # Whether to consider all old walks and new walks of walks to generate sample from. If false it considers only a percentage of the old walks.
 O=0.2                               # Percentage of new walks to draw from old walks.
 
 TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE-aw$ALL_WALKS-o$O"
@@ -427,7 +427,7 @@ do
 done
 
 
-mv ~/hooman/output/log5.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log6.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

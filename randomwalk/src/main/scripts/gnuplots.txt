@@ -109,18 +109,22 @@ set style line 1 lt 2 lw 1 pt 1 ps 0.25 linecolor rgb "red"
 set style line 2 lt 2 lw 1 pt 4 ps 0.25 linecolor rgb "green"
 set style line 3 lt 2 lw 1 pt 3 ps 0.25 linecolor rgb "black"
 set style line 4 lt 2 lw 1 pt 5 ps 0.25 linecolor rgb "blue"
-set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
-set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+set style line 5 lt 2 lw 1 pt 6 ps 0.25 linecolor rgb "brown"
+set style line 6 lt 2 lw 1 pt 7 ps 0.25 linecolor rgb "yellow"
+set style line 7 lt 2 lw 1 pt 6 ps 0.25 linecolor rgb "gray"
+set style line 8 lt 2 lw 1 pt 7 ps 0.25 linecolor rgb "pink"
 
 set size ratio 0.5 # y/x
 
-plot f1 every 10::10::110 using 13 with linespoints ls 1 t "M1", f1 every 10::10::110 using 13:14 with errorbars ls 1 not, f1 every 10::120::220 using 13 with linespoints ls 2 t "M3", f1 every 10::120::220 using 13:14 with errorbars ls 2 not, f1 every 10::230::330 using 13 with linespoints ls 3 t "M4", f1 every 10::230::330 using 13:14 with errorbars ls 3 not, f1 every 10::340::440 using 13 with linespoints ls 4 t "M5", f1 every 10::340::440 using 13:14 with errorbars ls 4 not
+plot f1 every 10::10::110 using 13 with linespoints ls 1 t "M1", f1 every 10::10::110 using 13:14 with errorbars ls 1 not, f1 every 10::120::220 using 13 with linespoints ls 2 t "M3", f1 every 10::120::220 using 13:14 with errorbars ls 2 not, f1 every 10::230::330 using 13 with linespoints ls 3 t "M4", f1 every 10::230::330 using 13:14 with errorbars ls 3 not, f1 every 10::340::440 using 13 with linespoints ls 4 t "M5", f1 every 10::340::440 using 13:14 with errorbars ls 4 not, f1 every 10::450::550 using 13 with linespoints ls 5 t "M3 O=0.2", f1 every 10::450::550 using 13:14 with errorbars ls 5 not, f1 every 10::560::660 using 13 with linespoints ls 6 t "M4 O=0.2", f1 every 10::560::660 using 13:14 with errorbars ls 6 not, f1 every 10::670::770 using 13 with linespoints ls 7 t "M5 O=0.2", f1 every 10::670::770 using 13:14 with errorbars ls 7 not, f1 every 10::780::880 using 13 with linespoints ls 8 t "M3 p,q=0.25", f1 every 10::780::880 using 13:14 with errorbars ls 8 not
 
+#plot f1 every ::1::110 using 13 with linespoints ls 1 t "M1", f1 every ::1::110 using 13:14 with errorbars ls 1 not, f1 every ::111::220 using 13 with linespoints ls 2 t "M3", f1 every ::111::220 using 13:14 with errorbars ls 2 not, f1 every ::221::330 using 13 with linespoints ls 3 t "M4", f1 every ::221::330 using 13:14 with errorbars ls 3 not, f1 every ::331::440 using 13 with linespoints ls 4 t "M5", f1 every ::331::440 using 13:14 with errorbars ls 4 not, f1 every ::441::550 using 13 with linespoints ls 5 t "M3 O=0.2", f1 every ::441::550 using 13:14 with errorbars ls 5 not, f1 every ::551::660 using 13 with linespoints ls 6 t "M4 O=0.2", f1 every ::551::660 using 13:14 with errorbars ls 6 not, f1 every ::661::770 using 13 with linespoints ls 7 t "M5 O=0.2", f1 every ::661::770 using 13:14 with errorbars ls 7 not, f1 every ::771::880 using 13 with linespoints ls 8 t "M3 p,q=0.25", f1 every ::771::880 using 13:14 with errorbars ls 8 not
 
 set output
 
-#plot f1 every ::1::110 using 13 with linespoints ls 1 t "M1", f1 every ::1::110 using 13:14 with errorbars ls 1 not, f1 every ::111::220 using 13 with linespoints ls 2 t "M3", f1 every ::111::220 using 13:14 with errorbars ls 2 not, f1 every ::221::330 using 13 with linespoints ls 3 t "M4", f1 every ::221::330 using 13:14 with errorbars ls 3 not, f1 every ::331::440 using 13 with linespoints ls 4 t "M5", f1 every ::331::440 using 13:14 with errorbars ls 4 not
 
+
+#
 
 ################ Number of walks
 reset
