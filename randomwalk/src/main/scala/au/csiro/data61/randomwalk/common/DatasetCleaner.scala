@@ -2,6 +2,7 @@ package au.csiro.data61.randomwalk.common
 
 import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
 
+import scala.collection.mutable
 import scala.collection.parallel.ParSeq
 
 
@@ -32,7 +33,7 @@ object DatasetCleaner {
     if (deduplicated.size != edges.size) {
       val duplicates = edges.groupBy(identity).filter(_._2.length > 1).map(_._1)
       println(s"Number of duplicates: ${duplicates.size}")
-      println(s"${duplicates.map{case (s, d) => s"$s\t$d"}.mkString("\n")}")
+      println(s"${duplicates.map { case (s, d) => s"$s\t$d" }.mkString("\n")}")
     }
     checkRedundantEdges(edges, config)
     val vertices = edges.flatMap { case e => Seq(e._1, e._2) }.distinct.seq.sortWith(_ < _)
@@ -109,6 +110,32 @@ object DatasetCleaner {
 
   def convertDelimiter(config: Params): Unit = {
 
+  }
+
+  def dfs(v: Int, vertices: mutable.Map[Int, Boolean]): Unit = {
+    vertices(v) = true
+
+    val neighbors = GraphMap.getNeighbors(v).toIterator
+    while (neighbors.hasNext) {
+      val next = neighbors.next()._1
+      if (!vertices(next)) {
+        dfs(next, vertices)
+      }
+    }
+  }
+
+  def countNumberOfSCCs(config: Params): Int = {
+    UniformRandomWalk(config).loadGraph()
+    val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
+    var components = 0
+    for (v <- vertices.keys) {
+      if (!vertices(v)) {
+        components += 1
+        dfs(v, vertices)
+      }
+    }
+
+    return components
   }
 
 }
