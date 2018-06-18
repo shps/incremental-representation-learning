@@ -112,30 +112,61 @@ object DatasetCleaner {
 
   }
 
-  def dfs(v: Int, vertices: mutable.Map[Int, Boolean]): Unit = {
+  def dfs(v: Int, vertices: mutable.Map[Int, Boolean]): Seq[Int] = {
     vertices(v) = true
-
+    var compVertices = Seq(v)
     val neighbors = GraphMap.getNeighbors(v).toIterator
     while (neighbors.hasNext) {
       val next = neighbors.next()._1
       if (!vertices(next)) {
-        dfs(next, vertices)
+        compVertices ++= dfs(next, vertices)
       }
     }
+    compVertices
   }
 
-  def countNumberOfSCCs(config: Params): Int = {
-    UniformRandomWalk(config).loadGraph()
+  def countNumberOfSCCs(): Int = {
     val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
     var components = 0
     for (v <- vertices.keys) {
       if (!vertices(v)) {
         components += 1
-        dfs(v, vertices)
+        val compSize = dfs(v, vertices)
+        println(s"Component $components\tsize: ${compSize.size}")
       }
     }
 
     return components
+  }
+
+  def getBiggestScc(): Seq[Int] = {
+    val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
+    var components = 0
+    var comps = Seq.empty[Seq[Int]]
+    for (v <- vertices.keys) {
+      if (!vertices(v)) {
+        components += 1
+        val comp = dfs(v, vertices)
+        println(s"Component $components\tsize: ${comp.size}")
+        comps ++= Seq(comp)
+      }
+    }
+
+    var nVertices = 0
+    for (c <- comps) {
+      nVertices += c.size
+    }
+    assert(nVertices == GraphMap.getNumVertices)
+    var max = 0
+    var maxSize = comps(0).size
+    for (i <- 1 until comps.length) {
+      if (comps(i).size > maxSize) {
+        max = i
+        maxSize = comps(i).size
+      }
+    }
+
+    return comps(0)
   }
 
 }

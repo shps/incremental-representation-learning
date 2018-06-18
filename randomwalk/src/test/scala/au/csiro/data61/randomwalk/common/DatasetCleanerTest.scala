@@ -2,7 +2,7 @@ package au.csiro.data61.randomwalk.common
 
 import java.time.Instant
 
-import au.csiro.data61.randomwalk.algorithm.GraphMap
+import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
 import org.scalatest.FunSuite
 
 
@@ -42,20 +42,32 @@ class DatasetCleanerTest extends FunSuite {
   test("SCCs") {
     var fName = dataset + "cora_edgelist.txt"
     var config = Params(input = fName, delimiter = "\\s+", directed = false)
-    var components = DatasetCleaner.countNumberOfSCCs(config)
-    println(s"Number of SSCs in Cora: $components")
+    UniformRandomWalk(config).loadGraph()
+    var components = DatasetCleaner.countNumberOfSCCs()
+    println(s"Number of SSCs in Cora: ${components}")
 
     GraphMap.reset
     fName = dataset + "Wiki_edgelist.txt"
     config = Params(input = fName, delimiter = "\\s+", directed = false)
-    components = DatasetCleaner.countNumberOfSCCs(config)
+    UniformRandomWalk(config).loadGraph()
+    components = DatasetCleaner.countNumberOfSCCs()
     println(s"Number of SSCs in Wiki: $components")
 
     GraphMap.reset
     fName = dataset + "edges.txt"
     config = Params(input = fName, delimiter = ",", directed = false)
-    components = DatasetCleaner.countNumberOfSCCs(config)
+    UniformRandomWalk(config).loadGraph()
+    components = DatasetCleaner.countNumberOfSCCs()
     println(s"Number of SSCs in BlogCatalog: $components")
   }
 
+  test("Biggest Scc") {
+    var fName = dataset + "cora_edgelist.txt"
+    var config = Params(input = fName, delimiter = "\\s+", directed = false)
+    UniformRandomWalk(config).loadGraph()
+    var components = DatasetCleaner.getBiggestScc()
+    println(s"Biggest SSC in Cora: ${components.size}")
+
+
+  }
 }

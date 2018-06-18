@@ -193,6 +193,10 @@ case class StreamingExperiment(config: Params) {
       }
     }
 
+    if (config.countSccs) {
+        DatasetCleaner.countNumberOfSCCs()
+    }
+
     return afs
   }
 

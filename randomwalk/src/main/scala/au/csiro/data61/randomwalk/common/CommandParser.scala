@@ -50,6 +50,7 @@ object CommandParser {
   val SELF_CONTEXT = "selfContext"
   val FORCE_SKIP_SIZE = "forceSkipSize"
   val ALL_WALKS = "allWalks"
+  val COUNT_NUM_SCC = "countScc"
   val O= "o"
   val DELIMITER2 = "d2"
 
@@ -116,6 +117,9 @@ object CommandParser {
     opt[Boolean](FORCE_SKIP_SIZE)
       .text(s"Force to generate pairs equal to skipSize: ${defaultParams.forceSkipSize}")
       .action((x, c) => c.copy(forceSkipSize = x))
+    opt[Boolean](COUNT_NUM_SCC)
+      .text(s"Count number of strongly connected components: ${defaultParams.countSccs}")
+      .action((x, c) => c.copy(countSccs = x))
     opt[Boolean](ALL_WALKS)
       .text(s"Include all walks to generate sample pairs: ${defaultParams.allWalks}")
       .action((x, c) => c.copy(allWalks = x))

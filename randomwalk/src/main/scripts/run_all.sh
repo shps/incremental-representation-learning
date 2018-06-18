@@ -1,40 +1,41 @@
 #!/bin/bash
 
 run_rw=true
-run_tc_gen=true
-run_w2v=true
-run_nc=true
+run_tc_gen=false
+run_w2v=false
+run_nc=false
 #run_cs=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
-#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
-METHODS=(m3)
+METHODS=(m1)
 
 
 # Random walk configs
 
 INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(80)
-WALK_LENGTH_ARR=(10)
+NUM_WALKS_ARR=(1)
+WALK_LENGTH_ARR=(1)
 P=0.25
 Q=0.25
 STREAM_SIZE=0.01
 #DATASET=cora
 DATASET=wiki
-NUM_RUNS=3
+NUM_RUNS=1
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
-RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
-#RW_DELIMITER=","
+#RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
+RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
 MAX_STEPS=10       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
+COUNT_NUM_SCC=true
 
 # target-context generator configs
 TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
@@ -75,7 +76,7 @@ LABEL_FILE=Wiki_category.txt           # label file
 #LABEL_FILE=blog-labels.txt
 
 
-RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS"
+RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS-cnscc$COUNT_NUM_SCC"
 W2V_CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA-uc$USE_CHECKPOINT-ffm1$FREEZE_AFV_FOR_M1"
 
 SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all.sh
@@ -109,7 +110,7 @@ if [ "$run_rw" = true ] ; then
                     --input $INPUT_EDGE_LIST --output $OUTPUT_DIR --nRuns $NUM_RUNS --directed $DIRECTED --p $P \
                     --q $Q --seed $SEED --d "$RW_DELIMITER" --rrType $METHOD_TYPE --wType $WALK_TYPE --save $LOG_PERIOD \
                     --logErrors $LOG_ERRORS --initEdgeSize $INIT_EDGE_SIZE --edgeStreamSize $STREAM_SIZE \
-                    --maxSteps $MAX_STEPS --grouped $GROUPED
+                    --maxSteps $MAX_STEPS --grouped $GROUPED --countScc $COUNT_NUM_SCC
 
             done
         done
@@ -427,7 +428,7 @@ do
 done
 
 
-mv ~/hooman/output/log6.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log11.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"
