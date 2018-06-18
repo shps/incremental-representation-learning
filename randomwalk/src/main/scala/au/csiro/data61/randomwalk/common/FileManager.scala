@@ -33,6 +33,15 @@ case class FileManager(config: Params) {
     }
   }
 
+  def readLabels(fname: String): ParSeq[(Int, Int)] = {
+    val lines = Source.fromFile(fname).getLines.toArray.par
+
+    lines.map { triplet =>
+      val split = triplet.split(config.delimiter)
+      (split(0).toInt, split(1).toInt)
+    }
+  }
+
 
   def readFromFile(directed: Boolean): ParSeq[(Int, mutable.Set[(Int, Float)])] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
@@ -311,6 +320,28 @@ case class FileManager(config: Params) {
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(edges.map { case (edge) =>
       s"${edge._1}\t${edge._2._1}"
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveEdgeList(edges: Set[(Int, Int)], suffix: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(edges.map { case (edge) =>
+      s"${edge._1}\t${edge._2}"
+    }.mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveLabels(labels: Set[(Int, Int)], suffix: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(labels.map { case (label) =>
+      s"${label._1}\t${label._2}"
     }.mkString("\n"))
     bw.flush()
     bw.close()
