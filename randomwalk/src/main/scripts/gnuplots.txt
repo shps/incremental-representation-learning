@@ -94,10 +94,10 @@ set output
 reset
 
 set terminal pdf
-set output "./wiki_methods_g0_scores.pdf"
+set output "./g0-scores-cora1.pdf"
 set ylabel "F1-score"
 set xlabel "Time step"
-f1="./g0-scores.csv"
+f1="./g0-scores-cora1.csv"
 set datafile separator ","
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
@@ -118,7 +118,9 @@ set size ratio 0.5 # y/x
 
 plot f1 every 10::10::110 using 13 with linespoints ls 1 t "M1", f1 every 10::10::110 using 13:14 with errorbars ls 1 not, f1 every 10::120::220 using 13 with linespoints ls 2 t "M3", f1 every 10::120::220 using 13:14 with errorbars ls 2 not, f1 every 10::230::330 using 13 with linespoints ls 3 t "M4", f1 every 10::230::330 using 13:14 with errorbars ls 3 not, f1 every 10::340::440 using 13 with linespoints ls 4 t "M5", f1 every 10::340::440 using 13:14 with errorbars ls 4 not, f1 every 10::450::550 using 13 with linespoints ls 5 t "M3 O=0.2", f1 every 10::450::550 using 13:14 with errorbars ls 5 not, f1 every 10::560::660 using 13 with linespoints ls 6 t "M4 O=0.2", f1 every 10::560::660 using 13:14 with errorbars ls 6 not, f1 every 10::670::770 using 13 with linespoints ls 7 t "M5 O=0.2", f1 every 10::670::770 using 13:14 with errorbars ls 7 not, f1 every 10::780::880 using 13 with linespoints ls 8 t "M3 p,q=0.25", f1 every 10::780::880 using 13:14 with errorbars ls 8 not
 
-#plot f1 every ::1::110 using 13 with linespoints ls 1 t "M1", f1 every ::1::110 using 13:14 with errorbars ls 1 not, f1 every ::111::220 using 13 with linespoints ls 2 t "M3", f1 every ::111::220 using 13:14 with errorbars ls 2 not, f1 every ::221::330 using 13 with linespoints ls 3 t "M4", f1 every ::221::330 using 13:14 with errorbars ls 3 not, f1 every ::331::440 using 13 with linespoints ls 4 t "M5", f1 every ::331::440 using 13:14 with errorbars ls 4 not, f1 every ::441::550 using 13 with linespoints ls 5 t "M3 O=0.2", f1 every ::441::550 using 13:14 with errorbars ls 5 not, f1 every ::551::660 using 13 with linespoints ls 6 t "M4 O=0.2", f1 every ::551::660 using 13:14 with errorbars ls 6 not, f1 every ::661::770 using 13 with linespoints ls 7 t "M5 O=0.2", f1 every ::661::770 using 13:14 with errorbars ls 7 not, f1 every ::771::880 using 13 with linespoints ls 8 t "M3 p,q=0.25", f1 every ::771::880 using 13:14 with errorbars ls 8 not
+#plot f1 every 10::10::60 using 13 with linespoints ls 1 t "M3", f1 every 10::10::60 using 13:14 with errorbars ls 1 not, f1 every 10::70::120 using 13 with linespoints ls 2 t "M5", f1 every 10::70::120 using 13:14 with errorbars ls 2 not
+plot f1 every ::1::60 using 13 with linespoints ls 1 t "M3", f1 every ::1::60 using 13:14 with errorbars ls 1 not, f1 every ::61::120 using 13 with linespoints ls 2 t "M5", f1 every ::61::120 using 13:14 with errorbars ls 2 not
+, f1 every ::221::330 using 13 with linespoints ls 3 t "M4", f1 every ::221::330 using 13:14 with errorbars ls 3 not, f1 every ::331::440 using 13 with linespoints ls 4 t "M5", f1 every ::331::440 using 13:14 with errorbars ls 4 not, f1 every ::441::550 using 13 with linespoints ls 5 t "M3 O=0.2", f1 every ::441::550 using 13:14 with errorbars ls 5 not, f1 every ::551::660 using 13 with linespoints ls 6 t "M4 O=0.2", f1 every ::551::660 using 13:14 with errorbars ls 6 not, f1 every ::661::770 using 13 with linespoints ls 7 t "M5 O=0.2", f1 every ::661::770 using 13:14 with errorbars ls 7 not, f1 every ::771::880 using 13 with linespoints ls 8 t "M3 p,q=0.25", f1 every ::771::880 using 13:14 with errorbars ls 8 not
 
 set output
 
@@ -130,7 +132,7 @@ set output
 reset
 
 set terminal pdf
-set output "./wiki_methods_rw_walks.pdf"
+set output "./cora1_methods_rw_walks.pdf"
 set ylabel "Number of walks"
 set xlabel "Time step"
 f1="./rw-walks.csv"
@@ -150,6 +152,6 @@ set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
 
 set size ratio 0.5 # y/x
 
-plot f1 every ::1::11 using 5 with linespoints ls 1 t "M1", f1 every ::1::11 using 5:6 with errorbars ls 1 not, f1 every ::12::22 using 5 with linespoints ls 2 t "M3", f1 every ::12::22 using 5:6 with errorbars ls 2 not, f1 every ::23::33 using 5 with linespoints ls 3 t "M4", f1 every ::23::33 using 5:6 with errorbars ls 3 not, f1 every ::34::44 using 5 with linespoints ls 4 t "M5", f1 every ::34::44 using 5:6 with errorbars ls 4 not
+plot f1 every ::1::6 using 5 with linespoints ls 1 t "M3", f1 every ::1::6 using 5:6 with errorbars ls 1 not, f1 every ::7::12 using 5 with linespoints ls 2 t "M5", f1 every ::7::12 using 5:6 with errorbars ls 2 not
 
 set output

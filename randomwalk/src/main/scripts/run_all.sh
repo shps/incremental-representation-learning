@@ -8,34 +8,35 @@ run_nc=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
-#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora1_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki_edgelist.txt
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 
 METHODS=(m1)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(1)
-WALK_LENGTH_ARR=(1)
-P=0.25
-Q=0.25
+INIT_EDGE_SIZE=0.3
+NUM_WALKS_ARR=(80)
+WALK_LENGTH_ARR=(10)
+P=1.0
+Q=1.0
 STREAM_SIZE=0.01
 #DATASET=cora
-DATASET=wiki
-NUM_RUNS=1
+DATASET=cora1
+NUM_RUNS=3
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
-#RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
-RW_DELIMITER=","
+RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
+#RW_DELIMITER=","
 LOG_PERIOD=1      # after what number of steps log the output
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=10       # max number of steps to run the experiment
+MAX_STEPS=4       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 COUNT_NUM_SCC=true
+FIXED_GRAPH=true    # use same graph among different runs.
 
 # target-context generator configs
 TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
@@ -53,7 +54,7 @@ TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fs
 # N2V parameters
 FREEZE_AFV=false              # Freeze non-affected vertices or not?
 FREEZE_AFV_FOR_M1=false
-USE_CHECKPOINT=true       # whether to use checkpoints or to restart training.
+USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
 NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
 LEARNING_RATE=0.025
@@ -68,18 +69,18 @@ DELIMITER="\\t"
 FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-#LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
-#LABEL_FILE=cora_labels.txt           # label file
-LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
-LABEL_FILE=Wiki_category.txt           # label file
+LABELS_DIR=/home/ubuntu/hooman/dataset/cora/
+LABEL_FILE=cora1_labels.txt           # label file
+#LABELS_DIR=/home/ubuntu/hooman/dataset/wiki/
+#LABEL_FILE=Wiki_category.txt           # label file
 #LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
 #LABEL_FILE=blog-labels.txt
 
 
-RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS-cnscc$COUNT_NUM_SCC"
+RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS-cnscc$COUNT_NUM_SCC-fg$FIXED_GRAPH"
 W2V_CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA-uc$USE_CHECKPOINT-ffm1$FREEZE_AFV_FOR_M1"
 
-SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all.sh
+SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all2.sh
 DATE_SUFFIX=`date +%s`
 
 SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary/summary$DATE_SUFFIX"
@@ -110,7 +111,7 @@ if [ "$run_rw" = true ] ; then
                     --input $INPUT_EDGE_LIST --output $OUTPUT_DIR --nRuns $NUM_RUNS --directed $DIRECTED --p $P \
                     --q $Q --seed $SEED --d "$RW_DELIMITER" --rrType $METHOD_TYPE --wType $WALK_TYPE --save $LOG_PERIOD \
                     --logErrors $LOG_ERRORS --initEdgeSize $INIT_EDGE_SIZE --edgeStreamSize $STREAM_SIZE \
-                    --maxSteps $MAX_STEPS --grouped $GROUPED --countScc $COUNT_NUM_SCC
+                    --maxSteps $MAX_STEPS --grouped $GROUPED --countScc $COUNT_NUM_SCC --fixedGraph $FIXED_GRAPH
 
             done
         done
@@ -135,6 +136,7 @@ if [ "$run_tc_gen" = true ] ; then
             do
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
+                    INC_SEED=$(($SEED+$RUN))
                     for STEP in $(seq 0 $MAX_STEPS)
                     do
                         printf "Run generator for method type %s\n" $METHOD_TYPE
@@ -159,7 +161,7 @@ if [ "$run_tc_gen" = true ] ; then
                         java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                             --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
                             --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE \
-                            --allWalks $ALL_WALKS --o $O
+                            --allWalks $ALL_WALKS --o $O --seed $INC_SEED
 
                         mv "$OUTPUT_DIR$PAIR_FILE.txt" "$OUTPUT_DIR$PAIR_FILE-$EXPERIMENT_TYPE.txt"
                         mv "$OUTPUT_DIR$VOCAB_FILE.txt" "$OUTPUT_DIR$VOCAB_FILE-$EXPERIMENT_TYPE.txt"
@@ -192,6 +194,7 @@ if [ "$run_w2v" = true ] ; then
             do
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
+                    INC_SEED=$(($SEED+$RUN))
                     for STEP in $(seq 0 $MAX_STEPS)
                     do
                         printf "Run generator for method type %s\n" $METHOD_TYPE
@@ -211,7 +214,7 @@ if [ "$run_w2v" = true ] ; then
                         DEGREES_DIR="/home/ubuntu/hooman/output/$DATASET/rw/$DIR_SUFFIX/"
                         DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
-                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE"
+                        COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE"
                         if [ "$FREEZE_EMBEDDINGS" == true ]; then
                             COMMAND="$COMMAND  --freeze_embeddings"
                         fi
@@ -256,6 +259,7 @@ if [ "$run_nc" = true ] ; then
             do
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
+                    INC_SEED=$(($SEED+$RUN))
                     for STEP in $(seq 0 $MAX_STEPS)
                     do
                         for EPOCH in $(seq 0 $(($N_EPOCHS-1)))
@@ -277,7 +281,7 @@ if [ "$run_nc" = true ] ; then
                             DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
                             G0_DEGREES_FILE="degrees-$G0_SUFFIX.txt"
                             EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name
-                            COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --init_degrees_file $G0_DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $SEED --train_split $TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
+                            COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --init_degrees_file $G0_DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
 
                             echo $COMMAND
 
@@ -298,6 +302,7 @@ SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
 SUMMARY_G0_SCORE_FILE="$SUMMARY_DIR/g0-score-summary.csv"
 SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
 SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
+SUMMARY_GRAPH_STAT="$SUMMARY_DIR/rw-graph-stat-summary.csv"
 SUMMARY_RW_WALK="$SUMMARY_DIR/rw-walk-summary.csv"
 SUMMARY_RW_STEP="$SUMMARY_DIR/rw-step-summary.csv"
 SUMMARY_MAX_ERROR="$SUMMARY_DIR/rw-max-error-summary.csv"
@@ -314,7 +319,7 @@ fi
 
 if [ "$run_rw" = true ] ; then
     HEADER="method\tnw\twl\trun"
-
+    GRAPH_STAT_HEADER="method\tnw\twl\trun\tstep\tn\tm\tnumSccs\tnumOtherVertices"
     for STEP in $(seq 0 $MAX_STEPS)
     do
         HEADER="$HEADER\tstep$STEP"
@@ -323,6 +328,7 @@ if [ "$run_rw" = true ] ; then
     echo -e "$HEADER" >> $SUMMARY_RW_TIME
     echo -e "$HEADER" >> $SUMMARY_RW_WALK
     echo -e "$HEADER" >> $SUMMARY_RW_STEP
+    echo -e "$GRAPH_STAT_HEADER" >> $SUMMARY_GRAPH_STAT
     if [ "$LOG_ERRORS" = true ] ; then
         echo -e "$HEADER" >> $SUMMARY_MAX_ERROR
         echo -e "$HEADER" >> $SUMMARY_MEAN_ERROR
@@ -391,6 +397,7 @@ do
                 STEPS_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-steps-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
                 WALK_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-walkers-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
                 TIME_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-time-to-compute-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
+                STAT_FILE_PREFIX="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-graphstats-wl$WALK_LENGTH-nw$NUM_WALKS"
 
                 if [ "$LOG_ERRORS" = true ] ; then
                     MAX_ERROR_FILE="$DIR_PREFIX/$DATASET/rw/$DIR_SUFFIX/$METHOD_TYPE-max-errors-wl$WALK_LENGTH-nw$NUM_WALKS.txt"
@@ -422,13 +429,23 @@ do
                     echo -e "$SUMMARY_PREFIX\t$counter\t$line" >> $SUMMARY_RW_TIME
                     counter=$((counter+1))
                 done < "$TIME_FILE"
+
+                for RUN in $(seq 0 $(($NUM_RUNS-1)))
+                do
+                    STAT_PREFIX="$SUMMARY_PREFIX\t$RUN"
+                    counter=0
+                    while IFS='' read -r line || [[ -n "$line" ]]; do
+                        echo -e "$STAT_PREFIX\t$counter\t$line" >> $SUMMARY_GRAPH_STAT
+                        counter=$((counter+1))
+                    done < "$STAT_FILE_PREFIX-$RUN.txt"
+                done
             fi
         done
     done
 done
 
 
-mv ~/hooman/output/log11.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log2.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"

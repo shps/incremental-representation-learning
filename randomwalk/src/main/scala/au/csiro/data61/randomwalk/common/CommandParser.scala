@@ -51,6 +51,7 @@ object CommandParser {
   val FORCE_SKIP_SIZE = "forceSkipSize"
   val ALL_WALKS = "allWalks"
   val COUNT_NUM_SCC = "countScc"
+  val FIXED_GRAPH = "fixedGraph"
   val O= "o"
   val DELIMITER2 = "d2"
 
@@ -114,6 +115,9 @@ object CommandParser {
     opt[Boolean](SELF_CONTEXT)
       .text(s"Accept target-context pairs where target=context: ${defaultParams.selfContext}")
       .action((x, c) => c.copy(selfContext = x))
+    opt[Boolean](FIXED_GRAPH)
+      .text(s"Use the same graph among different runs: ${defaultParams.fixedGraph}")
+      .action((x, c) => c.copy(fixedGraph = x))
     opt[Boolean](FORCE_SKIP_SIZE)
       .text(s"Force to generate pairs equal to skipSize: ${defaultParams.forceSkipSize}")
       .action((x, c) => c.copy(forceSkipSize = x))

@@ -139,12 +139,11 @@ case class FileManager(config: Params) {
       .zipWithIndex.map(a => (a._2, a._1))
   }
 
-  def readPartitionEdgeListWithInitEdges(seedIncrement: Int): (Seq[(Int, Int)], Seq[(Int, Seq[
+  def readPartitionEdgeListWithInitEdges(): (Seq[(Int, Int)], Seq[(Int, Seq[
     (Int, Int)])]) = {
     val lines = readEdgeList().seq
     val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
     println(s"Number of edges per step: $edgePerPartition")
-    Random.setSeed(config.seed + seedIncrement)
 
     val (part1, part2) = Random.shuffle(lines).splitAt((lines.size * config.initEdgeSize).toInt)
     (part1, part2.sliding(edgePerPartition, edgePerPartition).toSeq
@@ -227,6 +226,17 @@ case class FileManager(config: Params) {
     for (t <- times) {
       bw.write(s"${t.mkString("\t")}\n")
     }
+    bw.flush()
+    bw.close()
+
+  }
+
+
+  def saveGraphStats(graphStats: Seq[(Int, Int, Int, Int)], suffix: String): Unit = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(graphStats.map(a => s"${a._1}\t${a._2}\t${a._3}\t${a._4}").mkString("\n"))
     bw.flush()
     bw.close()
 

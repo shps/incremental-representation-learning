@@ -8,6 +8,7 @@ import scala.collection.mutable
 import scala.collection.parallel.ParSeq
 import scala.util.control.Breaks._
 import collection.JavaConverters._
+import scala.util.Random
 
 /**
   * Created by Hooman on 2018-04-11.
@@ -25,6 +26,7 @@ case class StreamingExperiment(config: Params) {
     var maxErrors = Array.empty[Array[Double]]
 
     for (nr <- 0 until config.numRuns) {
+      var graphStats = Seq.empty[(Int, Int, Int, Int)]
       var totalTime: Long = 0
       GraphMap.reset
       WalkStorage.reset
@@ -32,10 +34,16 @@ case class StreamingExperiment(config: Params) {
       var deltaWalks = ParSeq.empty[(Int, Int, Seq[Int])]
 
       println("******* Building the graph ********")
+      if (config.fixedGraph) {
+        Random.setSeed(config.seed)
+      } else {
+        Random.setSeed(config.seed + nr)
+      }
       val (initEdges, edges) = config.grouped match {
-        case false => fm.readPartitionEdgeListWithInitEdges(nr)
+        case false => fm.readPartitionEdgeListWithInitEdges()
         case true => fm.readAlreadyPartitionedEdgeList()
       }
+      Random.setSeed(config.seed + nr)
 
       val logSize = Math.min(edges.length, config.maxSteps) + 1
       if (numSteps.isEmpty) {
@@ -50,9 +58,14 @@ case class StreamingExperiment(config: Params) {
       println("******* Initialized Graph the graph ********")
       var afs = mutable.HashSet.empty[Int]
       if (!initEdges.isEmpty) {
-        afs = updateGraph(initEdges)
-        println(s"Number of edges: ${GraphMap.getNumEdges}")
-        println(s"Number of vertices: ${GraphMap.getNumVertices}")
+        val updateResult = updateGraph(initEdges)
+
+        val numEdges = GraphMap.getNumEdges
+        val numVertices = GraphMap.getNumVertices
+        afs = updateResult._1
+        val comps = updateResult._2
+        println(s"Number of edges: ${numEdges}")
+        println(s"Number of vertices: ${numVertices}")
         val result = streamingAddAndRunWithId(afs, prevWalks)
         prevWalks = result._1
         //        deltaWalks = result._1._2
@@ -60,6 +73,7 @@ case class StreamingExperiment(config: Params) {
         numSteps(nr)(0) = result._2
         numWalkers(nr)(0) = result._3
         stepTimes(nr)(0) = result._4
+        graphStats ++= Seq((numVertices, numEdges, comps._1, comps._2))
         if (config.logErrors) {
           val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result
             ._1, config)
@@ -92,25 +106,31 @@ case class StreamingExperiment(config: Params) {
           val (step, updates) = edges(ec - 1)
           if (ec > config.maxSteps)
             break
-          afs = updateGraph(updates)
+          val updateResult = updateGraph(updates)
+          afs = updateResult._1
+          val comps = updateResult._2
           val result = streamingAddAndRunWithId(afs, prevWalks)
           prevWalks = result._1
           //          deltaWalks = result._1._2
           val ns = result._2
           val nw = result._3
           val stepTime = result._4
+
+          val numEdges = GraphMap.getNumEdges
+          val numVertices = GraphMap.getNumVertices
+
           totalTime += stepTime
 
           numSteps(nr)(ec) = ns
           numWalkers(nr)(ec) = nw
           stepTimes(nr)(ec) = stepTime
+          graphStats ++= Seq((numVertices, numEdges, comps._1, comps._2))
 
-          val nEdges = GraphMap.getNumEdges
           println(s"Group-ID: ${step}")
           println(s"Step time: $stepTime")
           println(s"Total time: $totalTime")
-          println(s"Number of edges: ${nEdges}")
-          println(s"Number of vertices: ${GraphMap.getNumVertices}")
+          println(s"Number of edges: ${numEdges}")
+          println(s"Number of vertices: ${numVertices}")
           println(s"Number of walks: ${prevWalks.size + deltaWalks.size}")
           if (config.logErrors) {
             val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1,
@@ -163,6 +183,15 @@ case class StreamingExperiment(config: Params) {
           config
             .walkLength
         }-nw${config.numWalks}-final-$nr")
+      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+        config.rrType
+          .toString
+      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
+      fm.saveGraphStats(graphStats, s"${
+        config.rrType
+          .toString
+      }-${Property.graphStatsSuffix}-wl${config.walkLength}-nw${config.numWalks}-$nr")
+
     }
     fm.saveComputations(numSteps, Property.stepsToCompute.toString)
     fm.saveComputations(numWalkers, Property.walkersToCompute.toString)
@@ -173,7 +202,7 @@ case class StreamingExperiment(config: Params) {
     }
   }
 
-  def updateGraph(updates: Seq[(Int, Int)]): mutable.HashSet[Int] = {
+  def updateGraph(updates: Seq[(Int, Int)]): (mutable.HashSet[Int], (Int, Int)) = {
     val afs = new mutable.HashSet[Int]()
     for (u <- updates) {
       val src = u._1
@@ -193,11 +222,18 @@ case class StreamingExperiment(config: Params) {
       }
     }
 
+    var numSccs = 0
+    var numOtherVertices = 0
+
     if (config.countSccs) {
-        DatasetCleaner.countNumberOfSCCs()
+      val components = DatasetCleaner.countNumberOfSCCs()
+      numSccs = components.size
+      val totalVertices = components.sum
+      val maxVertices = components.max
+      numOtherVertices = totalVertices - maxVertices
     }
 
-    return afs
+    return (afs, (numSccs, numOtherVertices))
   }
 
   def streamingAddAndRunWithId(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Int, Int, Seq[Int])]):

@@ -125,14 +125,14 @@ object DatasetCleaner {
     compVertices
   }
 
-  def countNumberOfSCCs(): Int = {
+  def countNumberOfSCCs(): Seq[Int] = {
     val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
-    var components = 0
+    var components = Seq.empty[Int]
     for (v <- vertices.keys) {
       if (!vertices(v)) {
-        components += 1
-        val compSize = dfs(v, vertices)
-        println(s"Component $components\tsize: ${compSize.size}")
+        val comp = dfs(v, vertices)
+        components ++= Seq(comp.size)
+        println(s"Component ${components.size}\tsize: ${comp.size}")
       }
     }
 
