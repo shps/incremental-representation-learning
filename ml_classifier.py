@@ -12,7 +12,7 @@ from sklearn import (model_selection, linear_model, multiclass,
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_float('train_split', 0.8, 'initial learning rate.')
+flags.DEFINE_float('train_split', 0.4, 'initial learning rate.')
 flags.DEFINE_float('learning_rate', 0.2, 'initial learning rate.')
 flags.DEFINE_string('train_prefix', '',
                     'name of the object file that stores the training data. must be specified.')
@@ -45,32 +45,33 @@ def eval_classification(labels, embeddings, use_ml_splitter=False):
     # based on label size: we can't use StratifiedShuffleSplit
     # for the mutli-label case
     if len(labels.shape) > 1 and labels.shape[1] > 1:
-        print("Perforrming multi-label classification")
-        shuffle = model_selection.ShuffleSplit(n_splits=5, test_size=0.6)
+        print("Performing multi-label classification")
+        shuffle = model_selection.ShuffleSplit(n_splits=10, train_size=FLAGS.train_split,
+                                               test_size=1.0 - FLAGS.train_split)
 
         # shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
-        class MLSplitter:
-            def __init__(self, splitter, node_labels):
-                # Generate stratifications based on least frequent label
-                n_data = node_labels.shape[0]
-                label_freq = node_labels.sum(axis=0)
-                shuffle_y = np.zeros(n_data, dtype='int16')
-                for k in range(n_data):
-                    rowlabels = np.flatnonzero(node_labels[k])
-                    shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
-                self.shuffle_y = shuffle_y
-                self.s = splitter
-
-            def split(self, X, in_y=None, in_g=None):
-                return self.s.split(X, self.shuffle_y)
-
-        if use_ml_splitter:
-            shuffle = MLSplitter(shuffle, labels)
+        # class MLSplitter:
+        #     def __init__(self, splitter, node_labels):
+        #         # Generate stratifications based on least frequent label
+        #         n_data = node_labels.shape[0]
+        #         label_freq = node_labels.sum(axis=0)
+        #         shuffle_y = np.zeros(n_data, dtype='int16')
+        #         for k in range(n_data):
+        #             rowlabels = np.flatnonzero(node_labels[k])
+        #             shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
+        #         self.shuffle_y = shuffle_y
+        #         self.s = splitter
+        #
+        #     def split(self, X, in_y=None, in_g=None):
+        #         return self.s.split(X, self.shuffle_y)
+        #
+        # if use_ml_splitter:
+        #     shuffle = MLSplitter(shuffle, labels)
 
     else:
         shuffle = model_selection.StratifiedShuffleSplit(
-            n_splits=5, test_size=0.6)
+            n_splits=10, train_size=FLAGS.train_split, test_size=1.0 - FLAGS.train_split)
         # shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
     scoring = ['accuracy', 'f1_macro', 'f1_micro']
