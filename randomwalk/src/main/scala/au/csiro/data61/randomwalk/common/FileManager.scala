@@ -142,12 +142,11 @@ case class FileManager(config: Params) {
   def readPartitionEdgeListWithInitEdges(): (Seq[(Int, Int)], Seq[(Int, Seq[
     (Int, Int)])]) = {
     val lines = readEdgeList().seq
-    val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
-    println(s"Number of edges per step: $edgePerPartition")
+//    val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
+    println(s"Number of edges per step: ${config.edgeStreamSize}")
 
     val (part1, part2) = Random.shuffle(lines).splitAt((lines.size * config.initEdgeSize).toInt)
-    (part1, part2.sliding(edgePerPartition, edgePerPartition).toSeq
-      .zipWithIndex.map(a => (a._2 + 1, a._1)))
+    (part1, part2.grouped(config.edgeStreamSize).toSeq.zipWithIndex.map(a => (a._2 + 1, a._1)))
   }
 
   def readEdgeListByYear(): Seq[(Int, Seq[(Int, Int)])] = {
@@ -280,19 +279,19 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
-  def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
-    ] = {
-    config.output.toFile.createIfNotExists(true)
-    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(paths.map { case (wVersion, firstIndex, path) =>
-      val pathString = s"$wVersion\t$firstIndex\t" + path.mkString("\t")
-      s"$pathString"
-    }.mkString("\n"))
-    bw.flush()
-    bw.close()
-    paths
-  }
+//  def savePaths(paths: ParSeq[(Int, Int, Seq[Int])], suffix: String): ParSeq[(Int, Int, Seq[Int])
+//    ] = {
+//    config.output.toFile.createIfNotExists(true)
+//    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+//    val bw = new BufferedWriter(new FileWriter(file))
+//    bw.write(paths.map { case (wVersion, firstIndex, path) =>
+//      val pathString = s"$wVersion\t$firstIndex\t" + path.mkString("\t")
+//      s"$pathString"
+//    }.mkString("\n"))
+//    bw.flush()
+//    bw.close()
+//    paths
+//  }
 
   def savePaths(paths: ParSeq[(Int, Int, Int, Seq[Int])], suffix: String) {
     config.output.toFile.createIfNotExists(true)

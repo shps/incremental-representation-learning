@@ -1,11 +1,11 @@
 # F1-test-score
 set terminal pdf
-set output "./cora1-g0-scores15.pdf"
+set output "./cora1-f1-scores7-01.pdf"
 set ylabel "F1-score"
 set xlabel "Edges (%)"
-f1="./cora1-g0-scores15.csv"
+f1="./cora1-f1-scores7-01.csv"
 set datafile separator ","
-set xtics ("10" 0,"25" 1, "55" 3, "85" 5, "100" 7)
+#set xtics ("10" 0,"25" 1, "40" 2, "55" 3, "70" 4, "85" 5, "100" 6)
 set mxtics 1
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
@@ -20,7 +20,7 @@ set style line 4 lt 2 lw 2 pt 5 ps 0.5 linecolor rgb "blue"
 set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
 set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
 
-plot f1 every 10::10::80 using 13 with linespoints ls 1 t "M_1", f1 every 10::10::80 using 13:14 with errorbars ls 1 not
+plot f1 every 10::10::40 using 13 with linespoints ls 1 t "M_1", f1 every 10::10::40 using 13:14 with errorbars ls 1 not, f1 every 10::50::80 using 13 with linespoints ls 2 t "M_2", f1 every 10::50::80 using 13:14 with errorbars ls 2 not, f1 every 10::90::120 using 13 with linespoints ls 3 t "M_3", f1 every 10::90::120 using 13:14 with errorbars ls 3 not, f1 every 10::130::160 using 13 with linespoints ls 4 t "M_4", f1 every 10::130::160 using 13:14 with errorbars ls 4 not
 
 set output
 
@@ -38,16 +38,16 @@ set output
 
 ################## RW Errors
 set terminal pdf
-set output "./cora1-rw-mean-errors01.pdf"
+set output "./wiki1-rw-max-errors01.pdf"
 set ylabel "Mean absolute error"
 set xlabel "Edges (%)"
-f1="./cora1-rw-mean-errors01.csv"
+f1="./wiki1-rw-max-errors01.csv"
 set datafile separator ","
-set xtics ("10" 0,"25" 16,"50" 41,"75" 66,"100" 92)
+#set xtics ("10" 0,"25" 16,"50" 41,"75" 66,"100" 92)
 #set ytics 0,0.2
 #set yrange [0.05:1]
-set ytics 0,0.01
-set yrange [0.01:0.06]
+#set ytics 0,0.01
+#set yrange [0.01:0.06]
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
 set xlabel font  ",18"
@@ -61,7 +61,7 @@ set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
 set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
 set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
 
-plot f1 every ::1::93 using 5 with linespoints ls 1 t "M1", f1 every ::1::93 using 5:6 with errorbars ls 1 not, f1 every ::94::186 using 5 with linespoints ls 2 t "M2", f1 every ::94::186 using 5:6 with errorbars ls 2 not, f1 every ::187::279 using 5 with linespoints ls 3 t "M3", f1 every ::187::279 using 5:6 with errorbars ls 3 not, f1 every ::280::372 using 5 with linespoints ls 4 t "M4", f1 every ::280::372 using 5:6 with errorbars ls 4 not
+plot f1 every ::1::91 using 5 with linespoints ls 1 t "M1", f1 every ::1::91 using 5:6 with errorbars ls 1 not, f1 every ::92::182 using 5 with linespoints ls 2 t "M2", f1 every ::92::182 using 5:6 with errorbars ls 2 not, f1 every ::183::273 using 5 with linespoints ls 3 t "M3", f1 every ::183::273 using 5:6 with errorbars ls 3 not, f1 every ::274::364 using 5 with linespoints ls 4 t "M4", f1 every ::274::364 using 5:6 with errorbars ls 4 not
 
 set output
 
@@ -187,12 +187,12 @@ set output
 
 ########## SCCs percentage
 set terminal pdf
-set output "./cora1_percent_vertices_sccs01.pdf"
+set output "./dblp_percent_vertices_sccs.pdf"
 set ylabel "Vertices in the largest SCC (%)"
-set xlabel "Edges (%)"
+set xlabel "Years"
 #set xtics ("0.1" 0,"0.25" 1,"0.4" 2,"0.55" 3,"0.7" 4,"0.85" 5,"0.99" 6,"1" 7)
-f1="./cora1-rw-graph-stat-summary01.csv"
-set xtics ("10" 0,"25" 16,"50" 41,"75" 66,"100" 92)
+f1="./dblp-rw-graph-stat-summary.csv"
+#set xtics ("10" 0,"25" 16,"50" 41,"75" 66,"100" 92)
 set datafile separator ","
 set ytics font ",14"
 set ytics 0,0.5,1
@@ -205,17 +205,17 @@ set style line 1 lt 2 lw 1 pt 1 ps 1.2 linecolor rgb "blue"
 #set size ratio 1.0 # y/x
 set size square 0.8,0.8
 
-plot f1 every ::1::93 using 11 with linespoints ls 1 notitle
+plot f1 every ::1::41 using 10 with linespoints ls 1 notitle
 
 set output
 
 
 ##### Category distribution
 set terminal pdf
-set output "./cora1-label-dist.pdf"
+set output "./wiki1-label-dist.pdf"
 set ylabel "Number of vertices"
 set xlabel "Category ID"
-f1="./cora1-label-dist.csv"
+f1="./wiki1-label-dist.csv"
 set datafile separator ","
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
@@ -223,12 +223,35 @@ set xlabel font  ",18"
 set key font  ",16" inside center right
 set bmargin 4
 set boxwidth 0.5
-set yrange [0:]
+set yrange [0:405]
 set style fill solid
 set style line 1 lt 2 lw 2 pt 1 ps 1 linecolor rgb "blue"
 
 set size ratio 1.0 # y/x
 
-plot f1 every ::0::6 using 2:xtic(1) with boxes ls 1 notitle
+plot f1 every ::1::17 using 2:xtic(1) with boxes ls 1 notitle
+
+set output
+
+
+########## filtered degrees dist
+set terminal pdf
+set output "./wiki1-degrees.pdf"
+set ylabel "Number of vertices"
+set xlabel "Degree"
+f1="./wiki1-degrees.csv"
+set datafile separator ","
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+#set yrange [0:405]
+set style fill solid
+set style line 1 lt 2 lw 2 pt 1 ps 0.5 linecolor rgb "blue"
+
+set size ratio 0.5 # y/x
+
+plot f1 every ::0::168 using 4 with points ls 1 notitle
 
 set output

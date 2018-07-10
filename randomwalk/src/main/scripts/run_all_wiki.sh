@@ -8,8 +8,8 @@ run_nc=false
 
 
 RW_JAR_FILE=/home/ubuntu/hooman/rw/randomwalk-0.0.1-SNAPSHOT.jar
-INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora1_edgelist.txt
-#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki1_edgelist.txt
+#INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/cora/cora1_edgelist.txt
+INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/wiki/Wiki1_edgelist.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/blog/edges.txt
 #INPUT_EDGE_LIST=/home/ubuntu/hooman/dataset/dblp/coauthors-edge-list.txt
 
@@ -23,9 +23,9 @@ NUM_WALKS_ARR=(80)
 WALK_LENGTH_ARR=(10)
 P=1.0
 Q=1.0
-STREAM_SIZE=50
-DATASET=cora1
-#DATASET=wiki1
+STREAM_SIZE=0.001
+#DATASET=cora1
+DATASET=wiki1
 #DATASET=dblp
 NUM_RUNS=5
 DIRECTED=false    # tested on undirected graphs only.
@@ -33,9 +33,9 @@ SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
-LOG_PERIOD=1000      # after what number of steps log the output
+LOG_PERIOD=100      # after what number of steps log the output
 LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=5000       # max number of steps to run the experiment
+MAX_STEPS=900       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 COUNT_NUM_SCC=false
 FIXED_GRAPH=false    # use same graph among different runs.
@@ -78,13 +78,13 @@ LABEL_FILE=cora1_labels.txt           # label file
 #LABEL_FILE=Wiki1_labels.txt           # label file
 #LABELS_DIR=/home/ubuntu/hooman/dataset/blog/
 #LABEL_FILE=blog-labels.txt
-NC_TRAIN_SPLIT=0.1
+NC_TRAIN_SPLIT=0.03
 
 
 RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS-cnscc$COUNT_NUM_SCC-fg$FIXED_GRAPH"
 W2V_CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA-uc$USE_CHECKPOINT-ffm1$FREEZE_AFV_FOR_M1"
 
-SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all.sh
+SCRIPT_FILE=/home/ubuntu/hooman/rw/run_all_wiki.sh
 DATE_SUFFIX=`date +%s`
 
 SUMMARY_DIR="/home/ubuntu/hooman/output/$DATASET/summary/summary$DATE_SUFFIX"
@@ -464,7 +464,7 @@ do
 done
 
 
-mv ~/hooman/output/log.txt "$SUMMARY_DIR/"
+mv ~/hooman/output/log2.txt "$SUMMARY_DIR/"
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"
