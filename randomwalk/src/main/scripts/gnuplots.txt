@@ -65,6 +65,373 @@ plot f1 every ::1::91 using 5 with linespoints ls 1 t "M1", f1 every ::1::91 usi
 
 set output
 
+################## M1 RW Errors
+set terminal pdf
+set output "./cora-mean-error-m1-s5-s100.pdf"
+set ylabel "Mean absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 46)
+f1="./cora-mean-error-m1-s5-s100.csv"
+set datafile separator ","
+set ytics font ",14"
+set ytics 0,0.002
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box font  ",16" inside right bottom
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+
+plot f1 every ::1::47 using 8 with linespoints ls 1 t "sr = 0.1%", f1 every ::1::47 using 8:9 with errorbars ls 1 not, f1 every ::48::94 using 8 with linespoints ls 2 t "sr = 0.5%", f1 every ::48::94 using 8:9 with errorbars ls 2 not, f1 every ::95::141 using 8 with linespoints ls 3 t "sr = 1%", f1 every ::95::141 using 8:9 with errorbars ls 3 not, f1 every ::142::188 using 8 with linespoints ls 4 t "sr = 2%", f1 every ::142::188 using 8:9 with errorbars ls 4 not
+
+set output
+
+################## M1-4 Mean RW Errors
+
+set terminal pdf
+set output "./cora-m1-4-s100.pdf"
+set ylabel "Mean absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 46)
+f1="./cora-m1-4-s100.csv"
+set datafile separator ","
+set ytics font ",14"
+set ytics 0,0.02
+set yrange [0.005:0.07]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 2 height 1 font  ",16" inside right top
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+
+plot f1 every ::1::47 using 7 with linespoints ls 1 t "M_1", f1 every ::1::47 using 7:8 with errorbars ls 1 not, f1 every ::48::94 using 7 with linespoints ls 2 t "M_2", f1 every ::48::94 using 7:8 with errorbars ls 2 not, f1 every ::95::141 using 7 with linespoints ls 3 t "M_3", f1 every ::95::141 using 7:8 with errorbars ls 3 not, f1 every ::142::188 using 7 with linespoints ls 4 t "M_4", f1 every ::142::188 using 7:8 with errorbars ls 4 not
+
+set output
+
+################## M1-4 Max RW Errors
+
+set terminal pdf
+set output "./cora-m1-4-max-errors-s5.pdf"
+set ylabel "Max absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 46)
+f1="./cora-m1-4-max-errors-s5.csv"
+set datafile separator ","
+set ytics font ",14"
+set ytics 0,0.2
+#set yrange [0.005:0.07]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 2 height 1 font  ",16" inside left top maxrows 2
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+
+plot f1 every ::1::47 using 7 with linespoints ls 1 t "M_1", f1 every ::1::47 using 7:8 with errorbars ls 1 not, f1 every ::48::94 using 7 with linespoints ls 2 t "M_2", f1 every ::48::94 using 7:8 with errorbars ls 2 not, f1 every ::95::141 using 7 with linespoints ls 3 t "M_3", f1 every ::95::141 using 7:8 with errorbars ls 3 not, f1 every ::142::188 using 7 with linespoints ls 4 t "M_4", f1 every ::142::188 using 7:8 with errorbars ls 4 not
+
+set output
+
+######### cora steps M1-4
+
+set terminal pdf
+set output "./cora-m1-5-rw-steps5.pdf"
+set ylabel "Random Steps"
+set xlabel "Edges (%)"
+set xtics ("10" 1,"100" 91)
+f1="./cora-m1-5-rw-steps5.csv"
+set datafile separator ","
+set ytics font ",14"
+#set ytics 0,0.02
+set yrange [0:1]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 2 height 1 font  ",16" inside right center
+set bmargin 4
+set style line 1 lt 1 lw 1 pt 1 ps 0.4 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.4 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.4 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.4 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.4 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.4 linecolor rgb "yellow"
+
+set size square 0.75,0.75
+
+plot f1 every 10::2::914 using 12 with linespoints ls 1 t "M_1", f1 every 10::2::914 using 4 with linespoints ls 2 t "M_2", f1 every 10::2::914 using 7 with linespoints ls 3 t "M_3", f1 every 10::2::914 using 10 with linespoints ls 4 t "M_4"
+
+set output
+
+######### cora steps M3
+
+set terminal pdf
+set output "./cora-m1-3-rw-steps5-100.pdf"
+set ylabel "Random Steps"
+set xlabel "Edges (%)"
+set xtics ("10" 1,"100" 46)
+f1="./cora-m1-3-rw-steps5-100.csv"
+set datafile separator ","
+set ytics font ",14"
+#set ytics 0,0.02
+set yrange [0:1]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 2 height 1 font  ",16" inside right top
+set bmargin 4
+set style line 1 lt 1 lw 1 pt 1 ps 0.4 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.4 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.4 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.4 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.4 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.4 linecolor rgb "yellow"
+
+set size square 0.8,0.8
+
+plot f1 every 20::2::914 using 16 with linespoints ls 1 t "M_1", f1 every 20::2::914 using 5 with linespoints ls 2 t "M_3 sr=5", f1 every 4::2::184 using 10 with linespoints ls 3 t "M_3 sr=25", f1 every ::2::47 using 15 with linespoints ls 4 t "M_3 sr=100"
+
+set output
+
+######### WIKI Errors M1-4
+
+set terminal pdf
+set output "./wiki-m1-4-s5.pdf"
+set ylabel "Mean absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 84)
+f1="./wiki-m1-4-s5.csv"
+set datafile separator ","
+set ytics font ",14"
+set ytics 0,0.02
+set yrange [0.01:0.05]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 2 height 1 font  ",16" inside right top
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
+set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+
+plot f1 every ::1::85 using 7 with linespoints ls 1 t "M_1", f1 every ::1::85 using 7:8 with errorbars ls 1 not, f1 every ::86::170 using 7 with linespoints ls 2 t "M_2", f1 every ::86::170 using 7:8 with errorbars ls 2 not, f1 every ::171::255 using 7 with linespoints ls 3 t "M_3", f1 every ::171::255 using 7:8 with errorbars ls 3 not, f1 every ::256::340 using 7 with linespoints ls 4 t "M_4", f1 every ::256::340 using 7:8 with errorbars ls 4 not
+
+set output
+
+################## M5 Mean RW Errors
+
+set terminal pdf
+set output "./cora-m5-mean-s5-1000.pdf"
+set ylabel "Mean absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 5)
+f1="./cora-m5-mean-s5-1000.csv"
+set datafile separator ","
+set ytics font ",14"
+set ytics 0,0.02
+#set yrange [0.005:0.07]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 0 height 0 font  ",16" inside right bottom maxrows 3
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 5 lw 1 pt 6 ps 0.7 linecolor rgb "brown"
+set style line 6 lt 6 lw 1 pt 7 ps 0.7 linecolor rgb "gold"
+
+plot f1 every ::1::6 using 8 with linespoints ls 1 t "sr = 0.1%", f1 every ::1::6 using 8:9 with errorbars ls 1 not, f1 every ::7::12 using 8 with linespoints ls 2 t "sr = 0.5%", f1 every ::7::12 using 8:9 with errorbars ls 2 not, f1 every ::13::18 using 8 with linespoints ls 3 t "sr = 1%", f1 every ::13::18 using 8:9 with errorbars ls 3 not, f1 every ::19::24 using 8 with linespoints ls 4 t "sr = 2%", f1 every ::19::24 using 8:9 with errorbars ls 4 not, f1 every ::25::30 using 8 with linespoints ls 5 t "sr = 10%", f1 every ::25::30 using 8:9 with errorbars ls 5 not, f1 every ::31::36 using 8 with linespoints ls 6 t "sr = 20%", f1 every ::31::36 using 8:9 with errorbars ls 6 not
+
+set output
+
+
+################## M5 Mean RW Errors
+
+set terminal pdf
+set output "./cora-m5-max-s5-1000.pdf"
+set ylabel "Max absolute error"
+set xlabel "Edges (%)"
+set xtics ("10" 0,"100" 5)
+f1="./cora-m5-max-s5-1000.csv"
+set datafile separator ","
+set ytics font ",14"
+#set ytics 0,0.02
+#set yrange [0.005:0.07]
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key box width 0 height 0 font  ",16" inside right bottom maxrows 3
+set bmargin 4
+set size ratio 0.8 # y/x
+set style line 1 lt 1 lw 1 pt 1 ps 0.7 linecolor rgb "red"
+set style line 2 lt 2 lw 1 pt 4 ps 0.7 linecolor rgb "green"
+set style line 3 lt 3 lw 1 pt 3 ps 0.7 linecolor rgb "black"
+set style line 4 lt 4 lw 1 pt 5 ps 0.7 linecolor rgb "blue"
+set style line 5 lt 5 lw 1 pt 6 ps 0.7 linecolor rgb "brown"
+set style line 6 lt 6 lw 1 pt 7 ps 0.7 linecolor rgb "gold"
+
+plot f1 every ::1::6 using 8 with linespoints ls 1 t "sr = 0.1%", f1 every ::1::6 using 8:9 with errorbars ls 1 not, f1 every ::7::12 using 8 with linespoints ls 2 t "sr = 0.5%", f1 every ::7::12 using 8:9 with errorbars ls 2 not, f1 every ::13::18 using 8 with linespoints ls 3 t "sr = 1%", f1 every ::13::18 using 8:9 with errorbars ls 3 not, f1 every ::19::24 using 8 with linespoints ls 4 t "sr = 2%", f1 every ::19::24 using 8:9 with errorbars ls 4 not, f1 every ::25::30 using 8 with linespoints ls 5 t "sr = 10%", f1 every ::25::30 using 8:9 with errorbars ls 5 not, f1 every ::31::36 using 8 with linespoints ls 6 t "sr = 20%", f1 every ::31::36 using 8:9 with errorbars ls 6 not
+
+set output
+
+########## SCCs Numbers Cora
+set terminal pdf
+set output "./cora-sccs5.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("10" 0, "100" 913)
+f1="./cora-rw-graph-stat-summary5.csv"
+set datafile separator ","
+set ytics 0,100
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::914 using 8 with linespoints ls 1 not
+
+set output
+
+########## SCCs Numbers Blog
+set terminal pdf
+set output "./blog-sccs200.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("0" 0, "50" 834)
+f1="./blog-sccs200.csv"
+set datafile separator ","
+set ytics 0,100
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::835 using 8 with linespoints ls 1 not
+
+set output
+
+########## Number of vertices blog
+set terminal pdf
+set output "./blog-vertices200.pdf"
+set ylabel "Number of vertices"
+set xlabel "Edges (%)"
+set xtics ("0" 0, "50" 834)
+f1="./blog-sccs200.csv"
+set datafile separator ","
+set ytics 0,2000
+#set yr [:2400]
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+plot f1 every ::1::835 using 6 with linespoints ls 1 not
+
+set output
+
+########## SCCs Numbers wiki
+set terminal pdf
+set output "./wiki-scc5.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("10" 0, "100" 2087)
+f1="./wiki-scc5.csv"
+set datafile separator ","
+set ytics 0,100
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::2088 using 8 with linespoints ls 1 not
+
+set output
+
+########## Number of vertices wiki
+set terminal pdf
+set output "./wiki-vertices5.pdf"
+set ylabel "Number of vertices"
+set xlabel "Edges (%)"
+set xtics ("10" 0, "100" 2087)
+f1="./wiki-scc5.csv"
+set datafile separator ","
+set ytics 0,400
+set yr [:2400]
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+plot f1 every ::1::2087 using 6 with linespoints ls 1 not
+
+set output
+
+########## Number of vertices cora
+set terminal pdf
+set output "./cora-vertices5.pdf"
+set ylabel "Number of vertices"
+set xlabel "Edges (%)"
+set xtics ("10" 0, "100" 913)
+f1="./cora-rw-graph-stat-summary5.csv"
+set datafile separator ","
+set ytics 0,400
+set yr [:2500]
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+plot f1 every ::1::914 using 6 with linespoints ls 1 not
+
+set output
+
+
 ################### NumWalks vs WalkLength
 set terminal pdf
 set output "./cora_nw_wl_score.pdf"
@@ -84,6 +451,7 @@ set style line 3 lt 2 lw 3 pt 3 ps 0.5 linecolor rgb "black"
 set style line 4 lt 2 lw 3 pt 5 ps 0.5 linecolor rgb "blue"
 set style line 5 lt 2 lw 2 pt 6 ps 0.5 linecolor rgb "brown"
 set style line 6 lt 2 lw 2 pt 7 ps 0.5 linecolor rgb "yellow"
+
 
 #plot f1 every ::1::10 using 13 with linespoints ls 1 t "NW=10 WL=80 Force", f1 every ::1::10 using 13:14 with errorbars ls 1 not, f1 every ::11::20 using 13 with linespoints ls 2 t "NW=80 WL=10 Force", f1 every ::11::20 using 13:14 with errorbars ls 2 not, f1 every ::21::30 using 13 with linespoints ls 3 t "NW=80 WL=10 Self", f1 every ::21::30 using 13:14 with errorbars ls 3 not, f1 every ::31::40 using 13 with linespoints ls 4 t "NW=10 WL=80 Self", f1 every ::31::40 using 13:14 with errorbars ls 4 not, f1 every ::41::50 using 13 with linespoints ls 5 t "NW=20 WL=40 Force", f1 every ::41::50 using 13:14 with errorbars ls 5 not
 plot f1 every ::1::10 using 13 with linespoints ls 1 t "NW=10 WL=80", f1 every ::1::10 using 13:14 with errorbars ls 1 not, f1 every ::11::20 using 13 with linespoints ls 2 t "NW=80 WL=10", f1 every ::11::20 using 13:14 with errorbars ls 2 not, f1 every ::21::30 using 13 with linespoints ls 3 t "NW=80 WL=10 Self", f1 every ::21::30 using 13:14 with errorbars ls 3 not, f1 every ::31::40 using 13 with linespoints ls 4 t "NW=10 WL=80 Self", f1 every ::31::40 using 13:14 with errorbars ls 4 not, f1 every ::41::50 using 13 with linespoints ls 5 t "NW=20 WL=40 Force", f1 every ::41::50 using 13:14 with errorbars ls 5 not
@@ -212,10 +580,10 @@ set output
 
 ##### Category distribution
 set terminal pdf
-set output "./wiki1-label-dist.pdf"
+set output "./cocit-label-dist.pdf"
 set ylabel "Number of vertices"
 set xlabel "Category ID"
-f1="./wiki1-label-dist.csv"
+f1="./cocit-label-dist.csv"
 set datafile separator ","
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
@@ -223,13 +591,13 @@ set xlabel font  ",18"
 set key font  ",16" inside center right
 set bmargin 4
 set boxwidth 0.5
-set yrange [0:405]
+set yrange [0:7500]
 set style fill solid
 set style line 1 lt 2 lw 2 pt 1 ps 1 linecolor rgb "blue"
 
 set size ratio 1.0 # y/x
 
-plot f1 every ::1::17 using 2:xtic(1) with boxes ls 1 notitle
+plot f1 every ::1::15 using 2:xtic(1) with boxes ls 1 notitle
 
 set output
 

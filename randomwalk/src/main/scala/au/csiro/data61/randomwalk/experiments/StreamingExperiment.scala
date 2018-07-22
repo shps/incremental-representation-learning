@@ -57,6 +57,7 @@ case class StreamingExperiment(config: Params) {
       // Construct initial graph
       println("******* Initialized Graph the graph ********")
       var afs = mutable.HashSet.empty[Int]
+      var biggestScc = Seq.empty[Int]
       if (!initEdges.isEmpty) {
         val updateResult = updateGraph(initEdges)
 
@@ -64,8 +65,13 @@ case class StreamingExperiment(config: Params) {
         val numVertices = GraphMap.getNumVertices
         afs = updateResult._1
         val comps = updateResult._2
+        biggestScc = comps._3
         println(s"Number of edges: ${numEdges}")
         println(s"Number of vertices: ${numVertices}")
+        if (config.countSccs) {
+          println(s"Size of biggest SCC: ${biggestScc.size}")
+          println(s"Number of SCCs: ${comps._1}")
+        }
         val result = streamingAddAndRunWithId(afs, prevWalks)
         prevWalks = result._1
         //        deltaWalks = result._1._2
@@ -92,6 +98,13 @@ case class StreamingExperiment(config: Params) {
           config
             .walkLength
         }-nw${config.numWalks}-0-$nr")
+      if (config.countSccs) {
+        fm.saveBiggestScc(
+          biggestScc, s"${Property.biggestScc}-${config.rrType.toString}-wl${
+            config
+              .walkLength
+          }-nw${config.numWalks}-0-$nr")
+      }
       fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
         config.numWalks
       }-0-$nr")
@@ -109,6 +122,7 @@ case class StreamingExperiment(config: Params) {
           val updateResult = updateGraph(updates)
           afs = updateResult._1
           val comps = updateResult._2
+          biggestScc = comps._3
           val result = streamingAddAndRunWithId(afs, prevWalks)
           prevWalks = result._1
           //          deltaWalks = result._1._2
@@ -132,6 +146,10 @@ case class StreamingExperiment(config: Params) {
           println(s"Number of edges: ${numEdges}")
           println(s"Number of vertices: ${numVertices}")
           println(s"Number of walks: ${prevWalks.size + deltaWalks.size}")
+          if (config.countSccs) {
+            println(s"Size of biggest SCC: ${biggestScc.size}")
+            println(s"Number of SCCs: ${comps._1}")
+          }
           if (config.logErrors) {
             val (meanE, maxE): (Double, Double) = GraphUtils.computeErrorsMeanAndMax(result._1,
               config)
@@ -150,6 +168,13 @@ case class StreamingExperiment(config: Params) {
                 config
                   .walkLength
               }-nw${config.numWalks}-$step-$nr")
+            if (config.countSccs) {
+              fm.saveBiggestScc(
+                biggestScc, s"${Property.biggestScc}-${config.rrType.toString}-wl${
+                  config
+                    .walkLength
+                }-nw${config.numWalks}-$step-$nr")
+            }
             //            }
             fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${
               config
@@ -168,25 +193,26 @@ case class StreamingExperiment(config: Params) {
           }
         }
       }
-      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-        config.numWalks
-      }-final-$nr")
-      //      fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config.walkLength}-nw${
+      //      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
       //        config.numWalks
       //      }-final-$nr")
-      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
-        config.rrType
-          .toString
-      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
-      fm.saveAffectedVertices(
-        afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-          config
-            .walkLength
-        }-nw${config.numWalks}-final-$nr")
-      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
-        config.rrType
-          .toString
-      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
+      //      //      fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config
+      // .walkLength}-nw${
+      //      //        config.numWalks
+      //      //      }-final-$nr")
+      //      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+      //        config.rrType
+      //          .toString
+      //      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
+      //      fm.saveAffectedVertices(
+      //        afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
+      //          config
+      //            .walkLength
+      //        }-nw${config.numWalks}-final-$nr")
+      //      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
+      //        config.rrType
+      //          .toString
+      //      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
       fm.saveGraphStats(graphStats, s"${
         config.rrType
           .toString
@@ -202,7 +228,7 @@ case class StreamingExperiment(config: Params) {
     }
   }
 
-  def updateGraph(updates: Seq[(Int, Int)]): (mutable.HashSet[Int], (Int, Int)) = {
+  def updateGraph(updates: Seq[(Int, Int)]): (mutable.HashSet[Int], (Int, Int, Seq[Int])) = {
     val afs = new mutable.HashSet[Int]()
     for (u <- updates) {
       val src = u._1
@@ -224,16 +250,18 @@ case class StreamingExperiment(config: Params) {
 
     var numSccs = 0
     var numOtherVertices = 0
+    var biggestScc = Seq.empty[Int]
 
     if (config.countSccs) {
-      val components = DatasetCleaner.countNumberOfSCCs()
+      val sccResult = DatasetCleaner.getBiggestSccAndCounts()
+      val components = sccResult._1
+      biggestScc = components(sccResult._2)
       numSccs = components.size
-      val totalVertices = components.sum
-      val maxVertices = components.max
-      numOtherVertices = totalVertices - maxVertices
+      val totalVertices = components.foldLeft(0) { (acc, c) => acc + c.size }
+      numOtherVertices = totalVertices - biggestScc.size
     }
 
-    return (afs, (numSccs, numOtherVertices))
+    return (afs, (numSccs, numOtherVertices, biggestScc))
   }
 
   def streamingAddAndRunWithId(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Int, Int, Seq[Int])]):

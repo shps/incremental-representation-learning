@@ -5,6 +5,7 @@ object Property extends Enumeration {
   val countsSuffix = Value("counts")
   val pathSuffix = Value("path")
   val afsSuffix = Value("afs")
+  val biggestScc = Value("bscc")
   val removeAndRunSuffix = Value("remove-runs")
   val probSuffix = Value("probs")
   val degreeSuffix = Value("degrees")

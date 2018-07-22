@@ -1,14 +1,15 @@
 #!/bin/bash
 
-run_rw=true
+run_rw=false
 run_tc_gen=false
-run_w2v=false
+run_w2v=true
 run_nc=false
 #run_cs=false
 
 
 RW_JAR_FILE=/home/Ganymedian/rw/randomwalk-0.0.1-SNAPSHOT.jar
-INPUT_EDGE_LIST=/home/Ganymedian/dataset/cora/cora1_edgelist.txt
+#INPUT_EDGE_LIST=/home/Ganymedian/dataset/cora/cora1_edgelist.txt
+INPUT_EDGE_LIST=/home/Ganymedian/dataset/karate.txt
 #INPUT_EDGE_LIST=/home/Ganymedian/dataset/wiki/Wiki1_edgelist.txt
 #INPUT_EDGE_LIST=/home/Ganymedian/dataset/blog/edges.txt
 #INPUT_EDGE_LIST=/home/Ganymedian/dataset/dblp/coauthors-edge-list.txt
@@ -19,23 +20,25 @@ METHODS=(m5)
 # Random walk configs
 
 INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(80)
-WALK_LENGTH_ARR=(10)
+NUM_WALKS_ARR=(5)
+WALK_LENGTH_ARR=(5)
 P=1.0
 Q=1.0
-STREAM_SIZE=0.001
-DATASET=cora1
+STREAM_SIZE=5
+#DATASET=cora1
+#DATASET=blog
+DATASET=karate
 #DATASET=wiki1
 #DATASET=dblp
-NUM_RUNS=5
+NUM_RUNS=1
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
-LOG_PERIOD=20      # after what number of steps log the output
-LOG_ERRORS=true  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=993       # max number of steps to run the experiment
+LOG_PERIOD=1      # after what number of steps log the output
+LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
+MAX_STEPS=10       # max number of steps to run the experiment
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
 COUNT_NUM_SCC=false
 FIXED_GRAPH=true    # use same graph among different runs.
@@ -61,15 +64,15 @@ USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
 NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
 LEARNING_RATE=0.025
-EMBEDDING_SIZE=128
-VOCAB_SIZE=10313            # Size of vocabulary
+EMBEDDING_SIZE=2
+VOCAB_SIZE=35            # Size of vocabulary
 NEG_SAMPLE_SIZE=5
-N_EPOCHS=1
+N_EPOCHS=10
 BATCH_SIZE=200               # minibatch size
 FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
-#FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
-FORCE_OFFSET=0                        # For cora and wiki datasets
+FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
+#FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
 LABELS_DIR=/home/Ganymedian/dataset/cora/
@@ -109,8 +112,8 @@ if [ "$run_rw" = true ] ; then
 
                 # You can customize the JVM memory size by modifying -Xms.
                 # To run the script on the background: nohup sh random_walk.sh > log.txt &
-                #-Xmsg
-                java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
+                #-Xmsg -Xmx100g -Xms40g
+                java  -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
                     --input $INPUT_EDGE_LIST --output $OUTPUT_DIR --nRuns $NUM_RUNS --directed $DIRECTED --p $P \
                     --q $Q --seed $SEED --d "$RW_DELIMITER" --rrType $METHOD_TYPE --wType $WALK_TYPE --save $LOG_PERIOD \
                     --logErrors $LOG_ERRORS --initEdgeSize $INIT_EDGE_SIZE --edgeStreamSize $STREAM_SIZE \
@@ -162,8 +165,8 @@ if [ "$run_tc_gen" = true ] ; then
                             DIR_NAME="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
                             INPUT_EDGE_LIST="/home/Ganymedian/output/$DATASET/rw/$DIR_NAME/$RW_FILE"
                             OUTPUT_DIR="/home/Ganymedian/output/$DATASET/pairs/$DIR_NAME/$TC_CONFIG_SIG/"
-
-                            java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
+                            #-Xmx100g -Xms40g
+                            java  -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                                 --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
                                 --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE \
                                 --allWalks $ALL_WALKS --o $O --seed $INC_SEED

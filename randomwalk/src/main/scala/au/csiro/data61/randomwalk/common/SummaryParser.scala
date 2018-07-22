@@ -13,7 +13,7 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1531236748"
+  val DIR = "summary" + "1532069855"
   val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
   val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
@@ -159,7 +159,7 @@ object SummaryParser {
   }
 
   def saveScores(scoresStats: Seq[((String, Int, Int, Int, Int), (Float, Float, Float, Float, Float,
-    Float, Float, Float))], fname:String): Unit = {
+    Float, Float, Float))], fname: String): Unit = {
 
     OUTPUT_DIR.toFile.createIfNotExists(true)
     val file = new File(s"${OUTPUT_DIR}/$fname.csv")
@@ -220,11 +220,17 @@ object SummaryParser {
         r._1._5))
       saveScores(scoresStats, "scores")
 
-      val g0ScoreFile = s"$SUMMARY_DIR/$G0_SCORE_FILE"
-      val g0Scores = readScoresSummary(g0ScoreFile)
-      val g0ScoresStats = computeScoresStats(g0Scores).sortBy(r => (r._1._1, r._1._2, r._1._3, r._1._4,
-        r._1._5))
-      saveScores(g0ScoresStats, "g0-scores")
+      try {
+        val g0ScoreFile = s"$SUMMARY_DIR/$G0_SCORE_FILE"
+        val g0Scores = readScoresSummary(g0ScoreFile)
+        val g0ScoresStats = computeScoresStats(g0Scores).sortBy(r => (r._1._1, r._1._2, r._1._3,
+          r._1._4,
+
+          r._1._5))
+        saveScores(g0ScoresStats, "g0-scores")
+      } catch {
+        case e: Exception => println(e.printStackTrace())
+      }
     }
 
     val epochFile = s"$SUMMARY_DIR/$EPOCH_TIME"

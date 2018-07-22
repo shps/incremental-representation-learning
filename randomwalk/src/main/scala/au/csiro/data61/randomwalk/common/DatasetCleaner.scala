@@ -1,9 +1,12 @@
 package au.csiro.data61.randomwalk.common
 
+import java.util
+
 import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
 
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
+import scala.util.Random
 
 
 /**
@@ -125,12 +128,36 @@ object DatasetCleaner {
     compVertices
   }
 
+  def dfsNonRecurse(v: Int, vertices: mutable.Map[Int, Boolean]): Seq[Int] = {
+
+    var compVertices = Seq.empty[Int]
+    val stack: util.Stack[Int] = new util.Stack[Int]()
+    stack.push(v)
+
+    while (!stack.isEmpty) {
+      val next = stack.pop()
+      if (!vertices(next)) {
+        vertices(next) = true
+        compVertices ++= Seq(next)
+        val neighbors = GraphMap.getNeighbors(next).toIterator
+        while (neighbors.hasNext) {
+          val n = neighbors.next()._1
+          if (!vertices(n)) {
+            stack.push(n)
+          }
+        }
+      }
+    }
+
+    compVertices
+  }
+
   def countNumberOfSCCs(): Seq[Int] = {
     val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
     var components = Seq.empty[Int]
     for (v <- vertices.keys) {
       if (!vertices(v)) {
-        val comp = dfs(v, vertices)
+        val comp = dfsNonRecurse(v, vertices)
         components ++= Seq(comp.size)
         println(s"Component ${components.size}\tsize: ${comp.size}")
       }
@@ -139,24 +166,24 @@ object DatasetCleaner {
     return components
   }
 
-  def getBiggestScc(): Seq[Int] = {
+  def getBiggestSccAndCounts(): (Seq[Seq[Int]], Int) = {
     val vertices = mutable.Map(GraphMap.getVertices().map(a => (a, false)): _*)
     var components = 0
     var comps = Seq.empty[Seq[Int]]
     for (v <- vertices.keys) {
       if (!vertices(v)) {
         components += 1
-        val comp = dfs(v, vertices)
-        println(s"Component $components\tsize: ${comp.size}")
+        val comp = dfsNonRecurse(v, vertices)
+//        println(s"Component $components\tsize: ${comp.size}")
         comps ++= Seq(comp)
       }
     }
 
-    var nVertices = 0
-    for (c <- comps) {
-      nVertices += c.size
-    }
-    assert(nVertices == GraphMap.getNumVertices)
+//    var nVertices = 0
+//    for (c <- comps) {
+//      nVertices += c.size
+//    }
+//    assert(nVertices == GraphMap.getNumVertices)
     var max = 0
     var maxSize = comps(0).size
     for (i <- 1 until comps.length) {
@@ -166,7 +193,31 @@ object DatasetCleaner {
       }
     }
 
-    return comps(0)
+    return (comps, max)
+  }
+
+  //  def generateRandomConnectedEdgeStream(): Unit ={
+  //
+  //    val vertices = GraphMap.getVertices()
+  //    Random.setSeed(1234)
+  //    val v = Random.shuffle(vertices).head
+  //
+  //
+  //
+  //  }
+
+  def convertToUndirected():ParSeq[(Int, Int)] = {
+    val directedEdges = GraphMap.getVertices().par.flatMap { case v =>
+      GraphMap.getNeighbors(v).flatMap { case (dst, _) =>
+        if (v < dst)
+          Seq((v, dst))
+        else
+          Seq((dst, v))
+      }
+    }
+
+    println(s"Number of directed edges: ${directedEdges.size}")
+    return directedEdges.distinct
   }
 
 }

@@ -379,6 +379,15 @@ case class FileManager(config: Params) {
     bw.close()
   }
 
+  def saveBiggestScc(bScc: Seq[Int], suffix: String) = {
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(bScc.sortWith(_ < _).mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
   def saveCounts(counts: Seq[(Int, Int)], fName: String) = {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/$fName.txt")
