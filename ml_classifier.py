@@ -21,8 +21,8 @@ flags.DEFINE_string('input_dir', '.', 'Input data directory.')
 flags.DEFINE_string('emb_file', None, 'Input label file name.')
 flags.DEFINE_string('label_file', None, 'Input label file name.')
 flags.DEFINE_string('degrees_file', None, 'Input node degrees file name.')
-flags.DEFINE_string('init_degrees_file', None,
-                    'Input node degrees file name of the initial graph (G0)')
+flags.DEFINE_string('bscc_file', None,
+                    'Biggest Strongly Connected Component file')
 flags.DEFINE_string('label_dir', None, 'Input label file directory.')
 flags.DEFINE_string('degrees_dir', None, 'Input node degrees file directory.')
 flags.DEFINE_integer('output_index', 0, 'Output file suffix.')
@@ -135,6 +135,11 @@ def read_existing_vocab(degree_file):
     return vocabs
 
 
+def read_vocabs(vocab_file):
+    vocabs = pd.read_csv(vocab_file, dtype='int32', header=None).values
+    return vocabs + FLAGS.force_offset
+
+
 def save_scores(scores, prefix):
     if not os.path.exists(os.path.dirname(FLAGS.base_log_dir + "/")):
         try:
@@ -178,10 +183,10 @@ if __name__ == "__main__":
     evals = eval_classification(all_labels[existing_vocab], all_embeddings[existing_vocab])
     save_scores(evals, "scores")
 
-    if FLAGS.init_degrees_file is not None:
-        init_graph_vocabs = read_existing_vocab(
-            os.path.join(FLAGS.degrees_dir, FLAGS.init_degrees_file))
-        print("Init graph vocab size: {}".format(len(init_graph_vocabs)))
-        init_evals = eval_classification(all_labels[init_graph_vocabs],
-                                         all_embeddings[init_graph_vocabs])
-        save_scores(init_evals, "g0-scores")
+    if FLAGS.bscc_file is not None:
+        bscc_graph_vocabs = read_vocabs(
+            os.path.join(FLAGS.degrees_dir, FLAGS.bscc_file))
+        print("BSCC graph vocab size: {}".format(len(bscc_graph_vocabs)))
+        bscc_evals = eval_classification(all_labels[bscc_graph_vocabs],
+                                         all_embeddings[bscc_graph_vocabs])
+        save_scores(bscc_evals, "bscc-scores")

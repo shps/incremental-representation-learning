@@ -152,6 +152,8 @@ class W2V_Sampled:
     def save_embeddings(self, epoch, embeddings):
         with open(os.path.join(self.save_path, "embeddings{}.pkl".format(epoch)), "wb") as f:
             pickle.dump(embeddings, f)
+        if epoch == 10:
+            print(embeddings)
 
     def load_embeddings(self):
         pass
