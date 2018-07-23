@@ -136,8 +136,8 @@ def read_existing_vocab(degree_file):
 
 
 def read_vocabs(vocab_file):
-    vocabs = pd.read_csv(vocab_file, dtype='int32', header=None).values
-    return vocabs + FLAGS.force_offset
+    vocabs = pd.read_csv(vocab_file, delimiter=FLAGS.delimiter, dtype='int32', header=None).values
+    return vocabs[:, 0] + FLAGS.force_offset
 
 
 def save_scores(scores, prefix):
