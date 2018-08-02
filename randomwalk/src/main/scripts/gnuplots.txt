@@ -314,6 +314,78 @@ plot f1 every ::1::914 using 8 with linespoints ls 1 not
 
 set output
 
+########## SCCs Numbers Cocit
+set terminal pdf
+set output "./cocit-sccs1000.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("0" 0, "100" 194)
+f1="./cocit-sccs1000.csv"
+set datafile separator ","
+set ytics 0,500
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::195 using 8 with linespoints ls 1 not
+
+set output
+
+########## Vertices Numbers Cocit
+set terminal pdf
+set output "./cocit-vertices1000.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("0" 0, "100" 194)
+f1="./cocit-sccs1000.csv"
+set datafile separator ","
+#set ytics 0,500
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::195 using 6 with linespoints ls 1 not
+
+set output
+
+########## Vertices Numbers in Biggest SCC Cocit
+set terminal pdf
+set output "./cocit-biggest-scc1000.pdf"
+set ylabel "Number of SCCs"
+set xlabel "Edges (%)"
+set xtics ("0" 0, "100" 194)
+f1="./cocit-sccs1000.csv"
+set datafile separator ","
+#set ytics 0,500
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+#set arrow from 100,0 to 100,276 nohead
+
+plot f1 every ::1::195 using 10 with linespoints ls 1 not
+
+set output
+
 ########## SCCs Numbers Blog
 set terminal pdf
 set output "./blog-sccs200.pdf"
@@ -580,10 +652,10 @@ set output
 
 ##### Category distribution
 set terminal pdf
-set output "./cocit-label-dist.pdf"
+set output "./cocit1-label-dist.pdf"
 set ylabel "Number of vertices"
 set xlabel "Category ID"
-f1="./cocit-label-dist.csv"
+f1="./cocit1-label-dist.csv"
 set datafile separator ","
 set ytics font ",14"
 set ylabel font  ",18" offset 0.4
@@ -621,5 +693,29 @@ set style line 1 lt 2 lw 2 pt 1 ps 0.5 linecolor rgb "blue"
 set size ratio 0.5 # y/x
 
 plot f1 every ::0::168 using 4 with points ls 1 notitle
+
+set output
+
+########## Density
+set terminal pdf
+set output "./cora1-density.pdf"
+set ylabel "Density"
+set xlabel "Edges (%)"
+set xtics ("10" 0, "100" 91)
+f1="./cora1-density.csv"
+set datafile separator ","
+set format y "%1.1e"
+set ytics 0.0011,0.0002
+set yrange [0.0011:0.0017]
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 4
+set style line 1 lt 2 lw 2 pt 1 ps 0.25 linecolor rgb "blue"
+
+set size ratio 0.8 # y/x
+
+plot f1 every ::1::92 using 2 with linespoints ls 1 not
 
 set output

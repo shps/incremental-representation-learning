@@ -15,6 +15,8 @@ import scala.util.{Random, Try}
   */
 case class FileManager(config: Params) {
 
+
+
   def readCountFile(): ParSeq[(Int, Int)] = {
     val lines = Source.fromFile(config.input).getLines.toArray.par
 
@@ -259,7 +261,9 @@ case class FileManager(config: Params) {
     config.output.toFile.createIfNotExists(true)
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(pairs.map { case (t, c) => s"$t\t$c" }.mkString("\n"))
+    for (pair <- pairs) {
+      bw.write(s"${pair._1}\t${pair._2}\n")
+    }
     bw.flush()
     bw.close()
 
@@ -375,6 +379,15 @@ case class FileManager(config: Params) {
     val file = new File(s"${config.output}/${config.cmd}-$suffix.txt")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(afs.toSeq.sortWith(_ < _).mkString("\n"))
+    bw.flush()
+    bw.close()
+  }
+
+  def saveDensities(densities: Seq[Double], suffix: String): Unit ={
+    config.output.toFile.createIfNotExists(true)
+    val file = new File(s"${config.output}/$suffix.txt")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(densities.zipWithIndex.map{d => s"${d._2}\t${d._1}"}.mkString("\n"))
     bw.flush()
     bw.close()
   }

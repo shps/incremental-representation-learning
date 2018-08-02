@@ -13,11 +13,11 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1532069855"
+  val DIR = "summary" + "1533046658"
   val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
   val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
-  val G0_SCORE_FILE = "g0-score-summary.csv"
+  val BSCC_SCORE_FILE = "bscc-score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"
   val RW_TIME_FILE = "rw-time-summary.csv"
   val RW_STEP = "rw-step-summary.csv"
@@ -221,13 +221,13 @@ object SummaryParser {
       saveScores(scoresStats, "scores")
 
       try {
-        val g0ScoreFile = s"$SUMMARY_DIR/$G0_SCORE_FILE"
-        val g0Scores = readScoresSummary(g0ScoreFile)
-        val g0ScoresStats = computeScoresStats(g0Scores).sortBy(r => (r._1._1, r._1._2, r._1._3,
+        val bsccScoreFile = s"$SUMMARY_DIR/$BSCC_SCORE_FILE"
+        val bsccScores = readScoresSummary(bsccScoreFile)
+        val bsccScoresStats = computeScoresStats(bsccScores).sortBy(r => (r._1._1, r._1._2, r._1._3,
           r._1._4,
 
           r._1._5))
-        saveScores(g0ScoresStats, "g0-scores")
+        saveScores(bsccScoresStats, "bscc-scores")
       } catch {
         case e: Exception => println(e.printStackTrace())
       }

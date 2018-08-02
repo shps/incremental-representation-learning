@@ -1,47 +1,50 @@
 #!/bin/bash
 
-run_rw=false
-run_tc_gen=false
+run_rw=true
+run_tc_gen=true
 run_w2v=true
-run_nc=false
+run_nc=true
 #run_cs=false
 
+ROOT=/home/Ganymedian
 
-RW_JAR_FILE=/home/Ganymedian/rw/randomwalk-0.0.1-SNAPSHOT.jar
-#INPUT_EDGE_LIST=/home/Ganymedian/dataset/cora/cora1_edgelist.txt
-INPUT_EDGE_LIST=/home/Ganymedian/dataset/karate.txt
-#INPUT_EDGE_LIST=/home/Ganymedian/dataset/wiki/Wiki1_edgelist.txt
-#INPUT_EDGE_LIST=/home/Ganymedian/dataset/blog/edges.txt
-#INPUT_EDGE_LIST=/home/Ganymedian/dataset/dblp/coauthors-edge-list.txt
 
-METHODS=(m5)
+RW_JAR_FILE=$ROOT/rw/randomwalk-0.0.1-SNAPSHOT.jar
+INPUT_EDGE_LIST=$ROOT/dataset/cora/cora1_edgelist.txt
+#INPUT_EDGE_LIST="$ROOT/dataset/cocit/cocit1_edgelist.txt"
+#INPUT_EDGE_LIST="$ROOT/dataset/wiki/Wiki1_edgelist.txt"
+#INPUT_EDGE_LIST="$ROOT/dataset/blog/edges.txt"
+#INPUT_EDGE_LIST="$ROOT/dataset/dblp/coauthors-edge-list.txt"
+
+METHODS=(m1)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=0.1
-NUM_WALKS_ARR=(5)
-WALK_LENGTH_ARR=(5)
+INIT_EDGE_SIZE=1.0
+NUM_WALKS_ARR=(40)
+WALK_LENGTH_ARR=(10)
 P=1.0
 Q=1.0
 STREAM_SIZE=5
-#DATASET=cora1
-#DATASET=blog
-DATASET=karate
+#STREAM_SIZE=500
 #DATASET=wiki1
-#DATASET=dblp
+#DATASET=cocit
+DATASET=cora1
 NUM_RUNS=1
 DIRECTED=false    # tested on undirected graphs only.
 SEED=1234
 WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
 #RW_DELIMITER=","
-LOG_PERIOD=1      # after what number of steps log the output
+#LOG_PERIOD=2      # after what number of steps log the output
+LOG_PERIOD=1
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-MAX_STEPS=10       # max number of steps to run the experiment
+#MAX_STEPS=3       # max number of steps to run the experiment
+MAX_STEPS=0
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
-COUNT_NUM_SCC=false
-FIXED_GRAPH=true    # use same graph among different runs.
+COUNT_NUM_SCC=true
+FIXED_GRAPH=false    # use same graph among different runs.
 
 # target-context generator configs
 TC_DELIMITER="\\t"    # e.g., space-separated ("\ "), or comma-separated (",").
@@ -51,8 +54,11 @@ SELF_CONTEXT=true  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
 FORCE_SKIP_SIZE=false                # Force to generate skipSize number of pairs
 ALL_WALKS=true                      # Whether to consider all old walks and new walks of walks to generate sample from. If false it considers only a percentage of the old walks.
-O=0.2                               # Percentage of new walks to draw from old walks.
+O=0                               # Percentage of new walks to draw from old walks.
+#COMPUTE_PER_STEP=2
+#START_STEP=2
 COMPUTE_PER_STEP=1
+START_STEP=0
 
 TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE-aw$ALL_WALKS-o$O-cps$COMPUTE_PER_STEP"
 
@@ -63,33 +69,43 @@ FREEZE_AFV_FOR_M1=false
 USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
 NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
+#LEARNING_RATE=0.2
 LEARNING_RATE=0.025
-EMBEDDING_SIZE=2
-VOCAB_SIZE=35            # Size of vocabulary
+EMBEDDING_SIZE=128
+VOCAB_SIZE=2710            # Size of vocabulary
+#VOCAB_SIZE=44035
 NEG_SAMPLE_SIZE=5
 N_EPOCHS=10
 BATCH_SIZE=200               # minibatch size
 FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
-FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
-#FORCE_OFFSET=0                        # For cora and wiki datasets
+#FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
+FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-LABELS_DIR=/home/Ganymedian/dataset/cora/
+LABELS_DIR=$ROOT/dataset/cora/
 LABEL_FILE=cora1_labels.txt           # label file
-#LABELS_DIR=/home/Ganymedian/dataset/wiki/
+#LABELS_DIR=$ROOT/dataset/wiki/
 #LABEL_FILE=Wiki1_labels.txt           # label file
-#LABELS_DIR=/home/Ganymedian/dataset/blog/
+#LABELS_DIR=$ROOT/dataset/blog/
 #LABEL_FILE=blog-labels.txt
+#LABELS_DIR=$ROOT/dataset/cocit/
+#LABEL_FILE=cocit1_labels.txt
+
+NC_TRAIN_SPLIT=0.09
+
+
 
 
 RW_CONFIG_SIG="is$INIT_EDGE_SIZE-p$P-q$Q-ss$STREAM_SIZE-nr$NUM_RUNS-dir$DIRECTED-s$SEED-wt$WALK_TYPE-ms$MAX_STEPS-le$LOG_ERRORS-cnscc$COUNT_NUM_SCC-fg$FIXED_GRAPH"
 W2V_CONFIG_SIG="ts$TRAIN_SPLIT-lr$LEARNING_RATE-es$EMBEDDING_SIZE-vs$VOCAB_SIZE-ns$NEG_SAMPLE_SIZE-ne$N_EPOCHS-bs$BATCH_SIZE-fv$FREEZE_AFV-fe$FREEZE_EMBEDDINGS-s$SEED-twd$TRAIN_WITH_DELTA-uc$USE_CHECKPOINT-ffm1$FREEZE_AFV_FOR_M1"
 
-SCRIPT_FILE=/home/Ganymedian/rw/run_all_gce.sh
+#MAX_STEPS=1
+
+SCRIPT_FILE=$ROOT/rw/run_all_gce.sh
 DATE_SUFFIX=`date +%s`
 
-SUMMARY_DIR="/home/Ganymedian/output/$DATASET/summary/summary$DATE_SUFFIX"
+SUMMARY_DIR=$ROOT/output/$DATASET/summary/summary$DATE_SUFFIX
 mkdir -p $SUMMARY_DIR
 cp $SCRIPT_FILE "$SUMMARY_DIR/"
 
@@ -108,12 +124,12 @@ if [ "$run_rw" = true ] ; then
                 printf "    Num Walks: %s\n" $NUM_WALKS
                 printf "    Walk Length: %s\n" $WALK_LENGTH
 
-                OUTPUT_DIR="/home/Ganymedian/output/$DATASET/rw/$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS/"
+                OUTPUT_DIR=$ROOT/output/$DATASET/rw/$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS/
 
                 # You can customize the JVM memory size by modifying -Xms.
                 # To run the script on the background: nohup sh random_walk.sh > log.txt &
-                #-Xmsg -Xmx100g -Xms40g
-                java  -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
+                #-Xmsg
+                java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd sca --walkLength $WALK_LENGTH --numWalks $NUM_WALKS \
                     --input $INPUT_EDGE_LIST --output $OUTPUT_DIR --nRuns $NUM_RUNS --directed $DIRECTED --p $P \
                     --q $Q --seed $SEED --d "$RW_DELIMITER" --rrType $METHOD_TYPE --wType $WALK_TYPE --save $LOG_PERIOD \
                     --logErrors $LOG_ERRORS --initEdgeSize $INIT_EDGE_SIZE --edgeStreamSize $STREAM_SIZE \
@@ -143,7 +159,7 @@ if [ "$run_tc_gen" = true ] ; then
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
                     INC_SEED=$(($SEED+$RUN))
-                    for STEP in $(seq 0 $MAX_STEPS)
+                    for STEP in $(seq $START_STEP $MAX_STEPS)
                     do
                         MOD=$(( $STEP%$COMPUTE_PER_STEP ))
                         if [ "$MOD" == 0 ];then
@@ -163,10 +179,10 @@ if [ "$run_tc_gen" = true ] ; then
                             fi
 
                             DIR_NAME="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                            INPUT_EDGE_LIST="/home/Ganymedian/output/$DATASET/rw/$DIR_NAME/$RW_FILE"
-                            OUTPUT_DIR="/home/Ganymedian/output/$DATASET/pairs/$DIR_NAME/$TC_CONFIG_SIG/"
-                            #-Xmx100g -Xms40g
-                            java  -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
+                            INPUT_EDGE_LIST=$ROOT/output/$DATASET/rw/$DIR_NAME/$RW_FILE
+                            OUTPUT_DIR=$ROOT/output/$DATASET/pairs/$DIR_NAME/$TC_CONFIG_SIG/
+
+                            java -Xmx100g -Xms40g -jar $RW_JAR_FILE  --cmd gPairs --input $INPUT_EDGE_LIST --output $OUTPUT_DIR \
                                 --d "$TC_DELIMITER"  --w2vWindow $WINDOW_SIZE --w2vSkip $SKIP_SIZE \
                                 --selfContext $SELF_CONTEXT --forceSkipSize $FORCE_SKIP_SIZE \
                                 --allWalks $ALL_WALKS --o $O --seed $INC_SEED
@@ -185,8 +201,8 @@ fi
 # word2vec
 
 # Tensorflow configurations
-TENSORFLOW_BIN_DIR=/home/Ganymedian/tf/bin/
-N2V_SCRIPT_DIR=/home/Ganymedian/n2v/
+TENSORFLOW_BIN_DIR=$ROOT/tf/bin/
+N2V_SCRIPT_DIR=$ROOT/n2v/
 
 source $TENSORFLOW_BIN_DIR/activate tensorflow
 cd $N2V_SCRIPT_DIR
@@ -204,7 +220,7 @@ if [ "$run_w2v" = true ] ; then
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
                     INC_SEED=$(($SEED+$RUN))
-                    for STEP in $(seq 0 $MAX_STEPS)
+                    for STEP in $(seq $START_STEP $MAX_STEPS)
                     do
                             MOD=$(( $STEP%$COMPUTE_PER_STEP ))
                             if [ "$MOD" == 0 ];then
@@ -218,11 +234,11 @@ if [ "$run_w2v" = true ] ; then
                                 SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
                                 FILE_SUFFIX="w$WINDOW_SIZE-s$SKIP_SIZE-$SUFFIX"
                                 DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                                BASE_LOG_DIR="/home/Ganymedian/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
-                                INPUT_DIR="/home/Ganymedian/output/$DATASET/pairs/$DIR_SUFFIX/$TC_CONFIG_SIG/"                  # input data directory
+                                BASE_LOG_DIR=$ROOT/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN
+                                INPUT_DIR=$ROOT/output/$DATASET/pairs/$DIR_SUFFIX/$TC_CONFIG_SIG/                 # input data directory
                                 TRAIN_FILE="gPairs-$FILE_SUFFIX.txt"                 # train file name
                                 DELTA_TRAIN_FILE="gPairs-delta-$FILE_SUFFIX.txt"
-                                DEGREES_DIR="/home/Ganymedian/output/$DATASET/rw/$DIR_SUFFIX/"
+                                DEGREES_DIR=$ROOT/output/$DATASET/rw/$DIR_SUFFIX/
                                 DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 
                                 COMMAND="-m node2vec_pregen --base_log_dir $BASE_LOG_DIR --input_dir $INPUT_DIR --train_file $TRAIN_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $TRAIN_SPLIT --learning_rate $LEARNING_RATE --embedding_size $EMBEDDING_SIZE --vocab_size $VOCAB_SIZE --neg_sample_size $NEG_SAMPLE_SIZE --n_epochs $N_EPOCHS --batch_size $BATCH_SIZE"
@@ -242,7 +258,7 @@ if [ "$run_w2v" = true ] ; then
                                 fi
 
                                 if [ "$USE_CHECKPOINT" == true ] && [ $STEP -gt 0 ]; then
-                                    COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir /home/Ganymedian/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$(($STEP-1))-r$RUN"
+                                    COMMAND="$COMMAND --checkpoint_file model-epoch-$(($N_EPOCHS-1)) --checkpoint_dir $ROOT/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$(($STEP-1))-r$RUN"
                                 fi
 
                                 echo $COMMAND
@@ -272,7 +288,7 @@ if [ "$run_nc" = true ] ; then
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
                     INC_SEED=$(($SEED+$RUN))
-                    for STEP in $(seq 0 $MAX_STEPS)
+                    for STEP in $(seq $START_STEP $MAX_STEPS)
                     do
                         MOD=$(( $STEP%$COMPUTE_PER_STEP ))
                         if [ "$MOD" == 0 ];then
@@ -287,15 +303,20 @@ if [ "$run_nc" = true ] ; then
 
                                 CONFIG=wl$WALK_LENGTH-nw$NUM_WALKS
                                 SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
-                                G0_SUFFIX="$METHOD_TYPE-$CONFIG-0-0"
+#                                G0_SUFFIX="$METHOD_TYPE-$CONFIG-0-0"
                                 DIR_SUFFIX="$RW_CONFIG_SIG/$METHOD_TYPE-wl$WALK_LENGTH-nw$NUM_WALKS"
-                                BASE_LOG_DIR="/home/Ganymedian/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
-                                INPUT_DIR="/home/Ganymedian/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
-                                DEGREES_DIR="/home/Ganymedian/output/$DATASET/rw/$DIR_SUFFIX/"                  # input data directory
+                                BASE_LOG_DIR=$ROOT/output/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/ts$NC_TRAIN_SPLIT/s$STEP-r$RUN
+                                INPUT_DIR=$ROOT/output/$DATASET/emb/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN
+                                DEGREES_DIR=$ROOT/output/$DATASET/rw/$DIR_SUFFIX/                  # input data directory
                                 DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
-                                G0_DEGREES_FILE="degrees-$G0_SUFFIX.txt"
+#                                G0_DEGREES_FILE="degrees-$G0_SUFFIX.txt"
+                                BSCC_VERTEX_FILE="sca-bscc-$SUFFIX.txt"
                                 EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name
-                                COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --init_degrees_file $G0_DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
+                                COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --bscc_file $BSCC_VERTEX_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $NC_TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
+
+#                                if [ "$RANDOM_CLASSIFIER" == true ]; then
+#                                    COMMAND="$COMMAND  --random_classifier"
+#                                fi
 
                                 echo $COMMAND
 
@@ -314,7 +335,7 @@ deactivate
 # collect results
 echo "************ Collecting results ************"
 SUMMARY_SCORE_FILE="$SUMMARY_DIR/score-summary.csv"
-SUMMARY_G0_SCORE_FILE="$SUMMARY_DIR/g0-score-summary.csv"
+SUMMARY_BSCC_SCORE_FILE="$SUMMARY_DIR/bscc-score-summary.csv"
 SUMMARY_EPOCH_TIME="$SUMMARY_DIR/epoch-summary.csv"
 SUMMARY_RW_TIME="$SUMMARY_DIR/rw-time-summary.csv"
 SUMMARY_GRAPH_STAT="$SUMMARY_DIR/rw-graph-stat-summary.csv"
@@ -325,7 +346,7 @@ SUMMARY_MEAN_ERROR="$SUMMARY_DIR/rw-mean-error-summary.csv"
 
 if [ "$run_nc" = true ] ; then
     echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_SCORE_FILE
-    echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_G0_SCORE_FILE
+    echo "method,nw,wl,run,step,epoch,train_acc,train_f1,test_acc,test_f1" >> $SUMMARY_BSCC_SCORE_FILE
 fi
 
 if [ "$run_w2v" = true ] ; then
@@ -335,7 +356,7 @@ fi
 if [ "$run_rw" = true ] ; then
     HEADER="method\tnw\twl\trun"
     GRAPH_STAT_HEADER="method\tnw\twl\trun\tstep\tn\tm\tnumSccs\tnumOtherVertices"
-    for STEP in $(seq 0 $MAX_STEPS)
+    for STEP in $(seq $START_STEP $MAX_STEPS)
     do
         MOD=$(( $STEP%$COMPUTE_PER_STEP ))
         if [ "$MOD" == 0 ];then
@@ -356,7 +377,7 @@ fi
 
 trap "exit" INT
 
-DIR_PREFIX="/home/Ganymedian/output"
+DIR_PREFIX=$ROOT/output
 
 for METHOD_TYPE in ${METHODS[*]}
 do
@@ -369,7 +390,7 @@ do
             if [ "$run_nc" = true ] || [ "$run_w2v" = true ]; then
                 for RUN in $(seq 0 $(($NUM_RUNS-1)))
                 do
-                    for STEP in $(seq 0 $MAX_STEPS)
+                    for STEP in $(seq $START_STEP $MAX_STEPS)
                     do
                         MOD=$(( $STEP%$COMPUTE_PER_STEP ))
                         if [ "$MOD" == 0 ];then
@@ -386,16 +407,16 @@ do
                                 SUFFIX="$METHOD_TYPE-$CONFIG-$STEP-$RUN"
 
                                 if [ "$run_nc" = true ]; then
-                                    SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/s$STEP-r$RUN"
+                                    SCORE_INPUT_DIR="$DIR_PREFIX/$DATASET/train/$DIR_SUFFIX/$TC_CONFIG_SIG/$W2V_CONFIG_SIG/ts$NC_TRAIN_SPLIT/s$STEP-r$RUN"
                                     SCORE_FILE="$SCORE_INPUT_DIR/scores$EPOCH.txt"
                                     SCORE=$(<$SCORE_FILE)
                                     SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$SCORE"
                                     echo "$SUMMARY" >> $SUMMARY_SCORE_FILE
 
-                                    G0_SCORE_FILE="$SCORE_INPUT_DIR/g0-scores$EPOCH.txt"
-                                    G0_SCORE=$(<$G0_SCORE_FILE)
-                                    G0_SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$G0_SCORE"
-                                    echo "$G0_SUMMARY" >> $SUMMARY_G0_SCORE_FILE
+                                    BSCC_SCORE_FILE="$SCORE_INPUT_DIR/bscc-scores$EPOCH.txt"
+                                    BSCC_SCORE=$(<$BSCC_SCORE_FILE)
+                                    BSCC_SUMMARY="$METHOD_TYPE,$NUM_WALKS,$WALK_LENGTH,$RUN,$STEP,$EPOCH,$BSCC_SCORE"
+                                    echo "$BSCC_SUMMARY" >> $SUMMARY_BSCC_SCORE_FILE
                                 fi
 
                                 if [ "$run_w2v" = true ]; then
@@ -466,7 +487,7 @@ do
 done
 
 
-mv /home/Ganymedian/output/log.txt "$SUMMARY_DIR/"
+mv $ROOT/output/log.txt $SUMMARY_DIR/
 echo "Experiment Finished!"
 
 echo "Summary dir: $SUMMARY_DIR"
