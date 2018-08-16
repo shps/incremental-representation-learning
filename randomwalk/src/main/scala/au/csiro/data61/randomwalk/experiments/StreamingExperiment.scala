@@ -4,11 +4,11 @@ import au.csiro.data61.randomwalk.algorithm.{GraphMap, UniformRandomWalk}
 import au.csiro.data61.randomwalk.common.CommandParser.RrType
 import au.csiro.data61.randomwalk.common._
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
-import scala.util.control.Breaks._
-import collection.JavaConverters._
 import scala.util.Random
+import scala.util.control.Breaks._
 
 /**
   * Created by Hooman on 2018-04-11.
@@ -18,7 +18,6 @@ case class StreamingExperiment(config: Params) {
   val rwalk = UniformRandomWalk(config)
 
   def streamEdges(): Unit = {
-    //        val edges = fm.readPartitionedEdgeList()
     var numSteps = Array.empty[Array[Int]]
     var numWalkers = Array.empty[Array[Int]]
     var stepTimes = Array.empty[Array[Long]]
@@ -39,10 +38,8 @@ case class StreamingExperiment(config: Params) {
       } else {
         Random.setSeed(config.seed + nr)
       }
-      val (initEdges, edges) = config.grouped match {
-        case false => fm.readPartitionEdgeListWithInitEdges()
-        case true => fm.readAlreadyPartitionedEdgeList()
-      }
+      val (initEdges, edges) = fm.readPartitionEdgeListWithInitEdges()
+
       Random.setSeed(config.seed + nr)
 
       val logSize = Math.min(edges.length, config.maxSteps) + 1
@@ -74,7 +71,6 @@ case class StreamingExperiment(config: Params) {
         }
         val result = streamingAddAndRunWithId(afs, prevWalks)
         prevWalks = result._1
-        //        deltaWalks = result._1._2
         totalTime = result._4
         numSteps(nr)(0) = result._2
         numWalkers(nr)(0) = result._3
@@ -125,7 +121,6 @@ case class StreamingExperiment(config: Params) {
           biggestScc = comps._3
           val result = streamingAddAndRunWithId(afs, prevWalks)
           prevWalks = result._1
-          //          deltaWalks = result._1._2
           val ns = result._2
           val nw = result._3
           val stepTime = result._4
@@ -162,7 +157,6 @@ case class StreamingExperiment(config: Params) {
           println(s"Number of actual walks: $nw")
 
           if (ec % config.savePeriod == 0) {
-            //            if (config.rrType != RrType.m1) {
             fm.saveAffectedVertices(
               afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
                 config
@@ -175,17 +169,12 @@ case class StreamingExperiment(config: Params) {
                     .walkLength
                 }-nw${config.numWalks}-$step-$nr")
             }
-            //            }
             fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${
               config
                 .walkLength
             }-nw${
               config.numWalks
             }-$step-$nr")
-            //            fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config
-            // .walkLength}-nw${
-            //              config.numWalks
-            //            }-$step-$nr")
             fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
               config.rrType
                 .toString
@@ -193,26 +182,6 @@ case class StreamingExperiment(config: Params) {
           }
         }
       }
-      //      fm.savePaths(prevWalks, s"${config.rrType.toString}-wl${config.walkLength}-nw${
-      //        config.numWalks
-      //      }-final-$nr")
-      //      //      fm.savePaths(deltaWalks, s"${config.rrType.toString}-delta-wl${config
-      // .walkLength}-nw${
-      //      //        config.numWalks
-      //      //      }-final-$nr")
-      //      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
-      //        config.rrType
-      //          .toString
-      //      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
-      //      fm.saveAffectedVertices(
-      //        afs, s"${Property.afsSuffix}-${config.rrType.toString}-wl${
-      //          config
-      //            .walkLength
-      //        }-nw${config.numWalks}-final-$nr")
-      //      fm.saveDegrees(GraphUtils.degrees(), s"${Property.degreeSuffix}-${
-      //        config.rrType
-      //          .toString
-      //      }-wl${config.walkLength}-nw${config.numWalks}-final-$nr")
       fm.saveGraphStats(graphStats, s"${
         config.rrType
           .toString
@@ -281,36 +250,10 @@ case class StreamingExperiment(config: Params) {
 
         (p.map { case (_, w) => (w._1, w._2, 1, w._3) }, ns, nw, tTime)
       }
-      //      case RrType.m2 => {
-      //        val sTime = System.currentTimeMillis()
-      //
-      //        var fWalkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = filterUniqueWalkers(paths, afs)
-      //        for (a <- afs) {
-      //          if (fWalkers.count(_._1 == a) == 0) {
-      //            fWalkers ++= ParSeq((a, (1, 0, Seq(a))))
-      //          }
-      //        }
-      //        val walkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = ParSeq.fill(config.numWalks)
-      // (fWalkers)
-      //          .flatten
-      //        val pp = rwalk.secondOrderWalk(walkers)
-      //
-      //        val aws = fWalkers.map(tuple => tuple._1).seq
-      //        val up = paths.filter { case p =>
-      //          !aws.contains(p._3.head)
-      //        }
-      //        val np = up.union(pp)
-      //
-      //        val tTime = System.currentTimeMillis() - sTime
-      //
-      //        val ns = computeNumSteps(walkers)
-      //        val nw = walkers.length
-      //        ((np, pp), ns, nw, tTime)
-      //      }
-      case RrType.m3 => {
+      case RrType.m2 => {
         val sTime = System.currentTimeMillis()
 
-        val walkers = WalkStorage.filterAffectedPathsForM3(afs, config)
+        val walkers = WalkStorage.filterAffectedPathsForM2(afs, config)
         val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
         WalkStorage.updatePaths(partialPaths)
 
@@ -328,9 +271,9 @@ case class StreamingExperiment(config: Params) {
         }
         (allWalks, ns, nw, tTime)
       }
-      case RrType.m4 => {
+      case RrType.m3 => {
         val sTime = System.currentTimeMillis()
-        val walkers = WalkStorage.filterAffectedPathsForM4(afs, config)
+        val walkers = WalkStorage.filterAffectedPathsForM3(afs, config)
         val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
         WalkStorage.updatePaths(partialPaths)
 
@@ -346,9 +289,8 @@ case class StreamingExperiment(config: Params) {
           (w._1, w._2, isNew, w._3)
         }
         (allWalks, ns, nw, tTime)
-        //        ((newPaths, partialPaths.map(a => a._2)), ns, nw, tTime)
       }
-      case RrType.m5 => {
+      case RrType.m4 => {
         val sTime = System.currentTimeMillis()
 
         var fWalkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = paths.filter(a => afs.contains(a._4
@@ -363,11 +305,9 @@ case class StreamingExperiment(config: Params) {
           .flatten
         val newWalks = rwalk.secondOrderWalkWitIds(walkers)
 
-        //        val aws = fWalkers.map(tuple => tuple._1).seq
         val oldWalks = paths.filter { case p =>
           !afs.contains(p._4.head)
         }
-        //        val np = up.union(pp)
 
         val tTime = System.currentTimeMillis() - sTime
 

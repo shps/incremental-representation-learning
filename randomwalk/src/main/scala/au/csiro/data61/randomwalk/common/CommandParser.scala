@@ -6,37 +6,25 @@ object CommandParser {
 
   object TaskName extends Enumeration {
     type TaskName = Value
-    val firstorder, secondorder, soProbs, queryPaths, probs, degrees, affecteds, passProbs, rr,
-    ar, s1, coAuthors, sca, ae, gPairs, cd =
-      Value
-  }
-
-  object WalkType extends Enumeration {
-    type WalkType = Value
-    val firstorder, secondorder = Value
+    val sca, gPairs = Value
   }
 
   object RrType extends Enumeration {
     type RrType = Value
-    val m1, m2, m3, m4, m5 = Value
+    val m1, m2, m3, m4 = Value
   }
 
   val WALK_LENGTH = "walkLength"
   val NUM_WALKS = "numWalks"
-  val RDD_PARTITIONS = "rddPartitions"
   val WEIGHTED = "weighted"
   val DIRECTED = "directed"
-  val WALK_TYPE = "wType"
   val NUM_RUNS = "nRuns"
   val RR_TYPE = "rrType"
   val P = "p"
   val Q = "q"
-  val AL = "al"
   val INPUT = "input"
   val OUTPUT = "output"
   val CMD = "cmd"
-  val NODE_IDS = "nodes"
-  val NUM_VERTICES = "nVertices"
   val SEED = "seed"
   val DELIMITER = "d"
   val W2V_WINDOW = "w2vWindow"
@@ -46,14 +34,12 @@ object CommandParser {
   val INIT_EDGE_Size = "initEdgeSize"
   val EDGE_STREAM_Size = "edgeStreamSize"
   val MAX_STEPS = "maxSteps"
-  val GROUPED = "grouped"
   val SELF_CONTEXT = "selfContext"
   val FORCE_SKIP_SIZE = "forceSkipSize"
   val ALL_WALKS = "allWalks"
   val COUNT_NUM_SCC = "countScc"
   val FIXED_GRAPH = "fixedGraph"
   val O= "o"
-  val DELIMITER2 = "d2"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -73,21 +59,12 @@ object CommandParser {
     opt[Double](Q)
       .text(s"numWalks: ${defaultParams.q}")
       .action((x, c) => c.copy(q = x.toFloat))
-//    opt[Double](INIT_EDGE_Size)
-//      .text(s"Percentage of edges to be used to construct the initial graph before streaming: ${defaultParams.initEdgeSize}")
-//      .action((x, c) => c.copy(initEdgeSize = x.toFloat))
     opt[Int](INIT_EDGE_Size)
       .text(s"Percentage of edges to be used to construct the initial graph before streaming: ${defaultParams.initEdgeSize}")
       .action((x, c) => c.copy(initEdgeSize = x))
     opt[Int](EDGE_STREAM_Size)
       .text(s"Percentage of edges to stream at every step: ${defaultParams.edgeStreamSize}")
       .action((x, c) => c.copy(edgeStreamSize = x))
-    opt[Int](NUM_VERTICES)
-      .text(s"numWalks: ${defaultParams.numVertices}")
-      .action((x, c) => c.copy(numVertices = x))
-    opt[Int](AL)
-      .text(s"numWalks: ${defaultParams.affectedLength}")
-      .action((x, c) => c.copy(affectedLength = x))
     opt[Int](SAVE_PERIOD)
       .text(s"Save Period: ${defaultParams.savePeriod}")
       .action((x, c) => c.copy(savePeriod = x))
@@ -112,9 +89,6 @@ object CommandParser {
     opt[Boolean](LOG_ERRORS)
       .text(s"Log Errors (increases run time): ${defaultParams.logErrors}")
       .action((x, c) => c.copy(logErrors = x))
-    opt[Boolean](GROUPED)
-      .text(s"Are edges already grouped for streaming: ${defaultParams.grouped}")
-      .action((x, c) => c.copy(grouped = x))
     opt[Boolean](SELF_CONTEXT)
       .text(s"Accept target-context pairs where target=context: ${defaultParams.selfContext}")
       .action((x, c) => c.copy(selfContext = x))
@@ -140,16 +114,10 @@ object CommandParser {
     opt[String](DELIMITER)
       .text("Delimiter: ")
       .action((x, c) => c.copy(delimiter = x))
-    opt[String](DELIMITER2)
-      .text("Convert to delimiter: ")
-      .action((x, c) => c.copy(delimiter2 = x))
     opt[String](OUTPUT)
       .required()
       .text("Output path: empty")
       .action((x, c) => c.copy(output = x))
-    opt[String](NODE_IDS)
-      .text("Node IDs to query from the paths: empty")
-      .action((x, c) => c.copy(nodes = x))
     opt[String](CMD)
       .required()
       .text(s"command: ${defaultParams.cmd.toString}")
@@ -157,9 +125,6 @@ object CommandParser {
     opt[String](RR_TYPE)
       .text(s"RR Type: ${defaultParams.rrType.toString}")
       .action((x, c) => c.copy(rrType = RrType.withName(x)))
-    opt[String](WALK_TYPE)
-      .text(s"Walk Type: ${defaultParams.wType.toString}")
-      .action((x, c) => c.copy(wType = WalkType.withName(x)))
   }
 
   def parse(args: Array[String]) = {

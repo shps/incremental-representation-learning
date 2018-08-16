@@ -1,10 +1,9 @@
 package au.csiro.data61.randomwalk.common
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.{AtomicInteger, LongAdder}
+import java.util.concurrent.atomic.LongAdder
 
 import au.csiro.data61.randomwalk.algorithm.{GraphMap, RandomSample}
-import com.sun.org.apache.bcel.internal.generic.Type
 
 import scala.collection.mutable
 import scala.collection.parallel.{ParMap, ParSeq, ParSet}

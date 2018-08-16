@@ -3,7 +3,7 @@ package au.csiro.data61.randomwalk.algorithm
 import scala.collection.mutable
 import scala.util.Random
 
-case class RandomSample(nextFloat: () => Float = Random.nextFloat) extends Serializable {
+case class RandomSample(nextFloat: () => Float = Random.nextFloat) {
 
 
   /**
@@ -29,19 +29,17 @@ case class RandomSample(nextFloat: () => Float = Random.nextFloat) extends Seria
                                       q: Float = 1.0f,
                                       prevId: Int,
                                       prevNeighbors: mutable.Set[(Int, Float)],
-                                      currNeighbors: mutable.Set[(Int, Float)]): mutable.Set[(Int, Float)
+                                      currNeighbors: mutable.Set[(Int, Float)]): mutable.Set[
+    (Int, Float)
     ] = {
     currNeighbors.map { case (dstId, w) =>
-      var unnormProb = w / q // Default is that there is no direct link between src and
-      // dstNeighbor.
-      if (dstId == prevId) unnormProb = w / p // If the dstNeighbor is the src node.
+      var unnormProb = w / q
+      if (dstId == prevId) unnormProb = w / p
       else {
         if (prevNeighbors.exists(_._1 == dstId)) unnormProb = w
       }
       (dstId, unnormProb)
-    } // If there is a
-    // direct link from src to neighborDst. Note, that the weight of the direct link is always
-    // considered, which does not necessarily is the shortest path.
+    }
   }
 
   /**

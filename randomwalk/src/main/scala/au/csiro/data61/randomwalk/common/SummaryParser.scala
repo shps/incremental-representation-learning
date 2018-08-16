@@ -13,9 +13,10 @@ import scala.io.Source
   */
 object SummaryParser {
 
-  val DIR = "summary" + "1533891061"
-  val SUMMARY_DIR = s"/Users/Ganymedian/Desktop/$DIR"
-  val OUTPUT_DIR = s"/Users/Ganymedian/Desktop/$DIR/final"
+  val timestamp = "1234" // Timestamp of the summary dir.
+  val DIR = "summary" + timestamp
+  val SUMMARY_DIR = s"/$DIR"
+  val OUTPUT_DIR = s"/$DIR/final"
   val SCORE_FILE = "score-summary.csv"
   val BSCC_SCORE_FILE = "bscc-score-summary.csv"
   val RW_WALK_FILE = "rw-walk-summary.csv"

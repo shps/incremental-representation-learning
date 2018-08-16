@@ -1,11 +1,7 @@
 package au.csiro.data61.randomwalk.common
 
-import java.util
-import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-
-import au.csiro.data61.randomwalk.common.CommandParser.WalkType
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -49,12 +45,9 @@ object WalkStorage {
     walkMap.size()
   }
 
-  def filterAffectedPathsForM3(afs: mutable.HashSet[Int], config: Params) = {
+  def filterAffectedPathsForM2(afs: mutable.HashSet[Int], config: Params) = {
     println("****** WalkStorage: Filter Affected Paths ******")
-    val maxLength = config.wType match {
-      case WalkType.firstorder => config.walkLength + 1
-      case WalkType.secondorder => config.walkLength + 2
-    }
+    val maxLength = config.walkLength + 2 // second order random walk.
 
     filterAffectedPaths(afs, config).map { case (wId, duplicates) =>
       val wVersion = duplicates.head._2._1
@@ -70,7 +63,7 @@ object WalkStorage {
     }.filter(_._2._2 < maxLength).toSeq
   }
 
-  def filterAffectedPathsForM4(afs: mutable.HashSet[Int], config: Params) = {
+  def filterAffectedPathsForM3(afs: mutable.HashSet[Int], config: Params) = {
     println("****** WalkStorage: Filter Affected Paths ******")
 
     filterAffectedPaths(afs, config).map { case (wId, duplicates) =>
