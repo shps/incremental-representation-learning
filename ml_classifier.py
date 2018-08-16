@@ -47,38 +47,38 @@ def eval_classification(labels, embeddings, use_ml_splitter=False):
         # back to binary classification.
         classifier = multiclass.OneVsRestClassifier(classifier)
 
-        # Choose multi-label or multi-class classification
-        # based on label size: we can't use StratifiedShuffleSplit
-        # for the mutli-label case
-        if len(labels.shape) > 1 and labels.shape[1] > 1:
-            print("Performing multi-label classification")
-            shuffle = model_selection.ShuffleSplit(n_splits=10, train_size=FLAGS.train_split,
-                                                   test_size=1.0 - FLAGS.train_split)
+    # Choose multi-label or multi-class classification
+    # based on label size: we can't use StratifiedShuffleSplit
+    # for the mutli-label case
+    if len(labels.shape) > 1 and labels.shape[1] > 1:
+        print("Performing multi-label classification")
+        shuffle = model_selection.ShuffleSplit(n_splits=10, train_size=FLAGS.train_split,
+                                               test_size=1.0 - FLAGS.train_split)
 
-            # shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+        # shuffle = model_selection.KFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
-            # class MLSplitter:
-            #     def __init__(self, splitter, node_labels):
-            #         # Generate stratifications based on least frequent label
-            #         n_data = node_labels.shape[0]
-            #         label_freq = node_labels.sum(axis=0)
-            #         shuffle_y = np.zeros(n_data, dtype='int16')
-            #         for k in range(n_data):
-            #             rowlabels = np.flatnonzero(node_labels[k])
-            #             shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
-            #         self.shuffle_y = shuffle_y
-            #         self.s = splitter
-            #
-            #     def split(self, X, in_y=None, in_g=None):
-            #         return self.s.split(X, self.shuffle_y)
-            #
-            # if use_ml_splitter:
-            #     shuffle = MLSplitter(shuffle, labels)
+        # class MLSplitter:
+        #     def __init__(self, splitter, node_labels):
+        #         # Generate stratifications based on least frequent label
+        #         n_data = node_labels.shape[0]
+        #         label_freq = node_labels.sum(axis=0)
+        #         shuffle_y = np.zeros(n_data, dtype='int16')
+        #         for k in range(n_data):
+        #             rowlabels = np.flatnonzero(node_labels[k])
+        #             shuffle_y[k] = rowlabels[label_freq[rowlabels].argmin()]
+        #         self.shuffle_y = shuffle_y
+        #         self.s = splitter
+        #
+        #     def split(self, X, in_y=None, in_g=None):
+        #         return self.s.split(X, self.shuffle_y)
+        #
+        # if use_ml_splitter:
+        #     shuffle = MLSplitter(shuffle, labels)
 
-        else:
-            shuffle = model_selection.StratifiedShuffleSplit(
-                n_splits=10, train_size=FLAGS.train_split, test_size=1.0 - FLAGS.train_split)
-            # shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+    else:
+        shuffle = model_selection.StratifiedShuffleSplit(
+            n_splits=10, train_size=FLAGS.train_split, test_size=1.0 - FLAGS.train_split)
+        # shuffle = model_selection.StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
 
     scoring = ['accuracy', 'f1_macro', 'f1_micro']
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     un, counts = np.unique(all_labels, return_counts=True)
     print(dict(zip(un, counts)))
     print("Labeled vocab size: {}".format(len(all_labels)))
-    existing_vocab = read_existing_vocab(os.path.join(FLAGS.degrees_dir, FLAGS.degrees_file))
+
     # correct = True
     # for x in existing_vocab:
     #     x = x + 1
@@ -185,9 +185,6 @@ if __name__ == "__main__":
     #         correct = False
     # if correct:
     #     print("All keys exist in the labels file.")
-    # print("Existing vocab size: {}".format(len(existing_vocab)))
-    # evals = eval_classification(all_labels[existing_vocab], all_embeddings[existing_vocab])
-    # save_scores(evals, "scores")
 
     if FLAGS.bscc_file is not None:
         bscc_graph_vocabs = read_vocabs(
@@ -196,3 +193,8 @@ if __name__ == "__main__":
         bscc_evals = eval_classification(all_labels[bscc_graph_vocabs],
                                          all_embeddings[bscc_graph_vocabs])
         save_scores(bscc_evals, "bscc-scores")
+    else:
+        existing_vocab = read_existing_vocab(os.path.join(FLAGS.degrees_dir, FLAGS.degrees_file))
+        print("Existing vocab size: {}".format(len(existing_vocab)))
+        evals = eval_classification(all_labels[existing_vocab], all_embeddings[existing_vocab])
+        save_scores(evals, "scores")
