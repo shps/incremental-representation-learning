@@ -147,7 +147,8 @@ case class FileManager(config: Params) {
 //    val edgePerPartition: Int = Math.max((lines.size * config.edgeStreamSize).toInt, 1)
     println(s"Number of edges per step: ${config.edgeStreamSize}")
 
-    val (part1, part2) = Random.shuffle(lines).splitAt((lines.size * config.initEdgeSize).toInt)
+    val (part1, part2) = Random.shuffle(lines).splitAt(config.initEdgeSize)
+//    val (part1, part2) = Random.shuffle(lines).splitAt((lines.size * config.initEdgeSize).toInt)
     (part1, part2.grouped(config.edgeStreamSize).toSeq.zipWithIndex.map(a => (a._2 + 1, a._1)))
   }
 

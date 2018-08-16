@@ -719,3 +719,52 @@ set size ratio 0.8 # y/x
 plot f1 every ::1::92 using 2 with linespoints ls 1 not
 
 set output
+
+
+##### Run time  m3 vs m1
+set terminal pdf
+set output "./m1-3-cocit-rw-times.pdf"
+set ylabel "Normalized run time"
+#set xlabel "Normalized run time"
+set xtics ("M_1" 0, "M_2 sr=5" 1, "M_2 sr=50" 2, "M_2 sr=100" 3, "M_2 sr=200" 4, "M_2 sr=500" 5, "M_2 sr=1000" 6) rotate by 45 right
+f1="./m1-3-cocit-rw-times.csv"
+set datafile separator ","
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 7
+set boxwidth 0.5
+set yrange [0:1.05]
+set style fill solid
+set style line 1 lt 2 lw 2 pt 1 ps 1 linecolor rgb "blue"
+
+set size ratio 1.0 # y/x
+
+plot f1 every ::1::7 using 6 with boxes ls 1 notitle
+
+set output
+
+##### Epoch Run time  m3 vs m1
+set terminal pdf
+set output "./m1-m3-cocit-epoch-times.pdf"
+set ylabel "Normalized run time"
+#set xlabel "Normalized run time"
+set xtics ("U_1" 0, "U_2 sr=5" 1, "U_2 sr=50" 2, "U_2 sr=100" 3, "U_2 sr=200" 4, "U_2 sr=500" 5) rotate by 45 right
+f1="./m1-m3-cocit-epoch-times.csv"
+set datafile separator ","
+set ytics font ",14"
+set ylabel font  ",18" offset 0.4
+set xlabel font  ",18"
+set key font  ",16" inside center right
+set bmargin 7
+set boxwidth 0.5
+set yrange [0:1.05]
+set style fill solid
+set style line 1 lt 2 lw 2 pt 1 ps 1 linecolor rgb "blue"
+
+set size ratio 1.0 # y/x
+
+plot f1 every ::1::6 using 6 with boxes ls 1 notitle
+
+set output

@@ -10,19 +10,19 @@ ROOT=/home/Ganymedian
 
 
 RW_JAR_FILE=$ROOT/rw/randomwalk-0.0.1-SNAPSHOT.jar
-INPUT_EDGE_LIST=$ROOT/dataset/cora/cora1_edgelist.txt
-#INPUT_EDGE_LIST="$ROOT/dataset/cocit/cocit1_edgelist.txt"
-#INPUT_EDGE_LIST="$ROOT/dataset/wiki/Wiki1_edgelist.txt"
-#INPUT_EDGE_LIST="$ROOT/dataset/blog/edges.txt"
-#INPUT_EDGE_LIST="$ROOT/dataset/dblp/coauthors-edge-list.txt"
+#INPUT_EDGE_LIST=$ROOT/dataset/cora/cora1_edgelist.txt
+#INPUT_EDGE_LIST=$ROOT/dataset/cocit/cocit1_edgelist.txt
+#INPUT_EDGE_LIST=$ROOT/dataset/wiki/Wiki1_edgelist.txt
+INPUT_EDGE_LIST=$ROOT/dataset/blog/edges.txt
+#INPUT_EDGE_LIST=$ROOT/dataset/dblp/coauthors-edge-list.txt
 
-METHODS=(m1)
+METHODS=(m3)
 
 
 # Random walk configs
 
-INIT_EDGE_SIZE=1.0
-NUM_WALKS_ARR=(40)
+INIT_EDGE_SIZE=33398
+NUM_WALKS_ARR=(80)
 WALK_LENGTH_ARR=(10)
 P=1.0
 Q=1.0
@@ -30,20 +30,21 @@ STREAM_SIZE=5
 #STREAM_SIZE=500
 #DATASET=wiki1
 #DATASET=cocit
-DATASET=cora1
+DATASET=blog
+#DATASET=cora1
 NUM_RUNS=1
 DIRECTED=false    # tested on undirected graphs only.
-SEED=1234
+SEED=1236
 WALK_TYPE=secondorder
-RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
-#RW_DELIMITER=","
+#RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), or comma-separated (",").
+RW_DELIMITER=","
 #LOG_PERIOD=2      # after what number of steps log the output
-LOG_PERIOD=1
+LOG_PERIOD=60117
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
 #MAX_STEPS=3       # max number of steps to run the experiment
-MAX_STEPS=0
+MAX_STEPS=60117
 GROUPED=false         # whether the edge list is already tagged with group number (e.g., year)
-COUNT_NUM_SCC=true
+COUNT_NUM_SCC=false
 FIXED_GRAPH=false    # use same graph among different runs.
 
 # target-context generator configs
@@ -54,11 +55,11 @@ SELF_CONTEXT=true  # whether allows target == context pairs.
 TRAIN_WITH_DELTA=false              # train only with the samples generated from new walks
 FORCE_SKIP_SIZE=false                # Force to generate skipSize number of pairs
 ALL_WALKS=true                      # Whether to consider all old walks and new walks of walks to generate sample from. If false it considers only a percentage of the old walks.
-O=0                               # Percentage of new walks to draw from old walks.
+O=1.0                               # Percentage of new walks to draw from old walks.
 #COMPUTE_PER_STEP=2
 #START_STEP=2
 COMPUTE_PER_STEP=1
-START_STEP=0
+START_STEP=60117
 
 TC_CONFIG_SIG="w$WINDOW_SIZE-s$SKIP_SIZE-sc$SELF_CONTEXT-twd$TRAIN_WITH_DELTA-fss$FORCE_SKIP_SIZE-aw$ALL_WALKS-o$O-cps$COMPUTE_PER_STEP"
 
@@ -69,30 +70,32 @@ FREEZE_AFV_FOR_M1=false
 USE_CHECKPOINT=false       # whether to use checkpoints or to restart training.
 NUM_CHECKPOINTS=1
 TRAIN_SPLIT=1.0             # train validation split
-#LEARNING_RATE=0.2
-LEARNING_RATE=0.025
+LEARNING_RATE=0.2
+#LEARNING_RATE=0.025
 EMBEDDING_SIZE=128
-VOCAB_SIZE=2710            # Size of vocabulary
+#VOCAB_SIZE=2710            # Size of vocabulary
 #VOCAB_SIZE=44035
+VOCAB_SIZE=10313
 NEG_SAMPLE_SIZE=5
 N_EPOCHS=10
 BATCH_SIZE=200               # minibatch size
 FREEZE_EMBEDDINGS=false     #If true, the embeddings will be frozen otherwise the contexts will be frozen.
 DELIMITER="\\t"
-#FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
-FORCE_OFFSET=0                        # For cora and wiki datasets
+FORCE_OFFSET=-1                      # Offset to adjust node IDs, for BlogCatalog dataset
+#FORCE_OFFSET=0                        # For cora and wiki datasets
 
 # Classifier configs
-LABELS_DIR=$ROOT/dataset/cora/
-LABEL_FILE=cora1_labels.txt           # label file
+#LABELS_DIR=$ROOT/dataset/cora/
+#LABEL_FILE=cora1_labels.txt           # label file
 #LABELS_DIR=$ROOT/dataset/wiki/
 #LABEL_FILE=Wiki1_labels.txt           # label file
-#LABELS_DIR=$ROOT/dataset/blog/
-#LABEL_FILE=blog-labels.txt
+LABELS_DIR=$ROOT/dataset/blog/
+LABEL_FILE=blog-labels.txt
 #LABELS_DIR=$ROOT/dataset/cocit/
 #LABEL_FILE=cocit1_labels.txt
 
-NC_TRAIN_SPLIT=0.09
+NC_TRAIN_SPLIT=0.1
+RANDOM_CLASSIFIER=false
 
 
 
@@ -310,13 +313,18 @@ if [ "$run_nc" = true ] ; then
                                 DEGREES_DIR=$ROOT/output/$DATASET/rw/$DIR_SUFFIX/                  # input data directory
                                 DEGREES_FILE="degrees-$SUFFIX.txt"       # node degrees file name
 #                                G0_DEGREES_FILE="degrees-$G0_SUFFIX.txt"
-                                BSCC_VERTEX_FILE="sca-bscc-$SUFFIX.txt"
-                                EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name
-                                COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --bscc_file $BSCC_VERTEX_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $NC_TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
 
-#                                if [ "$RANDOM_CLASSIFIER" == true ]; then
-#                                    COMMAND="$COMMAND  --random_classifier"
-#                                fi
+                                EMB_FILE="embeddings$EPOCH.pkl"                # embeddings file name
+                                COMMAND="-m ml_classifier --base_log_dir $BASE_LOG_DIR --output_index $EPOCH --input_dir $INPUT_DIR --emb_file $EMB_FILE --degrees_dir $DEGREES_DIR --degrees_file $DEGREES_FILE --delimiter $DELIMITER --force_offset $FORCE_OFFSET --seed $INC_SEED --train_split $NC_TRAIN_SPLIT --label_dir $LABELS_DIR --label_file $LABEL_FILE"
+
+                                if [ "$COUNT_NUM_SCC" == true ]; then
+                                    BSCC_VERTEX_FILE="sca-bscc-$SUFFIX.txt"
+                                    COMMAND="$COMMAND --bscc_file $BSCC_VERTEX_FILE"
+                                fi
+
+                                if [ "$RANDOM_CLASSIFIER" == true ]; then
+                                    COMMAND="$COMMAND  --random_classifier"
+                                fi
 
                                 echo $COMMAND
 

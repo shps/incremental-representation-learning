@@ -124,25 +124,25 @@ class DatasetCleanerTest extends FunSuite {
     //    fm.saveLabels(compLabels.seq.toSet, "cora1_labels")
   }
 
-  test("Draw density") {
-    val fName = dataset + "blog_edgelist.txt"
-    val outputFile = "blog-density"
-    val output = dataset
-    val config = Params(input = fName, output = output, delimiter = ",", directed = false,
-      edgeStreamSize = 50, initEdgeSize = 0.1f)
-    val fm = FileManager(config)
-    val (initEdges, edges) = fm.readPartitionEdgeListWithInitEdges()
-    val experiment = StreamingExperiment(config)
-    var densities = Seq.empty[Double]
-    experiment.updateGraph(initEdges)
-    densities ++= Seq(computeDensity())
-    for (stream <- edges) {
-      experiment.updateGraph(stream._2)
-      densities ++= Seq(computeDensity())
-    }
-
-    fm.saveDensities(densities, outputFile)
-  }
+//  test("Draw density") {
+//    val fName = dataset + "blog_edgelist.txt"
+//    val outputFile = "blog-density"
+//    val output = dataset
+//    val config = Params(input = fName, output = output, delimiter = ",", directed = false,
+//      edgeStreamSize = 50, initEdgeSize = 0.1f)
+//    val fm = FileManager(config)
+//    val (initEdges, edges) = fm.readPartitionEdgeListWithInitEdges()
+//    val experiment = StreamingExperiment(config)
+//    var densities = Seq.empty[Double]
+//    experiment.updateGraph(initEdges)
+//    densities ++= Seq(computeDensity())
+//    for (stream <- edges) {
+//      experiment.updateGraph(stream._2)
+//      densities ++= Seq(computeDensity())
+//    }
+//
+//    fm.saveDensities(densities, outputFile)
+//  }
 
   def computeDensity(): Double = {
     val m = GraphMap.getNumEdges.toDouble // It is already multiplying by 2.
