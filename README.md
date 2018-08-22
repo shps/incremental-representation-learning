@@ -2,6 +2,7 @@
 
 
 ## Features ##
+* node2vec's second-order random walk
 
 ## Requirements ##
 * Scala 2.11 or later.
