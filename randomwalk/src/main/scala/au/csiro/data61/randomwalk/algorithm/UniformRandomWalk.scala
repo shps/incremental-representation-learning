@@ -15,7 +15,7 @@ case class UniformRandomWalk(config: Params) {
   var nEdges: Int = 0
 
   /**
-    * Loads the graph and computes the probabilities to go from each vertex to its neighbors
+    *
     *
     * @return
     */
@@ -54,7 +54,7 @@ case class UniformRandomWalk(config: Params) {
     vertices.flatMap { case (vId) => Seq.fill(config.numWalks)((vId, (1, 1, Seq(vId)))) }
   }
 
-  def secondOrderWalkWitIds(initPaths: ParSeq[(Int, (Int, Int, Seq[Int]))], nextFloat: () => Float =
+  def secondOrderWalk(initPaths: ParSeq[(Int, (Int, Int, Seq[Int]))], nextFloat: () => Float =
   Random
     .nextFloat): ParSeq[(Int, (Int, Int, Seq[Int]))] = {
     println("%%%%% Starting random walk %%%%%")
@@ -105,7 +105,7 @@ case class UniformRandomWalk(config: Params) {
   }
 
   def buildGraphMap(graph: Seq[(Int, mutable.Set[(Int, Float)])]): Unit = {
-    GraphMap.reset // This is only to run on a single executor.
+    GraphMap.reset
     graph.foreach { case (vId, neighbors) =>
       GraphMap.addVertex(vId, neighbors)
     }

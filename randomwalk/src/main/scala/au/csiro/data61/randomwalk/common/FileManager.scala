@@ -64,6 +64,24 @@ case class FileManager(config: Params) {
 
   }
 
+  def readAlreadyPartitionedEdgeList(): (Seq[(Int, Int)], Seq[(Int, Seq[
+    (Int, Int)])]) = {
+    val lines = Source.fromFile(config.input).getLines.toSeq.par
+    val partitions = lines.flatMap { triplet =>
+      val parts = triplet.split(config.delimiter)
+      val src = parts.head.toInt
+      val dst = parts(1).toInt
+      if (src == dst)
+        Seq.empty[(Int, Int, Int)]
+      else
+        Seq((src, dst, parts(2).toInt))
+    }.groupBy(_._3).toSeq.map { case (year, tuple) =>
+      (year, tuple.map(a => (a._1, a._2)).seq)
+    }.seq.sortWith(_._1 < _._1)
+    val (part1, part2) = partitions.splitAt(config.initEdgeSize)
+    (part1.flatMap(_._2), part2)
+  }
+
   def readPartitionEdgeListWithInitEdges(): (Seq[(Int, Int)], Seq[(Int, Seq[
     (Int, Int)])]) = {
     val lines = readEdgeList().seq

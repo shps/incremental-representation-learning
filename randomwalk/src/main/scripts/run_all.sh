@@ -9,7 +9,7 @@ ROOT=/home/
 
 
 RW_JAR_FILE=$ROOT/rw/randomwalk-0.0.1-SNAPSHOT.jar
-#INPUT_EDGE_LIST=$ROOT/dataset/cora/cora1_edgelist.txt
+INPUT_EDGE_LIST=$ROOT/dataset/cora/cora1_edgelist.txt
 
 METHODS=(m1)
 
@@ -30,7 +30,6 @@ WALK_TYPE=secondorder
 RW_DELIMITER="\\s+"    # e.g., tab-separated ("\\t"), "\\s+", or comma-separated (",").
 LOG_PERIOD=1    # after what number of steps save the randomwalks output.
 LOG_ERRORS=false  # Should it compute and log transition probability errors (computation intensive)   # portion of edges to be used for streaming at each step
-#MAX_STEPS=3       # max number of steps to run the experiment
 MAX_STEPS=60117
 COUNT_NUM_SCC=false
 FIXED_GRAPH=false    # use same graph among different runs.
@@ -69,7 +68,6 @@ FORCE_OFFSET=0                        # For cora and wiki datasets
 # Classifier configs
 LABELS_DIR=$ROOT/dataset/cora/
 LABEL_FILE=cora1_labels.txt           # label file
-
 NC_TRAIN_SPLIT=0.09
 RANDOM_CLASSIFIER=false
 

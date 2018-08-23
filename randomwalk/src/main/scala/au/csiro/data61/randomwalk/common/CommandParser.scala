@@ -40,6 +40,7 @@ object CommandParser {
   val COUNT_NUM_SCC = "countScc"
   val FIXED_GRAPH = "fixedGraph"
   val O= "o"
+  val GROUPED = "grouped"
 
   private lazy val defaultParams = Params()
   private lazy val parser = new OptionParser[Params]("2nd Order Random Walk + Word2Vec") {
@@ -104,6 +105,9 @@ object CommandParser {
     opt[Boolean](ALL_WALKS)
       .text(s"Include all walks to generate sample pairs: ${defaultParams.allWalks}")
       .action((x, c) => c.copy(allWalks = x))
+    opt[Boolean](GROUPED)
+      .text(s"Are edges already grouped into steps for streaming: ${defaultParams.grouped}")
+      .action((x, c) => c.copy(grouped = x))
     opt[Double](O)
       .text(s"Percentage of new walks to draw from old walks: ${defaultParams.O}")
       .action((x, c) => c.copy(O = x.toFloat))

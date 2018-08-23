@@ -30,7 +30,6 @@ case class StreamingExperiment(config: Params) {
       GraphMap.reset
       WalkStorage.reset
       var prevWalks = ParSeq.empty[(Int, Int, Int, Seq[Int])]
-      var deltaWalks = ParSeq.empty[(Int, Int, Seq[Int])]
 
       println("******* Building the graph ********")
       if (config.fixedGraph) {
@@ -38,7 +37,11 @@ case class StreamingExperiment(config: Params) {
       } else {
         Random.setSeed(config.seed + nr)
       }
-      val (initEdges, edges) = fm.readPartitionEdgeListWithInitEdges()
+
+      val (initEdges, edges) = config.grouped match {
+        case false => fm.readPartitionEdgeListWithInitEdges()
+        case true => fm.readAlreadyPartitionedEdgeList()
+      }
 
       Random.setSeed(config.seed + nr)
 
@@ -69,7 +72,7 @@ case class StreamingExperiment(config: Params) {
           println(s"Size of biggest SCC: ${biggestScc.size}")
           println(s"Number of SCCs: ${comps._1}")
         }
-        val result = streamingAddAndRunWithId(afs, prevWalks)
+        val result = streamingAddAndRun(afs, prevWalks)
         prevWalks = result._1
         totalTime = result._4
         numSteps(nr)(0) = result._2
@@ -119,7 +122,7 @@ case class StreamingExperiment(config: Params) {
           afs = updateResult._1
           val comps = updateResult._2
           biggestScc = comps._3
-          val result = streamingAddAndRunWithId(afs, prevWalks)
+          val result = streamingAddAndRun(afs, prevWalks)
           prevWalks = result._1
           val ns = result._2
           val nw = result._3
@@ -135,12 +138,12 @@ case class StreamingExperiment(config: Params) {
           stepTimes(nr)(ec) = stepTime
           graphStats ++= Seq((numVertices, numEdges, comps._1, comps._2))
 
-          println(s"Group-ID: ${step}")
+          println(s"Step ID: ${step}")
           println(s"Step time: $stepTime")
           println(s"Total time: $totalTime")
           println(s"Number of edges: ${numEdges}")
           println(s"Number of vertices: ${numVertices}")
-          println(s"Number of walks: ${prevWalks.size + deltaWalks.size}")
+          println(s"Number of walks: ${prevWalks.size}")
           if (config.countSccs) {
             println(s"Size of biggest SCC: ${biggestScc.size}")
             println(s"Number of SCCs: ${comps._1}")
@@ -233,7 +236,7 @@ case class StreamingExperiment(config: Params) {
     return (afs, (numSccs, numOtherVertices, biggestScc))
   }
 
-  def streamingAddAndRunWithId(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Int, Int, Seq[Int])]):
+  def streamingAddAndRun(afs: mutable.HashSet[Int], paths: ParSeq[(Int, Int, Int, Seq[Int])]):
   (ParSeq[(Int, Int, Int, Seq[Int])], Int, Int, Long) = {
 
     val result = config.rrType match {
@@ -241,7 +244,7 @@ case class StreamingExperiment(config: Params) {
         val sTime = System.currentTimeMillis()
 
         val init = rwalk.createWalkersByVertices(GraphMap.getVertices().par)
-        val p = rwalk.secondOrderWalkWitIds(init)
+        val p = rwalk.secondOrderWalk(init)
 
         val tTime = System.currentTimeMillis() - sTime
 
@@ -254,16 +257,16 @@ case class StreamingExperiment(config: Params) {
         val sTime = System.currentTimeMillis()
 
         val walkers = WalkStorage.filterAffectedPathsForM2(afs, config)
-        val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
+        val partialPaths = rwalk.secondOrderWalk(walkers)
         WalkStorage.updatePaths(partialPaths)
 
         val tTime = System.currentTimeMillis() - sTime
 
-        val ns = computeNumStepsWithIds(walkers)
+        val ns = computeNumSteps(walkers)
         val nw = walkers.length
 
         val newPathIds = partialPaths.map(_._1).toSet
-        val allWalks = WalkStorage.getPathsWithIds().asScala.toSeq.par.map { case (wId, w) =>
+        val allWalks = WalkStorage.getPaths().asScala.toSeq.par.map { case (wId, w) =>
           var isNew = 0
           if (newPathIds.contains(wId))
             isNew = 1
@@ -274,7 +277,7 @@ case class StreamingExperiment(config: Params) {
       case RrType.m3 => {
         val sTime = System.currentTimeMillis()
         val walkers = WalkStorage.filterAffectedPathsForM3(afs, config)
-        val partialPaths = rwalk.secondOrderWalkWitIds(walkers)
+        val partialPaths = rwalk.secondOrderWalk(walkers)
         WalkStorage.updatePaths(partialPaths)
 
         val tTime = System.currentTimeMillis() - sTime
@@ -282,7 +285,7 @@ case class StreamingExperiment(config: Params) {
         val ns = computeNumSteps(walkers)
         val nw = walkers.length
         val newPathIds = partialPaths.map(_._1).toSet
-        val allWalks = WalkStorage.getPathsWithIds().asScala.toSeq.par.map { case (wId, w) =>
+        val allWalks = WalkStorage.getPaths().asScala.toSeq.par.map { case (wId, w) =>
           var isNew = 0
           if (newPathIds.contains(wId))
             isNew = 1
@@ -303,7 +306,7 @@ case class StreamingExperiment(config: Params) {
         }
         val walkers: ParSeq[(Int, (Int, Int, Seq[Int]))] = ParSeq.fill(config.numWalks)(fWalkers)
           .flatten
-        val newWalks = rwalk.secondOrderWalkWitIds(walkers)
+        val newWalks = rwalk.secondOrderWalk(walkers)
 
         val oldWalks = paths.filter { case p =>
           !afs.contains(p._4.head)
@@ -324,100 +327,12 @@ case class StreamingExperiment(config: Params) {
     result
   }
 
-  def computeNumStepsWithIds(walkers: ParSeq[(Int, (Int, Int, Seq[Int]))]) = {
-    println("%%%%% Computing number of steps %%%%%")
-    val bcWalkLength = config.walkLength + 1
-    walkers.map {
-      case (_, path) => bcWalkLength - path._3.length
-    }.reduce(_ + _)
-  }
-
   def computeNumSteps(walkers: ParSeq[(Int, (Int, Int, Seq[Int]))]) = {
     println("%%%%% Computing number of steps %%%%%")
     val bcWalkLength = config.walkLength + 1
     walkers.map {
       case (_, path) => bcWalkLength - path._3.length
     }.reduce(_ + _)
-  }
-
-  def filterUniqueWalkers(paths: ParSeq[(Int, Int, Seq[Int])], afs1: mutable.Set[Int]) = {
-    println("&&&&&&&&& filterUniqueWalkers &&&&&&&&&")
-    filterWalkers(paths, afs1).groupBy(_._1).map {
-      case (_, p) =>
-        p.head
-    }.toSeq
-  }
-
-  def filterUniqueWalkers(paths: ParSeq[(Int, Int, Seq[Int])], afs: mutable.HashSet[Int]) = {
-    println("&&&&&&&&& filterUniqueWalkers &&&&&&&&&")
-    filterWalkers(paths, afs).groupBy(_._1).map {
-      case (_, p) =>
-        p.head
-    }.toSeq
-  }
-
-  def filterWalkers(paths: ParSeq[(Int, Int, Seq[Int])], afs1: mutable.Set[Int]): ParSeq[(Int, (Int,
-    Int, Seq[Int]))] = {
-    filterAffectedPaths(paths, afs1).map { case (wVersion, _, a) => (a.head, (wVersion, 0, Seq(a
-      .head)))
-    }
-  }
-
-  def filterWalkers(paths: ParSeq[(Int, Int, Seq[Int])], afs: mutable.HashSet[Int]): ParSeq[(Int,
-    (Int, Int, Seq[Int]))] = {
-    filterAffectedPaths(paths, afs).map { case (wVersion, _, a) => (a.head, (wVersion, 0, Seq(a
-      .head)))
-    }
-  }
-
-  def filterSplitPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs1: mutable.Set[Int]) = {
-    println("&&&&&&&&& filterSplitPaths &&&&&&&&&")
-    filterAffectedPaths(paths, afs1).map {
-      case (wVersion, _, a) =>
-        val first = a.indexWhere(e => afs1.contains(e)) + 1
-        (a.head, (wVersion, first, a.splitAt(first)._1))
-    }
-  }
-
-  def filterSplitPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs: mutable.HashSet[Int]) = {
-    println("&&&&&&&&& filterSplitPaths &&&&&&&&&")
-    filterAffectedPaths(paths, afs).map {
-      case (wVersion, _, a) =>
-        val first = a.indexWhere(e => afs.contains(e)) + 1
-        (a.head, (wVersion, first, a.splitAt(first)._1))
-    }
-  }
-
-  def filterAffectedPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs1: mutable.Set[Int]) = {
-    println("&&&&&&&&& filterAffectedPaths &&&&&&&&&")
-    paths.filter {
-      case (_, _, p) =>
-        !p.forall(s => !afs1.contains(s))
-    }
-  }
-
-  def filterAffectedPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs: mutable.HashSet[Int]) = {
-    println("&&&&&&&&& filterAffectedPaths &&&&&&&&&")
-    paths.filter {
-      case (_, _, p) =>
-        !p.forall(s => !afs.contains(s))
-    }
-  }
-
-  def filterUnaffectedPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs1: mutable.Set[Int]) = {
-    println("&&&&&&&&& filterUnaffectedPaths &&&&&&&&&")
-    paths.filter {
-      case (_, _, p) =>
-        p.forall(s => !afs1.contains(s))
-    }
-  }
-
-  def filterUnaffectedPaths(paths: ParSeq[(Int, Int, Seq[Int])], afs: mutable.HashSet[Int]) = {
-    println("&&&&&&&&& filterUnaffectedPaths &&&&&&&&&")
-    paths.filter {
-      case (_, _, p) =>
-        p.forall(s => !afs.contains(s))
-    }
   }
 
 }

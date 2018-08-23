@@ -3,7 +3,6 @@ package au.csiro.data61.randomwalk.common
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.parallel.ParSeq
 
@@ -31,13 +30,7 @@ object WalkStorage {
     }
   }
 
-
-  def getPaths(): ParSeq[(Int, Int, Seq[Int])] = {
-    //    walkMap.toMap.par.values.toSeq
-    walkMap.values.toSeq.par
-  }
-
-  def getPathsWithIds(): ConcurrentHashMap[Int, (Int, Int, Seq[Int])] = {
+  def getPaths(): ConcurrentHashMap[Int, (Int, Int, Seq[Int])] = {
     return walkMap
   }
 
@@ -53,11 +46,7 @@ object WalkStorage {
       val wVersion = duplicates.head._2._1
       val walk = duplicates.head._2._3
       val first = walk.indexWhere(e => afs.contains(e)) + 1
-      if (first == 0) {
-        print("Something is wrong. It can find the affected index in the path that already has " +
-          "the affected vertex!!!")
 
-      }
       (wId, (wVersion, first, walk.splitAt(first)._1))
       // do not consider walks that only their last element is affected
     }.filter(_._2._2 < maxLength).toSeq

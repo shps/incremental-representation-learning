@@ -29,5 +29,6 @@ case class Params(walkLength: Int = 80,
                   countSccs: Boolean = false,
                   fixedGraph: Boolean = false,
                   O: Float = 0.5f,
+                  grouped: Boolean = false,
                   delimiter: String = "\\s+",
                   cmd: TaskName = TaskName.sca) extends AbstractParams[Params]
