@@ -2,20 +2,22 @@ import scipy.io as sio
 import os
 
 if __name__ == "__main__":
-    mat = sio.loadmat("/Users/Ganymedian/Desktop/dynamic-rw/datasets/academic_confs.mat")
-    # print(mat)
-    graph = mat['network'].toarray()
+    # mat = sio.loadmat("/Users/Ganymedian/Desktop/dynamic-rw/datasets/academic_confs.mat")
 
-    srcs = graph.shape[0]
-    dests = graph.shape[1]
-
-    with open(os.path.join("/Users/Ganymedian/Desktop/dynamic-rw/datasets/", "cocit-edge-list.txt"),
-              "a") as f:
-        for x in range(0, srcs):
-            for y in range(x, dests):
-                e = graph[x, y]
-                if e == 1:
-                    f.write("{}\t{}\n".format(x, y))
+    mat = sio.mmread("/Users/Ganymedian/Desktop/ca-coauthors-dblp/ca-coauthors-dblp.mtx")
+    print(mat)
+    # graph = mat['network'].toarray()
+    #
+    # srcs = graph.shape[0]
+    # dests = graph.shape[1]
+    #
+    # with open(os.path.join("/Users/Ganymedian/Desktop/dynamic-rw/datasets/", "cocit-edge-list.txt"),
+    #           "a") as f:
+    #     for x in range(0, srcs):
+    #         for y in range(x, dests):
+    #             e = graph[x, y]
+    #             if e == 1:
+    #                 f.write("{}\t{}\n".format(x, y))
 
 
 
