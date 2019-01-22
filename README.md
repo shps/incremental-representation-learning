@@ -1,4 +1,4 @@
-# incremental-representation-learning
+# Incremental Representation Learning
 Incremental vertex representation learning using random walks and skip-gram model. For the detail of the algorithms please refer to:
 
 ```
